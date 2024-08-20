@@ -33,6 +33,18 @@
   (is (= {:parts ["Rel_Assignment_Up" "operationsI" "tapeS" "\"Some description\""] :block? false}
          (arch/get-parts "Rel_Assignment_Up(operationsI, tapeS, \"Some description\")"))))
 
+(deftest rel-f-re-test
+  (is (= ["Rel_Assignment_Up" "Assignment"]
+         (re-matches arch/rel-f-re "Rel_Assignment_Up")))
+  (is (= ["Rel_Assignment_up" "Assignment"]
+         (re-matches arch/rel-f-re "Rel_Assignment_up")))
+  (is (= ["Rel_Assignment" "Assignment"]
+         (re-matches arch/rel-f-re "Rel_Assignment")))
+  (is (= ["Rel_Access_r" "Access_r"]
+         (re-matches arch/rel-f-re "Rel_Access_r")))
+  (is (= ["Rel_Access" "Access"]
+         (re-matches arch/rel-f-re "Rel_Access"))))
+
 (deftest rel-b-re-test
   (is (= ["*--" "*-" "-"] (re-matches arch/rel-b-re "*--")))
   (is (= ["*-up-" "*-" "-"] (re-matches arch/rel-b-re "*-up-")))

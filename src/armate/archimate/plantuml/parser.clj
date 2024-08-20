@@ -99,16 +99,6 @@
 (def rel-f-re
   #"(?i)^Rel_(.+?)(?:_(?:Up|Down|Left|Right))?$")
 
-(comment
-  
-  (re-matches rel-f-re "Rel_Assignment_Up")
-  (re-matches rel-f-re "Rel_Assignment_up")
-  (re-matches rel-f-re "Rel_Assignment")
-  (re-matches rel-f-re "Rel_Access_r")
-  (re-matches rel-f-re "Rel_Access")
-
-  )
-
 (def rel-b-re
   #"(?i)(.*?[\.\-]+)(?:up|down|left|right)?([\.\-]+.*)")
 
