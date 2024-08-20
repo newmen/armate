@@ -1,5 +1,6 @@
 (ns armate.archimate-test
   (:require [clojure.test :refer :all]
+            [clojure.string :as s]
             [armate.archimate :as arch]))
 
 (deftest call-re-test
@@ -181,3 +182,48 @@
            :business-role
            :business-service}
          arch/possible-components)))
+
+(deftest lint-content-test
+  (defn- make-content
+    [rel]
+    (str "
+@startuml
+
+!include <archimate/Archimate>
+
+skinparam rectangle<<sub>> {
+    backgroundColor #2cc7fe
+}
+
+sprite $aComponent jar:archimate/application-component
+sprite $anInterface jar:archimate/application-interface
+
+rectangle \"Component1\" as c1 <<$aComponent>>
+rectangle \"Component 2\" as c2 <<$aComponent>><<sub>>
+
+c1 " rel " c2
+
+@enduml
+     "))
+
+  (is (empty? (arch/lint-content (make-content "*-"))))
+  (is (empty? (arch/lint-content (make-content "*--"))))
+  (is (empty? (arch/lint-content (make-content "*-up-"))))
+  (is (empty? (arch/lint-content (make-content "*-right-"))))
+  (is (empty? (arch/lint-content (make-content "*-down-"))))
+  (is (empty? (arch/lint-content (make-content "*-left-"))))
+  (is (= [{:level :error,
+           :kind :undefined-relation-type,
+           :in [:relations "c1" "c2"],
+           :body {:line 16, :type :unknown, :raw ".", :cut ".", :desc nil, :from "c1", :to "c2"}}]
+         (arch/lint-content (make-content "."))))
+  (is (= [{:level :warn,
+           :kind :unspecified-relation-type,
+           :in [:relations "c1" "c2"],
+           :body {:line 16, :type :serving, :raw "->", :cut "->", :desc nil, :from "c1", :to "c2"}}]
+         (arch/lint-content (make-content "->"))))
+  (is (= [{:level :warn, :kind :missing-start}
+          {:level :warn, :kind :missing-end}]
+         (arch/lint-content (s/replace (make-content "*-") #"@\w+" ""))))
+  (is (= [{:level :warn, :kind :missing-archimate-include}]
+         (arch/lint-content (s/replace (make-content "*-") #"!include.+?\n" "")))))

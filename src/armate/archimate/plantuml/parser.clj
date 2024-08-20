@@ -395,13 +395,17 @@
                      :end nil}
                     blocks)))
 
+(defn lint-content
+  [content]
+  (let [blocks (get-blocks content)]
+    (:lints (analyze blocks))))
+
 (defn lint
   [file-path]
   (let [content (slurp file-path)]
     (if (empty? content)
       (throw (ex-info "File is empty" {:file-path file-path}))
-      (let [blocks (get-blocks content)]
-        (:lints (analyze blocks))))))
+      (lint-content content))))
 
 (comment
   
