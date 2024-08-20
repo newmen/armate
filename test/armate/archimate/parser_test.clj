@@ -1,0 +1,167 @@
+(ns armate.archimate-test
+  (:require [clojure.test :refer :all]
+            [armate.archimate :as arch]))
+
+(deftest call-re-test
+  (is (= ["Rel_Assignment_Up(operationsI, tapeS)" "Rel_Assignment_Up" "operationsI" "tapeS" nil]
+         (re-matches arch/call-re "Rel_Assignment_Up(operationsI, tapeS)")))
+  (is (= ["Rel_Assignment_Up(operationsI, tapeS, \"Some description\")" "Rel_Assignment_Up" "operationsI" "tapeS" "\"Some description\""]
+         (re-matches arch/call-re "Rel_Assignment_Up(operationsI, tapeS, \"Some description\")")))
+  (is (nil? (re-matches arch/call-re "abs *-up- online"))))
+
+(deftest quoted-split-test
+  (is (= ["rectangle" "\"Component1\"" "as" "c1" "<<$aComponent>>"]
+         (arch/quoted-split "rectangle \"Component1\" as c1 <<$aComponent>>")))
+  (is (= ["rectangle" "\"Component 2\"" "as" "c2" "<<$aComponent>>"]
+         (arch/quoted-split "rectangle \"Component 2\" as c2 <<$aComponent>>")))
+  (is (= ["rectangle" "Component3" "as" "c3" "<<$aComponent>>"]
+         (arch/quoted-split "rectangle Component3 as c3 <<$aComponent>>")))
+  (is (= ["skinparam" "rectangle<<sub>>" "{"]
+         (arch/quoted-split "skinparam rectangle<<sub>> {"))))
+
+(deftest get-parts-test
+  (is (= {:parts ["skinparam" "rectangle<<sub>>"] :block? true}
+         (arch/get-parts "skinparam rectangle<<sub>> {")))
+  (is (= {:parts ["skinparam" "rectangle<<sub>>"] :block? true}
+         (arch/get-parts "skinparam rectangle<<sub>>{")))
+  (is (= {:parts ["sprite" "$aCollaboration" "jar:archimate/application-collaboration"] :block? false}
+         (arch/get-parts "sprite $aCollaboration jar:archimate/application-collaboration")))
+  (is (= {:parts ["abs" "*-up-" "online"] :block? false}
+         (arch/get-parts "abs *-up- online")))
+  (is (= {:parts ["Rel_Assignment_Up" "operationsI" "tapeS" nil] :block? false}
+         (arch/get-parts "Rel_Assignment_Up(operationsI, tapeS)")))
+  (is (= {:parts ["Rel_Assignment_Up" "operationsI" "tapeS" "\"Some description\""] :block? false}
+         (arch/get-parts "Rel_Assignment_Up(operationsI, tapeS, \"Some description\")"))))
+
+(deftest rel-b-re-test
+  (is (= ["*--" "*-" "-"] (re-matches arch/rel-b-re "*--")))
+  (is (= ["*-up-" "*-" "-"] (re-matches arch/rel-b-re "*-up-")))
+  (is (= ["<|.down." "<|." "."] (re-matches arch/rel-b-re "<|.down.")))
+  (is (= ["---left--#" "---" "--#"] (re-matches arch/rel-b-re "---left--#")))
+  (is (= ["-----#" "----" "-#"] (re-matches arch/rel-b-re "-----#"))))
+
+(deftest pin-re-test
+  (is (= ["<|.." "<|" ".." ""] (re-matches arch/pin-re "<|..")))
+  (is (= ["-----#" "" "-----" "#"] (re-matches arch/pin-re "-----#")))
+  (is (= ["----" "" "----" ""] (re-matches arch/pin-re "----"))))
+
+(deftest b-matches-test
+  (is (= {:type :composition :reverse? true :raw "---left--*" :cut "--*"}
+         (arch/b-matches "---left--*")))
+  (is (= {:type :unknown :raw "---left--#" :cut "--#"}
+         (arch/b-matches "---left--#")))
+  (is (= {:type :unknown :raw "<|.down." :cut "<|.."}
+         (arch/b-matches "<|.down.")))
+  (is (= {:type :unknown :raw "<|.." :cut "<|.."}
+         (arch/b-matches "<|..")))
+  (is (= {:type :specialization :raw "--down-|>" :cut "--|>"}
+         (arch/b-matches "--down-|>")))
+  (is (= {:type :specialization :raw "--|>" :cut "--|>"}
+         (arch/b-matches "--|>")))
+  (is (nil? (arch/b-matches "hello"))))
+
+(deftest match-rel-test
+  (is (= {:type :assignment :from "A" :to "B" :desc "desc"}
+         (arch/match-rel ["Rel_Assignment" "A" "B" "desc"])))
+  (is (= {:type :assignment :from "A" :to "B" :desc "desc"}
+         (arch/match-rel ["Rel_Assignment_Up" "A" "B" "desc"])))
+  (is (= {:type :serving :raw "-->" :cut "-->" :desc nil :from "A" :to "B"}
+         (arch/match-rel ["A" "-->" "B" nil])))
+  (is (= {:type :specialization :reverse? true :raw "<|--" :cut "<|--" :desc nil :from "B" :to "A"}
+         (arch/match-rel ["A" "<|--" "B" nil])))
+  (is (= {:type :unknown :raw ".." :cut ".." :desc nil :from "A" :to "B"}
+         (arch/match-rel ["A" ".." "B" nil])))
+  (is (= {:type :unknown :from "A" :to "B" :desc "desc" :raw "Rel_Some" :cut :some}
+         (arch/match-rel ["Rel_Some" "A" "B" "desc"]))))
+
+(deftest fur-re-test
+  (is (= [["rectangle" "rectangle"] ["<<db>>" "<<db>>"]]
+         (re-seq arch/fur-re "rectangle<<db>>")))
+  (is (= [["<<$aCollaboration>>" "<<$aCollaboration>>"] ["<<platform>>" "<<platform>>"]]
+         (re-seq arch/fur-re "<<$aCollaboration>><<platform>>"))))
+
+(deftest cut-fur-test
+  (is (= ["rectangle" "db"] (arch/cut-fur "rectangle<<db>>")))
+  (is (= ["$aCollaboration" "platform"] (arch/cut-fur "<<$aCollaboration>><<platform>>")))
+  (is (= ["$aCollaboration"] (arch/cut-fur "<<$aCollaboration>>"))))
+
+(deftest cut1-test
+  (is (= "archimate/Archimate" (arch/cut1 "<archimate/Archimate>"))))
+
+(deftest cut2-test
+  (is (= "$aComponent" (arch/cut2 "<<$aComponent>>"))))
+
+(deftest match-block-test
+  (is (= {:body {:line 1} :in [:start]}
+         (arch/match-block {:parts ["@startuml"] :line 1})))
+  (is (= {:body {:line 1} :in [:end]}
+         (arch/match-block {:parts ["@enduml"] :line 1})))
+  (is (= {:body {:line 1} :in [:includes "archimate/Archimate"]}
+         (arch/match-block {:parts ["!include" "<archimate/Archimate>"] :line 1})))
+  (is (= {:body {:line 1 :props [["fontColor" "#eeeeee"]]}
+          :in [:skins "rectangle" "sub"]}
+         (arch/match-block {:parts ["skinparam" "rectangle<<sub>>"] :line 1
+                            :props [["fontColor" "#eeeeee"]]})))
+  (is (= {:body {:line 1 :props [["fontColor" "#eeeeee"]]}
+          :in [:skins :default]}
+         (arch/match-block {:parts ["skinparam"] :line 1
+                            :props [["fontColor" "#eeeeee"]]})))
+  (is (= {:body {:line 1 :kind :application-component}
+          :in [:types "$aComponent"]}
+         (arch/match-block {:parts ["sprite"
+                                    "$aComponent"
+                                    "jar:archimate/application-component"] :line 1})))
+  (is (= {:body {:line 1 :title "X" :type "$aComponent" :skin nil :meta nil}
+          :in [:components "x"]}
+         (arch/match-block {:parts ["rectangle" "X" "as" "x" "<<$aComponent>>"] :line 1})))
+  (is (= {:body {:line 1 :title "X" :type "$aComponent" :skin "pin" :meta nil}
+          :in [:components "x"]}
+         (arch/match-block {:parts ["rectangle"
+                                    "X" "as" "x"
+                                    "<<$aComponent>><<pin>>"] :line 1})))
+  (is (= {:body {:line 1 :title "X" :type "$aComponent" :skin "pin" :meta nil}
+          :in [:components "x"]}
+         (arch/match-block {:parts ["rectangle"
+                                    "X" "as" "x"
+                                    "<<$aComponent>>" "<<pin>>"] :line 1})))
+  (is (= {:body {:line 1 :title "X" :type "$aComponent" :skin "pin" :meta "#Application"}
+          :in [:components "x"]}
+         (arch/match-block {:parts ["rectangle"
+                                    "X" "as" "x"
+                                    "<<$aComponent>><<pin>>" "#Application"] :line 1})))
+  (is (= {:body {:line 1 :title "X" :type "$aComponent" :skin "pin" :meta "#Application"}
+          :in [:components "x"]}
+         (arch/match-block {:parts ["rectangle"
+                                    "X" "as" "x"
+                                    "<<$aComponent>>" "<<pin>>" "#Application"] :line 1})))
+  (is (= {:body {:line 1 :title "X" :type "$aComponent" :skin nil :meta "#Application"}
+          :in [:components "x"]}
+         (arch/match-block {:parts ["rectangle"
+                                    "X" "as" "x"
+                                    "<<$aComponent>>" "#Application"] :line 1})))
+  (is (= {:body {:line 1 :type :composition :raw "*-up-" :cut "*--" :desc nil
+                 :from "manager" :to "docsI"}
+          :in [:relations "manager" "docsI"]}
+         (arch/match-block {:parts ["manager" "*-up-" "docsI"] :line 1})))
+  (is (= {:body {:line 1 :type :assignment :from "profitI" :to "calcS" :desc nil}
+          :in [:relations "profitI" "calcS"]}
+         (arch/match-block {:parts ["Rel_Assignment_Up" "profitI" "calcS" nil] :line 1})))
+  (is (= {:body {:line 1 :parts ["blah"]} :in [:unknowns]}
+         (arch/match-block {:parts ["blah"] :line 1}))))
+
+(deftest possible-components-test
+  (is (= #{:application-collaboration
+           :application-component
+           :application-data-object
+           :application-function
+           :application-interface
+           :application-service
+           :business-actor
+           :business-collaboration
+           :business-event
+           :business-function
+           :business-interaction
+           :business-process
+           :business-role
+           :business-service}
+         arch/possible-components)))
