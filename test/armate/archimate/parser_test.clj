@@ -11,6 +11,10 @@
   (is (nil? (re-matches arch/call-re "abs *-up- online"))))
 
 (deftest quoted-split-test
+  (is (= ["@startuml"]
+         (arch/quoted-split "@startuml")))
+  (is (= ["@startuml" "\"Какое-то длинное описание\""]
+         (arch/quoted-split "@startuml \"Какое-то длинное описание\"")))
   (is (= ["rectangle" "\"Component1\"" "as" "c1" "<<$aComponent>>"]
          (arch/quoted-split "rectangle \"Component1\" as c1 <<$aComponent>>")))
   (is (= ["rectangle" "\"Component 2\"" "as" "c2" "<<$aComponent>>"]
@@ -111,6 +115,8 @@
 (deftest match-block-test
   (is (= {:body {:line 1} :in [:start]}
          (arch/match-block {:parts ["@startuml"] :line 1})))
+  (is (= {:body {:line 1 :title "Какое-то длинное описание"} :in [:start]}
+         (arch/match-block {:parts ["@startuml" "\"Какое-то длинное описание\""] :line 1})))
   (is (= {:body {:line 1} :in [:end]}
          (arch/match-block {:parts ["@enduml"] :line 1})))
   (is (= {:body {:line 1} :in [:includes "archimate/Archimate"]}
