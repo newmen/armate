@@ -322,8 +322,12 @@
                         (update-in in merge bd))
                     (assoc-in ctx in bd)))
         lint-ctx (fn [ctx bd checks]
-                   (reduce (fn [cx [check [level kind]]]
-                             (if (check) (add-err cx level kind bd) cx))
+                   (reduce (fn [cx [check [level kind] ctx-extra-check]]
+                             (if (and (or (not ctx-extra-check)
+                                          (ctx-extra-check cx))
+                                      (check))
+                               (add-err cx level kind bd)
+                               cx))
                            ctx
                            checks))]
     (case context-key
@@ -374,7 +378,12 @@
                                       (not (contains? (get-in possible-connections
                                                               [from-kind to-kind])
                                                       type)))
-                                [:warn :unspecified-relation-type]]
+                                [:warn :unspecified-relation-type]
+                                (fn [ctx]
+                                  (let [ll (last (:lints ctx))]
+                                    (not (and (= in (:in ll))
+                                              (#{:undefined-relation-from
+                                                 :undefined-relation-to} (:kind ll))))))]
                                [#(get-in context [:relations to from])
                                 [:warn :relation-between-components-already-present]]]
                        linted-ctx (lint-ctx context body2 checks)]

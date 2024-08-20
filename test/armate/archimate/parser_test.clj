@@ -226,6 +226,33 @@ c1 " rel " c2
                   :from :application-component
                   :to :application-component}}]
          (arch/lint-content (make-content "->"))))
+  (is (= [{:level :error
+           :kind :undefined-relation-from
+           :in [:relations "c3" "c2"]
+           :body {:line 16 :type :composition :raw "*-"
+                  :from "c3" :to :application-component}}]
+         (arch/lint-content (s/replace (make-content "*-") "c1 *- c2" "c3 *- c2"))))
+  (is (= [{:level :error
+           :kind :undefined-relation-to
+           :in [:relations "c1" "c3"]
+           :body {:line 16 :type :composition :raw "*-"
+                  :from :application-component :to "c3"}}]
+         (arch/lint-content (s/replace (make-content "*-") "c1 *- c2" "c1 *- c3"))))
+  (is (= [{:level :error
+           :kind :undefined-relation-from
+           :in [:relations "c3" "c4"]
+           :body {:line 16 :type :composition :raw "*-" :from "c3" :to "c4"}}
+          {:level :error
+           :kind :undefined-relation-to
+           :in [:relations "c3" "c4"]
+           :body {:line 16 :type :composition :raw "*-" :from "c3" :to "c4"}}]
+         (arch/lint-content (s/replace (make-content "*-") "c1 *- c2" "c3 *- c4"))))
+  (is (= [{:level :warn
+           :kind :relation-between-components-already-present
+           :in [:relations "c2" "c1"]
+           :body {:line 17 :type :composition :raw "-*" :reverse? true
+                  :from :application-component :to :application-component}}]
+         (arch/lint-content (s/replace (make-content "*-") "c1 *- c2" "c1 *- c2\nc1 -* c2"))))
   (is (= [{:level :warn :kind :missing-start}
           {:level :warn :kind :missing-end}]
          (arch/lint-content (s/replace (make-content "*-") #"@\w+" ""))))
