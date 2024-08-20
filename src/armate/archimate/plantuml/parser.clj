@@ -298,38 +298,47 @@
   (set (concat (keys possible-connections)
                (mapcat keys (vals possible-connections)))))
 
+(defn dissoc-if-nil
+  [hm & ks]
+  (apply dissoc hm (filter #(nil? (hm %)) ks)))
+
 (defn append-block
   [context block]
   (let [matched-block (match-block block)
         body (:body matched-block)
         in (:in matched-block)
         context-key (first in)
-        err (fn [level kind] {:level level :kind kind :in in :body body})
-        add-err (fn [ctx level kind]
-                  (update ctx :lints conj (err level kind)))
-        add-ctx (fn [ctx]
+        err (fn [level kind bd]
+              {:level level
+               :kind kind
+               :in in
+               :body bd})
+        add-err (fn [ctx level kind bd]
+                  (update ctx :lints conj (err level kind bd)))
+        add-ctx (fn [ctx bd]
                   (if (get-in ctx in)
                     (-> ctx
-                        (add-err :error :duplicate)
-                        (update-in in merge body))
-                    (assoc-in ctx in body)))
-        lint-ctx (fn [ctx checks]
+                        (add-err :error :duplicate bd)
+                        (update-in in merge bd))
+                    (assoc-in ctx in bd)))
+        lint-ctx (fn [ctx bd checks]
                    (reduce (fn [cx [check [level kind]]]
-                             (if (check) (add-err cx level kind) cx))
+                             (if (check) (add-err cx level kind bd) cx))
                            ctx
                            checks))]
     (case context-key
-      :unknown (add-err context :error :unknown)
-      (:start :end :includes :skins) (add-ctx context)
+      :unknown (add-err context :error :unknown body)
+      (:start :end :includes :skins) (add-ctx context body)
       :types (if (possible-components (:kind body))
-               (add-ctx context)
+               (add-ctx context body)
                (-> context
-                   (add-err :warn :unsupporting-component-type)
-                   (add-ctx)))
+                   (add-err :warn :unsupporting-component-type body)
+                   (add-ctx body)))
       :components (let [{type :type
                          skin :skin
                          meta :meta} body
                         kind (get-in context [:types type :kind])
+                        body2 (assoc body :kind kind)
                         checks (remove (comp nil? first)
                                        [[(when meta
                                            #(not (#{"#Application" "#Business"} meta)))
@@ -341,9 +350,8 @@
                                          [:warn :undefined-component-skin]]
                                         [#(nil? kind)
                                          [:error :undefined-component-type]]])
-                        linted-ctx (lint-ctx context checks)]
-                    (-> (add-ctx linted-ctx)
-                        (update-in in assoc :kind kind)))
+                        linted-ctx (lint-ctx context body2 checks)]
+                    (add-ctx linted-ctx body2))
       :relations (let [{from :from
                         to :to
                         type :type} body
@@ -351,6 +359,11 @@
                        to-c (get-in context [:components to])
                        from-kind (:kind from-c)
                        to-kind (:kind to-c)
+                       body2 (-> body
+                                 (assoc :from (or from-kind from))
+                                 (assoc :to (or to-kind to))
+                                 (dissoc :cut)
+                                 (dissoc-if-nil :desc))
                        checks [[#(not (possible-relation-types type))
                                 [:error :undefined-relation-type]]
                                [#(nil? from-c)
@@ -364,8 +377,8 @@
                                 [:warn :unspecified-relation-type]]
                                [#(get-in context [:relations to from])
                                 [:warn :relation-between-components-already-present]]]
-                       linted-ctx (lint-ctx context checks)]
-                   (add-ctx linted-ctx)))))
+                       linted-ctx (lint-ctx context body2 checks)]
+                   (add-ctx linted-ctx body2)))))
 
 (defn finalize
   [context]

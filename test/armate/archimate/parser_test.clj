@@ -212,18 +212,22 @@ c1 " rel " c2
   (is (empty? (arch/lint-content (make-content "*-right-"))))
   (is (empty? (arch/lint-content (make-content "*-down-"))))
   (is (empty? (arch/lint-content (make-content "*-left-"))))
-  (is (= [{:level :error,
-           :kind :undefined-relation-type,
-           :in [:relations "c1" "c2"],
-           :body {:line 16, :type :unknown, :raw ".", :cut ".", :desc nil, :from "c1", :to "c2"}}]
+  (is (= [{:level :error
+           :kind :undefined-relation-type
+           :in [:relations "c1" "c2"]
+           :body {:line 16 :type :unknown :raw "."
+                  :from :application-component
+                  :to :application-component}}]
          (arch/lint-content (make-content "."))))
-  (is (= [{:level :warn,
-           :kind :unspecified-relation-type,
-           :in [:relations "c1" "c2"],
-           :body {:line 16, :type :serving, :raw "->", :cut "->", :desc nil, :from "c1", :to "c2"}}]
+  (is (= [{:level :warn
+           :kind :unspecified-relation-type
+           :in [:relations "c1" "c2"]
+           :body {:line 16 :type :serving :raw "->"
+                  :from :application-component
+                  :to :application-component}}]
          (arch/lint-content (make-content "->"))))
-  (is (= [{:level :warn, :kind :missing-start}
-          {:level :warn, :kind :missing-end}]
+  (is (= [{:level :warn :kind :missing-start}
+          {:level :warn :kind :missing-end}]
          (arch/lint-content (s/replace (make-content "*-") #"@\w+" ""))))
-  (is (= [{:level :warn, :kind :missing-archimate-include}]
+  (is (= [{:level :warn :kind :missing-archimate-include}]
          (arch/lint-content (s/replace (make-content "*-") #"!include.+?\n" "")))))
