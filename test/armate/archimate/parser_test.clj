@@ -45,31 +45,35 @@
   (is (= ["Rel_Access" "Access"]
          (re-matches arch/rel-f-re "Rel_Access"))))
 
-(deftest rel-b-re-test
-  (is (= ["*--" "*-" "-"] (re-matches arch/rel-b-re "*--")))
-  (is (= ["*-up-" "*-" "-"] (re-matches arch/rel-b-re "*-up-")))
-  (is (= ["<|.down." "<|." "."] (re-matches arch/rel-b-re "<|.down.")))
-  (is (= ["---left--#" "---" "--#"] (re-matches arch/rel-b-re "---left--#")))
-  (is (= ["-----#" "----" "-#"] (re-matches arch/rel-b-re "-----#"))))
+(deftest match-rel-b-test
+  (is (= ["*--" "*--" ""] (arch/match-rel-b "*--")))
+  (is (= ["*-" "*-" ""] (arch/match-rel-b "*-")))
+  (is (= ["*-up-" "*-" "-"] (arch/match-rel-b "*-up-")))
+  (is (= ["<|.down." "<|." "."] (arch/match-rel-b "<|.down.")))
+  (is (= ["---left--#" "---" "--#"] (arch/match-rel-b "---left--#")))
+  (is (= ["-----#" "-----" "#"] (arch/match-rel-b "-----#"))))
 
 (deftest pin-re-test
   (is (= ["<|.." "<|" ".." ""] (re-matches arch/pin-re "<|..")))
+  (is (= ["-|>" "" "-" "|>"] (re-matches arch/pin-re "-|>")))
   (is (= ["-----#" "" "-----" "#"] (re-matches arch/pin-re "-----#")))
   (is (= ["----" "" "----" ""] (re-matches arch/pin-re "----"))))
 
 (deftest b-matches-test
-  (is (= {:type :composition :reverse? true :raw "---left--*" :cut "--*"}
+  (is (= {:type :composition :reverse? true :raw "---left--*" :cut "-*"}
          (arch/b-matches "---left--*")))
-  (is (= {:type :unknown :raw "---left--#" :cut "--#"}
+  (is (= {:type :unknown :raw "---left--#" :cut "-#"}
          (arch/b-matches "---left--#")))
-  (is (= {:type :unknown :raw "<|.down." :cut "<|.."}
+  (is (= {:type :unknown :raw "<|.down." :cut "<|."}
          (arch/b-matches "<|.down.")))
-  (is (= {:type :unknown :raw "<|.." :cut "<|.."}
+  (is (= {:type :unknown :raw "<|.." :cut "<|."}
          (arch/b-matches "<|..")))
-  (is (= {:type :specialization :raw "--down-|>" :cut "--|>"}
+  (is (= {:type :specialization :raw "--down-|>" :cut "-|>"}
          (arch/b-matches "--down-|>")))
-  (is (= {:type :specialization :raw "--|>" :cut "--|>"}
+  (is (= {:type :specialization :raw "--|>" :cut "-|>"}
          (arch/b-matches "--|>")))
+  (is (= {:type :specialization :raw "-|>" :cut "-|>"}
+         (arch/b-matches "-|>")))
   (is (nil? (arch/b-matches "hello"))))
 
 (deftest match-rel-test
@@ -77,11 +81,11 @@
          (arch/match-rel ["Rel_Assignment" "A" "B" "desc"])))
   (is (= {:type :assignment :from "A" :to "B" :desc "desc"}
          (arch/match-rel ["Rel_Assignment_Up" "A" "B" "desc"])))
-  (is (= {:type :serving :raw "-->" :cut "-->" :desc nil :from "A" :to "B"}
+  (is (= {:type :serving :raw "-->" :cut "->" :desc nil :from "A" :to "B"}
          (arch/match-rel ["A" "-->" "B" nil])))
-  (is (= {:type :specialization :reverse? true :raw "<|--" :cut "<|--" :desc nil :from "B" :to "A"}
+  (is (= {:type :specialization :reverse? true :raw "<|--" :cut "<|-" :desc nil :from "B" :to "A"}
          (arch/match-rel ["A" "<|--" "B" nil])))
-  (is (= {:type :unknown :raw ".." :cut ".." :desc nil :from "A" :to "B"}
+  (is (= {:type :unknown :raw ".." :cut "." :desc nil :from "A" :to "B"}
          (arch/match-rel ["A" ".." "B" nil])))
   (is (= {:type :unknown :from "A" :to "B" :desc "desc" :raw "Rel_Some" :cut :some}
          (arch/match-rel ["Rel_Some" "A" "B" "desc"]))))
@@ -151,7 +155,7 @@
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>>" "#Application"] :line 1})))
-  (is (= {:body {:line 1 :type :composition :raw "*-up-" :cut "*--" :desc nil
+  (is (= {:body {:line 1 :type :composition :raw "*-up-" :cut "*-" :desc nil
                  :from "manager" :to "docsI"}
           :in [:relations "manager" "docsI"]}
          (arch/match-block {:parts ["manager" "*-up-" "docsI"] :line 1})))

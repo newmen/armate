@@ -99,8 +99,14 @@
 (def rel-f-re
   #"(?i)^Rel_(.+?)(?:_(?:Up|Down|Left|Right))?$")
 
-(def rel-b-re
-  #"(?i)(.*?[\.\-]+)(?:up|down|left|right)?([\.\-]+.*)")
+(def rel-b-res
+  [#"(?i)(.*?\.+)(?:up|down|left|right)(\.+.*)"
+   #"(?i)(.*?-+)(?:up|down|left|right)(-+.*)"
+   #"(.*?[\.\-]+)(.*)"])
+
+(defn match-rel-b
+  [dir-bond]
+  (some #(re-matches % dir-bond) rel-b-res))
 
 (def pin-re
   #"([^\.\-]*)?([\.\-]+)([^\.\-]*)?")
@@ -108,34 +114,34 @@
 (defn match-pos-bond
   [mbond]
   (case mbond
-    (["o" "--" ""]
-     ["O" "--" ""]) {:type :aggregation}
-    (["" "--" "o"]
-     ["" "--" "O"]) {:type :aggregation :reverse? true}
-    ["" "--" ""] {:type :association}
-    ["*" "--" ""] {:type :composition}
-    ["" "--" "*"] {:type :composition :reverse? true}
-    ["" ".." ">>"] {:type :flow}
-    ["<<" ".." ""] {:type :flow :reverse? true}
-    ["" ".." ">"] {:type :influence}
-    ["<" ".." ""] {:type :influence :reverse? true}
-    ["" "--" ">"] {:type :serving}
-    ["<" "--" ""] {:type :serving :reverse? true}
-    (["" "--" "|>"]
-     ["" "--" "^"]) {:type :specialization}
-    (["<|" "--" ""]
-     ["^" "--" ""]) {:type :specialization :reverse? true}
-    ["" "--" ">>"] {:type :triggering}
-    ["<<" "--" ""] {:type :triggering :reverse? true}
+    (["o" \- ""]
+     ["O" \- ""]) {:type :aggregation}
+    (["" \- "o"]
+     ["" \- "O"]) {:type :aggregation :reverse? true}
+    ["" \- ""] {:type :association}
+    ["*" \- ""] {:type :composition}
+    ["" \- "*"] {:type :composition :reverse? true}
+    ["" \. ">>"] {:type :flow}
+    ["<<" \. ""] {:type :flow :reverse? true}
+    ["" \. ">"] {:type :influence}
+    ["<" \. ""] {:type :influence :reverse? true}
+    ["" \- ">"] {:type :serving}
+    ["<" \- ""] {:type :serving :reverse? true}
+    (["" \- "|>"]
+     ["" \- "^"]) {:type :specialization}
+    (["<|" \- ""]
+     ["^" \- ""]) {:type :specialization :reverse? true}
+    ["" \- ">>"] {:type :triggering}
+    ["<<" \- ""] {:type :triggering :reverse? true}
     {:type :unknown}))
 
 (defn b-matches
   [dir-bond]
-  (when-let [matches (re-matches rel-b-re dir-bond)]
+  (when-let [matches (match-rel-b dir-bond)]
     (let [bond (str (second matches) (last matches))
           [_ left body right] (re-matches pin-re bond)
           bc (first body)
-          mbond [left (str bc bc) right]]
+          mbond [left bc right]]
       (assoc (match-pos-bond mbond)
              :raw dir-bond
              :cut (apply str mbond)))))
