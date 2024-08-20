@@ -382,18 +382,18 @@
 
 (defn finalize
   [context]
-  (let [checks [[#(get-in context [:includes "archimate/Archimate"])
-                 [:warn :missing-archimate-include]]
-                [#(:end context)
-                 [:warn :missing-end]]
-                [#(:start context)
-                 [:warn :missing-start]]]]
-    (reduce (fn [ctx [check [level kind]]]
-              (if (not (check))
+  (let [not-checks [[#(get-in context [:includes "archimate/Archimate"])
+                     [:warn :missing-archimate-include]]
+                    [#(:end context)
+                     [:warn :missing-end]]
+                    [#(:start context)
+                     [:warn :missing-start]]]]
+    (reduce (fn [ctx [not-check [level kind]]]
+              (if (not (not-check))
                 (update ctx :lints (partial concat [{:level level :kind kind}]))
                 ctx))
             context
-            checks)))
+            not-checks)))
 
 (defn analyze
   [blocks]
