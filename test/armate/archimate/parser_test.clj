@@ -134,30 +134,42 @@
          (arch/match-block {:parts ["sprite"
                                     "$aComponent"
                                     "jar:archimate/application-component"] :line 1})))
-  (is (= {:body {:line 1 :title "X" :type "$aComponent" :skin nil :meta nil}
+  (is (= {:body {:line 1
+                 :title "X" :type "$aComponent"
+                 :shape "rectangle" :skin nil :meta nil}
           :in [:components "x"]}
          (arch/match-block {:parts ["rectangle" "X" "as" "x" "<<$aComponent>>"] :line 1})))
-  (is (= {:body {:line 1 :title "X" :type "$aComponent" :skin "pin" :meta nil}
+  (is (= {:body {:line 1
+                 :title "X" :type "$aComponent"
+                 :shape "rectangle" :skin "pin" :meta nil}
           :in [:components "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>><<pin>>"] :line 1})))
-  (is (= {:body {:line 1 :title "X" :type "$aComponent" :skin "pin" :meta nil}
+  (is (= {:body {:line 1
+                 :title "X" :type "$aComponent"
+                 :shape "rectangle" :skin "pin" :meta nil}
           :in [:components "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>>" "<<pin>>"] :line 1})))
-  (is (= {:body {:line 1 :title "X" :type "$aComponent" :skin "pin" :meta "#Application"}
+  (is (= {:body {:line 1
+                 :title "X" :type "$aComponent"
+                 :shape "rectangle" :skin "pin" :meta "#Application"}
           :in [:components "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>><<pin>>" "#Application"] :line 1})))
-  (is (= {:body {:line 1 :title "X" :type "$aComponent" :skin "pin" :meta "#Application"}
+  (is (= {:body {:line 1
+                 :title "X" :type "$aComponent"
+                 :shape "rectangle" :skin "pin" :meta "#Application"}
           :in [:components "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>>" "<<pin>>" "#Application"] :line 1})))
-  (is (= {:body {:line 1 :title "X" :type "$aComponent" :skin nil :meta "#Application"}
+  (is (= {:body {:line 1
+                 :title "X" :type "$aComponent"
+                 :shape "rectangle" :skin nil :meta "#Application"}
           :in [:components "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
@@ -208,6 +220,7 @@ rectangle \"Component1\" as c1 <<$aComponent>>
 rectangle \"Component 2\" as c2 <<$aComponent>><<sub>>
 
 c1 " rel " c2
+c1 -[hidden]> c2
 
 @enduml
      "))
