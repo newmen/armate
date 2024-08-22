@@ -39,6 +39,8 @@
          (arch/get-parts "Rel_Assignment_Up(operationsI, tapeS, \"Some description\")"))))
 
 (deftest parse-variables-test
+  (is (= ["$a" "1"]
+         (arch/parse-variable "!$a = 1")))
   (is (= ["a" "1"]
          (arch/parse-variable "!a = 1")))
   (is (= ["a" "123"]
@@ -48,10 +50,22 @@
   (is (= ["abc" "11"]
          (arch/parse-variable "!abc= 11"))))
 
+(deftest mask-variable-test
+  (is (= "\\$a\\b"
+         (arch/mask-variable "$a")))
+  (is (= "\\$\\$a\\b"
+         (arch/mask-variable "$$a")))
+  (is (= "\\$a\\$"
+         (arch/mask-variable "$a$")))
+  (is (= "\\ba\\b"
+         (arch/mask-variable "a"))))
+
 (deftest apply-variables-test
   (is (= "-1- line has variable"
          (arch/apply-variables {"a" "1"
-                                "with" "has"} "-a- line with variable"))))
+                                "with" "has"} "-a- line with variable")))
+  (is (= "a line with 1 variable"
+         (arch/apply-variables {"$a" "1"} "a line with $a variable"))))
 
 (deftest rel-f-re-test
   (is (= ["Rel_Assignment_Up" "Assignment"]
@@ -222,15 +236,15 @@
     (str "
 @startuml
 
-!app = \"jar:archimate/application\"
+!$app = \"jar:archimate/application\"
 !include <archimate/Archimate>
 
 skinparam rectangle<<sub>> {
     backgroundColor #2cc7fe
 }
 
-sprite $aComponent app-component
-sprite $anInterface app-interface
+sprite $aComponent $app-component
+sprite $anInterface $app-interface
 
 rectangle \"Component1\" as c1 <<$aComponent>>
 rectangle \"Component 2\" as c2 <<$aComponent>><<sub>>
