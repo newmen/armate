@@ -38,6 +38,21 @@
   (is (= {:parts ["Rel_Assignment_Up" "operationsI" "tapeS" "\"Some description\""] :block? false}
          (arch/get-parts "Rel_Assignment_Up(operationsI, tapeS, \"Some description\")"))))
 
+(deftest parse-variables-test
+  (is (= ["a" "1"]
+         (arch/parse-variable "!a = 1")))
+  (is (= ["a" "123"]
+         (arch/parse-variable "!a=123")))
+  (is (= ["a" "11"]
+         (arch/parse-variable "!a =11")))
+  (is (= ["abc" "11"]
+         (arch/parse-variable "!abc= 11"))))
+
+(deftest apply-variables-test
+  (is (= "-1- line has variable"
+         (arch/apply-variables {"a" "1"
+                                "with" "has"} "-a- line with variable"))))
+
 (deftest rel-f-re-test
   (is (= ["Rel_Assignment_Up" "Assignment"]
          (re-matches arch/rel-f-re "Rel_Assignment_Up")))
@@ -207,14 +222,15 @@
     (str "
 @startuml
 
+!app = \"jar:archimate/application\"
 !include <archimate/Archimate>
 
 skinparam rectangle<<sub>> {
     backgroundColor #2cc7fe
 }
 
-sprite $aComponent jar:archimate/application-component
-sprite $anInterface jar:archimate/application-interface
+sprite $aComponent app-component
+sprite $anInterface app-interface
 
 rectangle \"Component1\" as c1 <<$aComponent>>
 rectangle \"Component 2\" as c2 <<$aComponent>><<sub>>
@@ -234,42 +250,42 @@ c1 -[hidden]> c2
   (is (= [{:level :error
            :kind :undefined-relation-type
            :in [:relations "c1" "c2"]
-           :body {:line 16 :type :unknown :raw "."
+           :body {:line 17 :type :unknown :raw "."
                   :from :application-component
                   :to :application-component}}]
          (arch/lint-content (make-content "."))))
   (is (= [{:level :warn
            :kind :unspecified-relation-type
            :in [:relations "c1" "c2"]
-           :body {:line 16 :type :serving :raw "->"
+           :body {:line 17 :type :serving :raw "->"
                   :from :application-component
                   :to :application-component}}]
          (arch/lint-content (make-content "->"))))
   (is (= [{:level :error
            :kind :undefined-relation-from
            :in [:relations "c3" "c2"]
-           :body {:line 16 :type :composition :raw "*-"
+           :body {:line 17 :type :composition :raw "*-"
                   :from "c3" :to :application-component}}]
          (arch/lint-content (s/replace (make-content "*-") "c1 *- c2" "c3 *- c2"))))
   (is (= [{:level :error
            :kind :undefined-relation-to
            :in [:relations "c1" "c3"]
-           :body {:line 16 :type :composition :raw "*-"
+           :body {:line 17 :type :composition :raw "*-"
                   :from :application-component :to "c3"}}]
          (arch/lint-content (s/replace (make-content "*-") "c1 *- c2" "c1 *- c3"))))
   (is (= [{:level :error
            :kind :undefined-relation-from
            :in [:relations "c3" "c4"]
-           :body {:line 16 :type :composition :raw "*-" :from "c3" :to "c4"}}
+           :body {:line 17 :type :composition :raw "*-" :from "c3" :to "c4"}}
           {:level :error
            :kind :undefined-relation-to
            :in [:relations "c3" "c4"]
-           :body {:line 16 :type :composition :raw "*-" :from "c3" :to "c4"}}]
+           :body {:line 17 :type :composition :raw "*-" :from "c3" :to "c4"}}]
          (arch/lint-content (s/replace (make-content "*-") "c1 *- c2" "c3 *- c4"))))
   (is (= [{:level :warn
            :kind :relation-between-components-already-present
            :in [:relations "c2" "c1"]
-           :body {:line 17 :type :composition :raw "-*" :reverse? true
+           :body {:line 18 :type :composition :raw "-*" :reverse? true
                   :from :application-component :to :application-component}}]
          (arch/lint-content (s/replace (make-content "*-") "c1 *- c2" "c1 *- c2\nc1 -* c2"))))
   (is (= [{:level :warn :kind :missing-start}
