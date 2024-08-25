@@ -226,6 +226,7 @@
            :business-function
            :business-interaction
            :business-process
+           :business-product
            :business-role
            :business-service}
          arch/possible-components)))
