@@ -228,7 +228,8 @@
            :business-process
            :business-product
            :business-role
-           :business-service}
+           :business-service
+           :technology-system-software}
          arch/possible-components)))
 
 (deftest lint-content-test
