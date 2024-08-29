@@ -163,40 +163,40 @@
          (arch/match-block {:parts ["sprite"
                                     "$aComponent"
                                     "jar:archimate/application-component"] :line 1})))
-  (is (= {:body {:line 1
+  (is (= {:body {:line 1 :inside []
                  :title "X" :type "$aComponent"
                  :shape "rectangle" :skin nil :meta nil}
           :in [:components "x"]}
          (arch/match-block {:parts ["rectangle" "X" "as" "x" "<<$aComponent>>"] :line 1})))
-  (is (= {:body {:line 1
+  (is (= {:body {:line 1 :inside []
                  :title "X" :type "$aComponent"
                  :shape "rectangle" :skin "pin" :meta nil}
           :in [:components "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>><<pin>>"] :line 1})))
-  (is (= {:body {:line 1
+  (is (= {:body {:line 1 :inside []
                  :title "X" :type "$aComponent"
                  :shape "rectangle" :skin "pin" :meta nil}
           :in [:components "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>>" "<<pin>>"] :line 1})))
-  (is (= {:body {:line 1
+  (is (= {:body {:line 1 :inside []
                  :title "X" :type "$aComponent"
                  :shape "rectangle" :skin "pin" :meta "#Application"}
           :in [:components "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>><<pin>>" "#Application"] :line 1})))
-  (is (= {:body {:line 1
+  (is (= {:body {:line 1 :inside []
                  :title "X" :type "$aComponent"
                  :shape "rectangle" :skin "pin" :meta "#Application"}
           :in [:components "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>>" "<<pin>>" "#Application"] :line 1})))
-  (is (= {:body {:line 1
+  (is (= {:body {:line 1 :inside []
                  :title "X" :type "$aComponent"
                  :shape "rectangle" :skin nil :meta "#Application"}
           :in [:components "x"]}
