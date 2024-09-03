@@ -166,40 +166,40 @@
   (is (= {:body {:line 1 :inside []
                  :title "X" :type "$aComponent"
                  :shape "rectangle" :skin nil :layer nil}
-          :in [:components "x"]}
+          :in [:elements "x"]}
          (arch/match-block {:parts ["rectangle" "X" "as" "x" "<<$aComponent>>"] :line 1})))
   (is (= {:body {:line 1 :inside []
                  :title "X" :type "$aComponent"
                  :shape "rectangle" :skin "pin" :layer nil}
-          :in [:components "x"]}
+          :in [:elements "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>><<pin>>"] :line 1})))
   (is (= {:body {:line 1 :inside []
                  :title "X" :type "$aComponent"
                  :shape "rectangle" :skin "pin" :layer nil}
-          :in [:components "x"]}
+          :in [:elements "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>>" "<<pin>>"] :line 1})))
   (is (= {:body {:line 1 :inside []
                  :title "X" :type "$aComponent"
                  :shape "rectangle" :skin "pin" :layer "#Application"}
-          :in [:components "x"]}
+          :in [:elements "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>><<pin>>" "#Application"] :line 1})))
   (is (= {:body {:line 1 :inside []
                  :title "X" :type "$aComponent"
                  :shape "rectangle" :skin "pin" :layer "#Application"}
-          :in [:components "x"]}
+          :in [:elements "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>>" "<<pin>>" "#Application"] :line 1})))
   (is (= {:body {:line 1 :inside []
                  :title "X" :type "$aComponent"
                  :shape "rectangle" :skin nil :layer "#Application"}
-          :in [:components "x"]}
+          :in [:elements "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>>" "#Application"] :line 1})))
@@ -213,11 +213,10 @@
   (is (= {:body {:line 1 :parts ["blah"]} :in [:unknowns]}
          (arch/match-block {:parts ["blah"] :line 1}))))
 
-(deftest possible-components-test
+(deftest possible-elements-test
   (is (= #{:application-collaboration
            :application-component
            :application-data-object
-           :application-function
            :application-interface
            :application-service
            :business-actor
@@ -230,7 +229,7 @@
            :business-role
            :business-service
            :technology-system-software}
-         arch/possible-components)))
+         arch/possible-elements)))
 
 (deftest lint-content-test
   (defn- make-content
@@ -299,7 +298,7 @@ c1 -[hidden]> c2
            :body {:line 17 :type :composition :raw "*-" :from "c3" :to "c4"}}]
          (arch/lint-content (s/replace (make-content "*-") "c1 *- c2" "c3 *- c4"))))
   (is (= [{:level :warn
-           :kind :relation-between-components-already-present
+           :kind :relation-between-elements-already-present
            :in [:relations "c2" "c1"]
            :body {:line 18 :type :composition :raw "-*" :reverse? true
                   :from :application-component :to :application-component}}]
