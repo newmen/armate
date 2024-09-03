@@ -10,19 +10,31 @@
          (re-matches arch/call-re "Rel_Assignment_Up(operationsI, tapeS, \"Some description\")")))
   (is (nil? (re-matches arch/call-re "abs *-up- online"))))
 
-(deftest quoted-split-test
+(deftest full-line-re-test
+  (is (= ["Rel_Serves(A, \"B\", \"C\", \"D\")" "Rel_Serves" "A" "\"B\"" "\"C\", \"D\"" nil nil]
+         (re-matches arch/full-line-re "Rel_Serves(A, \"B\", \"C\", \"D\")")))
+  (is (= ["Grouping(business_r, \"Бизнес\") #1122f3 {" "Grouping" "business_r" "\"Бизнес\"" nil "#1122f3" "{"]
+         (re-matches arch/full-line-re "Grouping(business_r, \"Бизнес\") #1122f3 {")))
+  (is (nil? (re-matches arch/full-line-re "rectangle \"Получение\nспискa\" as list_as <<$aService>> #Application")))
+  (is (nil? (re-matches arch/full-line-re "accountOptionsService_acp -[hidden]down-> templatesService_acp"))))
+
+(deftest quoted-brackets-split-test
   (is (= ["@startuml"]
-         (arch/quoted-split "@startuml")))
+         (arch/quoted-brackets-split "@startuml")))
   (is (= ["@startuml" "\"Какое-то длинное описание\""]
-         (arch/quoted-split "@startuml \"Какое-то длинное описание\"")))
+         (arch/quoted-brackets-split "@startuml \"Какое-то длинное описание\"")))
   (is (= ["rectangle" "\"Component1\"" "as" "c1" "<<$aComponent>>"]
-         (arch/quoted-split "rectangle \"Component1\" as c1 <<$aComponent>>")))
+         (arch/quoted-brackets-split "rectangle \"Component1\" as c1 <<$aComponent>>")))
   (is (= ["rectangle" "\"Component 2\"" "as" "c2" "<<$aComponent>>"]
-         (arch/quoted-split "rectangle \"Component 2\" as c2 <<$aComponent>>")))
+         (arch/quoted-brackets-split "rectangle \"Component 2\" as c2 <<$aComponent>>")))
   (is (= ["rectangle" "Component3" "as" "c3" "<<$aComponent>>"]
-         (arch/quoted-split "rectangle Component3 as c3 <<$aComponent>>")))
+         (arch/quoted-brackets-split "rectangle Component3 as c3 <<$aComponent>>")))
   (is (= ["skinparam" "rectangle<<sub>>" "{"]
-         (arch/quoted-split "skinparam rectangle<<sub>> {"))))
+         (arch/quoted-brackets-split "skinparam rectangle<<sub>> {")))
+  (is (= ["Rel_Serves" "A" "\"B\"" "\"C\", D"]
+         (arch/quoted-brackets-split "Rel_Serves(A, \"B\", \"C\", D)")))
+  (is (= ["Grouping" "business_r" "\"Бизнес\"" "#1122f3" "{"]
+         (arch/quoted-brackets-split "Grouping(business_r, \"Бизнес\") #1122f3 {"))))
 
 (deftest get-parts-test
   (is (= {:parts ["skinparam" "rectangle<<sub>>"] :block? true}
