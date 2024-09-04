@@ -2,7 +2,8 @@
 
 (defn dissoc-if-nil
   [hm & ks]
-  (apply dissoc hm (filter #(nil? (hm %)) ks)))
+  (apply dissoc hm
+         (filter (comp nil? hm) ks)))
 
 (defn assoc-if-not-nil
   [hm k v]
