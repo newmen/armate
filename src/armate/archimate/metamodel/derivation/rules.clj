@@ -2,8 +2,7 @@
   "Appendix B: Relationships (Normative)
    https://pubs.opengroup.org/architecture/archimate3-doc/ch-relationships-Normative.html
    There are no any restriction rules here, due to this project uses only a subset of ArchiMate 3.2."
-  (:require [clojure.math.combinatorics :as combo]
-            [armate.derivation.viz :as viz]))
+  (:require [clojure.math.combinatorics :as combo]))
 
 (def dependency-rels
   "Ordered by strength from weakest to strongest"
@@ -72,17 +71,6 @@
           structural-rels-strength-rules
           structural-dependency-rels-rules
           structural-dynamic-rels-rules))
-
-(comment
-
-  (count certain-rules)
-
-  (->> certain-rules
-       (filter #(or (= :flow (first (first %)))
-                    (= :flow (first (second %)))))
-       (sort))
-
-  )
   
 (defn- make-specialization-other-rels-rules
   [other-rels]
@@ -141,12 +129,8 @@
 
 (comment
 
+  (count certain-rules)
   (count potential-rules)
   (count potential-group-around-rules)
-
-  (->> potential-group-around-rules
-       (sort-by #(mapv first %))
-       (viz/vizualize)
-       (spit "deriviation.wsd"))
 
   )
