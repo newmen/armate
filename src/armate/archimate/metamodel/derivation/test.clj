@@ -3,19 +3,17 @@
             [armate.derivation.viz :as viz]))
 
 (defn- select-rules
-  [rules prefix rels]
+  [rules rels]
   (->> rules
        (filter #(and (rels (first (first %)))
                      (rels (first (second %)))))
-       (sort-by (partial mapv first))
-       (map (partial vector prefix))))
+       (sort-by (partial mapv first))))
 
 (defn viz-between
   [& rels]
   (let [target (set rels)]
-    (->> (concat (select-rules rs/certain-rules "certain" target)
-                 (select-rules rs/potential-rules "potential" target))
-         (viz/vizualize)
+    (->> (viz/vizualize {:certain (select-rules rs/certain-rules target)
+                         :potential (select-rules rs/potential-rules target)})
          (spit "deriviation.wsd"))))
 
 (comment
