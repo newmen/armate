@@ -4,6 +4,13 @@
    There are no any restriction rules here, due to this project uses only a subset of ArchiMate 3.2."
   (:require [clojure.math.combinatorics :as combo]))
 
+(def structural-rels
+  "Ordered by strength from weakest to strongest"
+  [:realization
+   :assignment
+   :aggregation
+   :composition])
+
 (def dependency-rels
   "Ordered by strength from weakest to strongest"
   [:association
@@ -19,16 +26,10 @@
   [:triggering
    :flow])
 
-(def structural-rels
-  "Ordered by strength from weakest to strongest"
-  [:realization
-   :assignment
-   :aggregation
-   :composition])
-
 (def ^:private transitive-rels
   "According with DR1 and DR8"
-  [:specialization
+  [:association ;; own extension for the current local model
+   :specialization
    :triggering])
 
 (def ^:private structural-rels-strength-rules

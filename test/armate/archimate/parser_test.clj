@@ -240,6 +240,9 @@
            :business-product
            :business-role
            :business-service
+           :technology-collaboration
+           :technology-node
+           :technology-path
            :technology-system-software}
          arch/possible-elements)))
 
