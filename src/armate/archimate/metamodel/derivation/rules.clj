@@ -32,11 +32,23 @@
    :specialization
    :triggering])
 
+(defn get-structural-index
+  [rel]
+  (.indexOf structural-rels rel))
+
+(defn get-dependency-index
+  [rel]
+  (.indexOf dependency-rels rel))
+
+(defn get-dynamic-index
+  [rel]
+  (.indexOf dynamic-rels rel))
+
 (def ^:private structural-rels-strength-rules
   "According with DR2"
   (->> (combo/permuted-combinations structural-rels 2)
        (map (fn [[rel1 rel2]]
-              [[rel1 :a :b] [rel2 :b :c] [(min-key #(.indexOf structural-rels %) rel1 rel2) :a :c]]))))
+              [[rel1 :a :b] [rel2 :b :c] [(min-key get-structural-index rel1 rel2) :a :c]]))))
 
 (defn- make-front-structural-other-rels-rules
   [other-rels]
@@ -101,7 +113,7 @@
   (->> (combo/permuted-combinations dependency-rels 2)
        (remove #(= #{:access_r :access_w} (set %)))
        (map (fn [[rel1 rel2]]
-              [[rel1 :a :b] [rel2 :b :c] [(min-key #(.indexOf dependency-rels %) rel1 rel2) :a :c]]))))
+              [[rel1 :a :b] [rel2 :b :c] [(min-key get-dependency-index rel1 rel2) :a :c]]))))
 
 (def ^:private potential-dynamic-rels-rules
   "According with PDR8, PDR9, PDR10 and PDR11"

@@ -17,10 +17,12 @@
          (spit "deriviation.wsd"))))
 
 (comment
-  
+
+  (select-rules rs/certain-rules #{:serving :assignment :realization :flow})
+
   (viz-between :assignment :serving)
 
   (->> (viz/vizualize rs/certain-rules)
        (spit "deriviation.wsd"))
-  
+
   )
