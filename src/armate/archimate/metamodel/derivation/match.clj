@@ -63,25 +63,30 @@
                         (map (fn [[to rel]]
                                [from to (:type rel)]))))))))
 
+(defn check-rule
+  [rule]
+  (let [[[_ f1 t1] [_ f2 t2] [_ fr tr]] rule]
+    (assert (not= f1 t1))
+    (assert (not= f2 t2))
+    (assert (not= fr tr))
+    (assert (or (and (= f1 f2) (not= t1 t2))
+                (and (= f1 t2) (not= t1 f2))
+                (and (= t1 f2) (not= f1 t2))
+                (and (= t1 t2) (not= f1 f2))))
+    (assert (or (and (= f1 fr) (not= t1 tr))
+                (and (= f1 tr) (not= t1 fr))
+                (and (= t1 fr) (not= f1 tr))
+                (and (= t1 tr) (not= f1 fr))))
+    (assert (or (and (= f2 fr) (not= t2 tr))
+                (and (= f2 tr) (not= t2 fr))
+                (and (= t2 fr) (not= f2 tr))
+                (and (= t2 tr) (not= f2 fr))))
+    rule))
+
 (defn match-rule
   [from to
    iter-map
-   [[_ f1 t1] [next-rel f2 t2] [result-rel fr tr]]]
-  {:pre [(not= f1 t1)
-         (not= f2 t2)
-         (not= fr tr)
-         (or (and (= f1 f2) (not= t1 t2))
-             (and (= f1 t2) (not= t1 f2))
-             (and (= t1 f2) (not= f1 t2))
-             (and (= t1 t2) (not= f1 f2)))
-         (or (and (= f1 fr) (not= t1 tr))
-             (and (= f1 tr) (not= t1 fr))
-             (and (= t1 fr) (not= f1 tr))
-             (and (= t1 tr) (not= f1 fr)))
-         (or (and (= f2 fr) (not= t2 tr))
-             (and (= f2 tr) (not= t2 fr))
-             (and (= t2 fr) (not= f2 tr))
-             (and (= t2 tr) (not= f2 fr)))]}
+   [[_ f1 t1] [next-rel f2 _] [result-rel fr tr]]]
   (let [{forward-graph :forward-graph
          reverse-graph :reverse-graph} iter-map
         relation {:type result-rel}
@@ -152,6 +157,7 @@
 
 (defn derivate-rules
   [rules source-graph]
+  (doseq [rule rules] (check-rule rule))
   (loop [graph source-graph
          derivated-graph {}]
     (let [next-derivated-graph (derivate-rules-once rules graph)]
