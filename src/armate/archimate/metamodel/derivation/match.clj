@@ -35,6 +35,18 @@
              {}
              graph))
 
+(defn get-relationships
+  ([graph]
+   (get-relationships identity graph))
+  ([prepare graph]
+   (get-relationships prepare :type graph))
+  ([prepare rel-key graph]
+   (->> (prepare graph)
+        (mapcat (fn [[from nbrs]]
+                  (->> (prepare nbrs)
+                       (map (fn [[to rel]]
+                              [from to (rel-key rel)]))))))))
+
 (defn get-weights
   [graph]
   (let [source-weights (->> graph
@@ -52,16 +64,11 @@
                         [(wth node) (reduce + (map (comp wth first) nbrs))]))))
          (into {}))))
 
-(defn get-relationships
+(defn get-prioritized-relationships
   [graph]
   (let [weights (get-weights graph)]
-    (->> graph
-         (sort-by (comp weights first))
-         (mapcat (fn [[from nbrs]]
-                   (->> nbrs
-                        (sort-by (comp #(weights % [0 0]) first))
-                        (map (fn [[to rel]]
-                               [from to (:type rel)]))))))))
+    (get-relationships (partial sort-by (comp #(weights % [0 0]) first))
+                       graph)))
 
 (defn check-rule
   [rule]
@@ -132,13 +139,13 @@
                        (get-in reverse-graph [from node3]))))
          (reduce append iter-map))))
 
-(defn derivate-rules-once
+(defn derivate-relationships-once
   [rules graph]
   (let [rules-map (make-rules-map rules)]
     (loop [forward-graph graph
            reverse-graph (reverse-graph graph)
            derivated-graph {}
-           relations (get-relationships graph)]
+           relations (get-prioritized-relationships graph)]
       (if (empty? relations)
         derivated-graph
         (let [relation (first relations)
@@ -155,12 +162,12 @@
                  (concat (rest relations)
                          (:derivated-relations iter-map))))))))
 
-(defn derivate-rules
+(defn derivate-relationships
   [rules source-graph]
   (doseq [rule rules] (check-rule rule))
   (loop [graph source-graph
          derivated-graph {}]
-    (let [next-derivated-graph (derivate-rules-once rules graph)]
+    (let [next-derivated-graph (derivate-relationships-once rules graph)]
       (if (empty? next-derivated-graph)
         derivated-graph
         (recur (merge-with merge graph next-derivated-graph)

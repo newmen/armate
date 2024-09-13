@@ -60,6 +60,20 @@
          (mch/get-weights graph0))))
 
 (deftest get-relationships-test
+  (is (= #{["partner_br" "configureTurnstile_bp" :assignment]
+           ["partner_br" "controlFood_bp" :assignment]
+           ["child_ba" "client_br" :assignment]
+           ["client_br" "fillForm_bp" :assignment]
+           ["controlFood_bp" "food_bs" :realization]
+           ["configureTurnstile_bp" "pass_bs" :realization]
+           ["getRegistry_bf" "registry_bs" :realization]
+           ["registry_bs" "partner_br" :serving]
+           ["food_bs" "child_ba" :serving]
+           ["pass_bs" "child_ba" :serving]
+           ["fillForm_bp" "getRegistry_bf" :flow]}
+         (set (mch/get-relationships graph0)))))
+
+(deftest get-prioritized-relationships-test
   (is (= [["partner_br" "configureTurnstile_bp" :assignment]
           ["partner_br" "controlFood_bp" :assignment]
           ["child_ba" "client_br" :assignment]
@@ -71,9 +85,9 @@
           ["food_bs" "child_ba" :serving]
           ["pass_bs" "child_ba" :serving]
           ["fillForm_bp" "getRegistry_bf" :flow]]
-         (mch/get-relationships graph0))))
+         (mch/get-prioritized-relationships graph0))))
 
-(deftest derivate-rules-once-test
+(deftest derivate-relationships-once-test
   (is (= {"partner_br" {"pass_bs" {:type :realization}
                         "food_bs" {:type :realization}
                         "child_ba" {:type :serving}}
@@ -81,7 +95,7 @@
           "controlFood_bp" {"child_ba" {:type :serving}}
           "configureTurnstile_bp" {"child_ba" {:type :serving}}
           "getRegistry_bf" {"partner_br" {:type :serving}}}
-         (mch/derivate-rules-once rs/certain-rules graph0)))
+         (mch/derivate-relationships-once rs/certain-rules graph0)))
   (is (= {"registry_bs" {"configureTurnstile_bp" {:type :serving}
                          "controlFood_bp" {:type :serving}
                          "pass_bs" {:type :serving}
@@ -91,9 +105,9 @@
           "pass_bs" {"client_br" {:type :serving}
                      "fillForm_bp" {:type :serving}}
           "fillForm_bp" {"registry_bs" {:type :flow}}}
-         (mch/derivate-rules-once rs/potential-rules graph0))))
+         (mch/derivate-relationships-once rs/potential-rules graph0))))
 
-(deftest derivate-rules-test
+(deftest derivate-relationships-test
   (is (= {"partner_br" {"pass_bs" {:type :realization}
                         "food_bs" {:type :realization}
                         "child_ba" {:type :serving}}
@@ -102,8 +116,8 @@
           "configureTurnstile_bp" {"child_ba" {:type :serving}}
           "getRegistry_bf" {"partner_br" {:type :serving}}
           "child_ba" {"getRegistry_bf" {:type :flow}}}
-         (mch/derivate-rules rs/certain-rules graph0)))
-  (is (not= (mch/derivate-rules-once rs/certain-rules graph0)
-            (mch/derivate-rules rs/certain-rules graph0)))
-  (is (= (mch/derivate-rules-once rs/potential-rules graph0)
-         (mch/derivate-rules rs/potential-rules graph0))))
+         (mch/derivate-relationships rs/certain-rules graph0)))
+  (is (not= (mch/derivate-relationships-once rs/certain-rules graph0)
+            (mch/derivate-relationships rs/certain-rules graph0)))
+  (is (= (mch/derivate-relationships-once rs/potential-rules graph0)
+         (mch/derivate-relationships rs/potential-rules graph0))))
