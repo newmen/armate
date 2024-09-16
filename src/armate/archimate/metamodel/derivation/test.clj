@@ -20,7 +20,7 @@
 
   (select-rules rs/certain-rules #{:serving :assignment :realization :flow})
 
-  (viz-between :assignment :serving)
+  (viz-between :access_w :assignment)
 
   (->> (viz/vizualize rs/certain-rules)
        (spit "deriviation.wsd"))

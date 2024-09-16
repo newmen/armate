@@ -241,6 +241,7 @@
            :business-role
            :business-service
            :technology-collaboration
+           :technology-interaction
            :technology-node
            :technology-path
            :technology-system-software}
