@@ -93,50 +93,44 @@
 (defn match-rule
   [from to
    iter-map
-   [[_ f1 t1] [next-rel f2 _] [result-rel fr tr]]]
+   [[_ f1 t1] [next-rel f2 t2] [result-rel fr tr]]]
   (let [{forward-graph :forward-graph
          reverse-graph :reverse-graph} iter-map
         relation {:type result-rel}
+        check-relation (fn [f t]
+                         (or (get-in forward-graph [f t])
+                             (get-in reverse-graph [f t])))
+        add-relation (fn [acc f t]
+                       (-> acc
+                           (assoc-in [:forward-graph f t] relation)
+                           (assoc-in [:reverse-graph t f] relation)
+                           (assoc-in [:derivated-graph f t] relation)
+                           (update :derivated-relations conj [f t result-rel])))
+        exists? (if (#{f2 t2} f1)
+                  (partial check-relation to)
+                  (partial check-relation from))
         append (if (= f1 fr)
-                 (fn [acc node3]
-                   (-> acc
-                       (assoc-in [:forward-graph from node3] relation)
-                       (assoc-in [:reverse-graph node3 from] relation)
-                       (assoc-in [:derivated-graph from node3] relation)
-                       (update :derivated-relations conj [from node3 result-rel])))
+                 #(add-relation %1 from %2)
                  (if (= f1 tr)
-                   (fn [acc node3]
-                     (-> acc
-                         (assoc-in [:forward-graph node3 from] relation)
-                         (assoc-in [:reverse-graph from node3] relation)
-                         (assoc-in [:derivated-graph node3 from] relation)
-                         (update :derivated-relations conj [node3 from result-rel])))
+                   #(add-relation %1 %2 from)
                    (if (= t1 fr)
-                     (fn [acc node3]
-                       (-> acc
-                           (assoc-in [:forward-graph to node3] relation)
-                           (assoc-in [:reverse-graph node3 to] relation)
-                           (assoc-in [:derivated-graph to node3] relation)
-                           (update :derivated-relations conj [to node3 result-rel])))
+                     #(add-relation %1 to %2)
                      ; (= t1 tr)
-                     (fn [acc node3]
-                       (-> acc
-                           (assoc-in [:forward-graph node3 to] relation)
-                           (assoc-in [:reverse-graph to node3] relation)
-                           (assoc-in [:derivated-graph node3 to] relation)
-                           (update :derivated-relations conj [node3 to result-rel]))))))]
+                     #(add-relation %1 %2 to))))]
     (->> (if (= f1 f2)
            (-> (forward-graph from)
                (dissoc to))
-           (-> (if (= t1 f2)
-                 (forward-graph to)
-                 (reverse-graph to))
-               (dissoc from)))
+           (if (= f1 t2)
+             (-> (reverse-graph from)
+                 (dissoc to))
+             (-> (if (= t1 f2)
+                   (forward-graph to)
+                   ; (= t1 t2)
+                   (reverse-graph to))
+                 (dissoc from))))
          (filter (comp (partial = next-rel) :type second))
          (map first)
-         (remove (fn [node3]
-                   (or (get-in forward-graph [from node3])
-                       (get-in reverse-graph [from node3]))))
+         (remove exists?)
          (reduce append iter-map))))
 
 (defn derivate-relationships-once
