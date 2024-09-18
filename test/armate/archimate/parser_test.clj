@@ -248,16 +248,17 @@
          arch/possible-elements)))
 
 (deftest lint-content-test
-  (defn- make-content
-    [rel]
-    (str "
+  (letfn [(lint-content [content]
+            (:lints (arch/analyze (arch/get-blocks content))))
+          (make-content [rel]
+            (str "
 @startuml
 
 !$app = \"jar:archimate/application\"
 !include <archimate/Archimate>
 
 skinparam rectangle<<sub>> {
-    backgroundColor #2cc7fe
+  backgroundColor #2cc7fe
 }
 
 sprite $aComponent $app-component
@@ -269,58 +270,57 @@ rectangle \"Component 2\" as c2 <<$aComponent>><<sub>>
 c1 " rel " c2
 c1 -[hidden]> c2
 
-@enduml
-     "))
+@enduml"))]
 
-  (is (empty? (arch/lint-content (make-content "*-"))))
-  (is (empty? (arch/lint-content (make-content "*--"))))
-  (is (empty? (arch/lint-content (make-content "*-up-"))))
-  (is (empty? (arch/lint-content (make-content "*-right-"))))
-  (is (empty? (arch/lint-content (make-content "*-down-"))))
-  (is (empty? (arch/lint-content (make-content "*-left-"))))
-  (is (= [{:level :error
-           :kind :undefined-relation-type
-           :in [:relations "c1" "c2"]
-           :body {:line 17 :type :unknown :raw "."
-                  :from :application-component
-                  :to :application-component}}]
-         (arch/lint-content (make-content "."))))
-  (is (= [{:level :warn
-           :kind :unspecified-relation-type
-           :in [:relations "c1" "c2"]
-           :body {:line 17 :type :serving :raw "->"
-                  :from :application-component
-                  :to :application-component}}]
-         (arch/lint-content (make-content "->"))))
-  (is (= [{:level :error
-           :kind :undefined-relation-from
-           :in [:relations "c3" "c2"]
-           :body {:line 17 :type :composition :raw "*-"
-                  :from "c3" :to :application-component}}]
-         (arch/lint-content (s/replace (make-content "*-") "c1 *- c2" "c3 *- c2"))))
-  (is (= [{:level :error
-           :kind :undefined-relation-to
-           :in [:relations "c1" "c3"]
-           :body {:line 17 :type :composition :raw "*-"
-                  :from :application-component :to "c3"}}]
-         (arch/lint-content (s/replace (make-content "*-") "c1 *- c2" "c1 *- c3"))))
-  (is (= [{:level :error
-           :kind :undefined-relation-from
-           :in [:relations "c3" "c4"]
-           :body {:line 17 :type :composition :raw "*-" :from "c3" :to "c4"}}
-          {:level :error
-           :kind :undefined-relation-to
-           :in [:relations "c3" "c4"]
-           :body {:line 17 :type :composition :raw "*-" :from "c3" :to "c4"}}]
-         (arch/lint-content (s/replace (make-content "*-") "c1 *- c2" "c3 *- c4"))))
-  (is (= [{:level :warn
-           :kind :relation-between-elements-already-present
-           :in [:relations "c2" "c1"]
-           :body {:line 18 :type :composition :raw "-*" :reverse? true
-                  :from :application-component :to :application-component}}]
-         (arch/lint-content (s/replace (make-content "*-") "c1 *- c2" "c1 *- c2\nc1 -* c2"))))
-  (is (= [{:level :warn :kind :missing-start}
-          {:level :warn :kind :missing-end}]
-         (arch/lint-content (s/replace (make-content "*-") #"@\w+" ""))))
-  (is (= [{:level :warn :kind :missing-archimate-include}]
-         (arch/lint-content (s/replace (make-content "*-") #"!include.+?\n" "")))))
+    (is (empty? (lint-content (make-content "*-"))))
+    (is (empty? (lint-content (make-content "*--"))))
+    (is (empty? (lint-content (make-content "*-up-"))))
+    (is (empty? (lint-content (make-content "*-right-"))))
+    (is (empty? (lint-content (make-content "*-down-"))))
+    (is (empty? (lint-content (make-content "*-left-"))))
+    (is (= [{:level :error
+             :kind :undefined-relation-type
+             :in [:relations "c1" "c2"]
+             :body {:line 17 :type :unknown :raw "."
+                    :from :application-component
+                    :to :application-component}}]
+           (lint-content (make-content "."))))
+    (is (= [{:level :warn
+             :kind :unspecified-relation-type
+             :in [:relations "c1" "c2"]
+             :body {:line 17 :type :serving :raw "->"
+                    :from :application-component
+                    :to :application-component}}]
+           (lint-content (make-content "->"))))
+    (is (= [{:level :error
+             :kind :undefined-relation-from
+             :in [:relations "c3" "c2"]
+             :body {:line 17 :type :composition :raw "*-"
+                    :from "c3" :to :application-component}}]
+           (lint-content (s/replace (make-content "*-") "c1 *- c2" "c3 *- c2"))))
+    (is (= [{:level :error
+             :kind :undefined-relation-to
+             :in [:relations "c1" "c3"]
+             :body {:line 17 :type :composition :raw "*-"
+                    :from :application-component :to "c3"}}]
+           (lint-content (s/replace (make-content "*-") "c1 *- c2" "c1 *- c3"))))
+    (is (= [{:level :error
+             :kind :undefined-relation-from
+             :in [:relations "c3" "c4"]
+             :body {:line 17 :type :composition :raw "*-" :from "c3" :to "c4"}}
+            {:level :error
+             :kind :undefined-relation-to
+             :in [:relations "c3" "c4"]
+             :body {:line 17 :type :composition :raw "*-" :from "c3" :to "c4"}}]
+           (lint-content (s/replace (make-content "*-") "c1 *- c2" "c3 *- c4"))))
+    (is (= [{:level :warn
+             :kind :relation-between-elements-already-present
+             :in [:relations "c2" "c1"]
+             :body {:line 18 :type :composition :raw "-*" :reverse? true
+                    :from :application-component :to :application-component}}]
+           (lint-content (s/replace (make-content "*-") "c1 *- c2" "c1 *- c2\nc1 -* c2"))))
+    (is (= [{:level :warn :kind :missing-start}
+            {:level :warn :kind :missing-end}]
+           (lint-content (s/replace (make-content "*-") #"@\w+" ""))))
+    (is (= [{:level :warn :kind :missing-archimate-include}]
+           (lint-content (s/replace (make-content "*-") #"!include.+?\n" ""))))))

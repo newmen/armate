@@ -153,8 +153,8 @@
           (recur (:forward-graph iter-map)
                  (:reverse-graph iter-map)
                  (:derivated-graph iter-map)
-                 (concat (rest relations)
-                         (:derivated-relations iter-map))))))))
+                 (into (rest relations)
+                       (:derivated-relations iter-map))))))))
 
 (defn derivate-relationships
   [rules source-graph]
