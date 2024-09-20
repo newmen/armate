@@ -44,11 +44,16 @@
   [rel]
   (.indexOf dynamic-rels rel))
 
+(defn- make-transitive
+  [rel]
+  [[rel :a :b] [rel :b :c] [rel :a :c]])
+
 (def ^:private structural-rels-strength-rules
   "According with DR2"
   (->> (combo/permuted-combinations structural-rels 2)
        (map (fn [[rel1 rel2]]
-              [[rel1 :a :b] [rel2 :b :c] [(min-key get-structural-index rel1 rel2) :a :c]]))))
+              [[rel1 :a :b] [rel2 :b :c] [(min-key get-structural-index rel1 rel2) :a :c]]))
+       (concat (map make-transitive structural-rels))))
 
 (defn- make-front-structural-other-rels-rules
   [other-rels]
@@ -74,10 +79,6 @@
           (map (fn [structural-rel]
                  [[:triggering :a :b] [structural-rel :b :c] [:triggering :a :c]])
                structural-rels)))
-
-(defn- make-transitive
-  [rel]
-  [[rel :a :b] [rel :b :c] [rel :a :c]])
 
 (def certain-rules
   (concat (map make-transitive transitive-rels)
