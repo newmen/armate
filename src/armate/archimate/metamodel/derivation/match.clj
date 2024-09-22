@@ -3,13 +3,13 @@
 
 (defn get-rel-wieght
   [rel]
-  (let [dynamic-index (rs/get-dynamic-index rel)]
+  (let [dynamic-index (.indexOf rs/dynamic-rels rel)]
     (if-not (neg? dynamic-index)
       (inc dynamic-index)
-      (let [dependency-index (rs/get-dependency-index rel)]
+      (let [dependency-index (.indexOf rs/dependency-rels rel)]
         (if-not (neg? dependency-index)
           (* 10 (inc dependency-index))
-          (let [structural-index (rs/get-structural-index rel)]
+          (let [structural-index (.indexOf rs/structural-rels rel)]
             (if-not (neg? structural-index)
               (* 100 (inc structural-index))
               (if (= :specialization rel)
@@ -97,9 +97,11 @@
   (let [{forward-graph :forward-graph
          reverse-graph :reverse-graph} iter-map
         relation {:type result-rel}
+        checking-graph (if (#{f1 t1} fr)
+                         forward-graph
+                         reverse-graph)
         check-relation (fn [f t]
-                         (or (get-in forward-graph [f t])
-                             (get-in reverse-graph [f t])))
+                         (get-in checking-graph [f t]))
         add-relation (fn [acc f t]
                        (-> acc
                            (assoc-in [:forward-graph f t] relation)
