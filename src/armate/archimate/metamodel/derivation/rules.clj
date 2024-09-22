@@ -26,6 +26,9 @@
   [:triggering
    :flow])
 
+(def other-rels
+  [:specialization])
+
 (def ^:private transitive-rels
   "According with DR1 and DR8"
   [:specialization

@@ -90,6 +90,18 @@
                 (and (= t2 tr) (not= f2 fr))))
     rule))
 
+(def rel-kin-map
+  (reduce (fn [acc group]
+            (reduce (fn [a rel]
+                      (assoc a rel (set group)))
+                    acc
+                    group))
+          {}
+          [rs/structural-rels
+           rs/dependency-rels
+           rs/dynamic-rels
+           rs/other-rels]))
+
 (defn match-rule
   [from to
    iter-map
@@ -97,11 +109,14 @@
   (let [{forward-graph :forward-graph
          reverse-graph :reverse-graph} iter-map
         relation {:type result-rel}
+        kin (rel-kin-map result-rel)
         checking-graph (if (#{f1 t1} fr)
                          forward-graph
                          reverse-graph)
         check-relation (fn [f t]
-                         (get-in checking-graph [f t]))
+                         (-> (get-in checking-graph [f t])
+                             :type
+                             kin))
         add-relation (fn [acc f t]
                        (-> acc
                            (assoc-in [:forward-graph f t] relation)
