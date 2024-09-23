@@ -5,15 +5,15 @@
 
 (def graph0
   {"child_ba" {"client_br" #{{:type :assignment}}}
-   "client_br" {"fillForm_bp" #{{:type :assignment}}}
-   "configureTurnstile_bp" {"pass_bs" #{{:type :realization}}}
-   "controlFood_bp" {"food_bs" #{{:type :realization}}}
-   "fillForm_bp" {"getRegistry_bf" #{{:type :flow}}}
+   "client_br" {"fillForm_bpc" #{{:type :assignment}}}
+   "configureTurnstile_bpc" {"pass_bs" #{{:type :realization}}}
+   "controlFood_bpc" {"food_bs" #{{:type :realization}}}
+   "fillForm_bpc" {"getRegistry_bpc" #{{:type :flow}}}
    "food_bs" {"child_ba" #{{:type :serving}}}
-   "getRegistry_bf" {"registry_bs" #{{:type :realization}}}
+   "getRegistry_bpc" {"registry_bs" #{{:type :realization}}}
    "pass_bs" {"child_ba" #{{:type :serving}}}
-   "partner_br" {"configureTurnstile_bp" #{{:type :assignment}}
-                 "controlFood_bp" #{{:type :assignment}}}
+   "partner_br" {"configureTurnstile_bpc" #{{:type :assignment}}
+                 "controlFood_bpc" #{{:type :assignment}}}
    "registry_bs" {"partner_br" #{{:type :serving}}}})
 
 (deftest get-rel-wieght-test
@@ -36,55 +36,55 @@
   (is (= {"child_ba" {"food_bs" #{{:type :serving}}
                       "pass_bs" #{{:type :serving}}}
           "client_br" {"child_ba" #{{:type :assignment}}}
-          "configureTurnstile_bp" {"partner_br" #{{:type :assignment}}}
-          "controlFood_bp" {"partner_br" #{{:type :assignment}}}
-          "fillForm_bp" {"client_br" #{{:type :assignment}}}
-          "food_bs" {"controlFood_bp" #{{:type :realization}}}
-          "getRegistry_bf" {"fillForm_bp" #{{:type :flow}}}
+          "configureTurnstile_bpc" {"partner_br" #{{:type :assignment}}}
+          "controlFood_bpc" {"partner_br" #{{:type :assignment}}}
+          "fillForm_bpc" {"client_br" #{{:type :assignment}}}
+          "food_bs" {"controlFood_bpc" #{{:type :realization}}}
+          "getRegistry_bpc" {"fillForm_bpc" #{{:type :flow}}}
           "partner_br" {"registry_bs" #{{:type :serving}}}
-          "pass_bs" {"configureTurnstile_bp" #{{:type :realization}}}
-          "registry_bs" {"getRegistry_bf" #{{:type :realization}}}}
+          "pass_bs" {"configureTurnstile_bpc" #{{:type :realization}}}
+          "registry_bs" {"getRegistry_bpc" #{{:type :realization}}}}
          (mch/reverse-graph graph0))))
 
 (deftest get-weights-test
   (is (= {"partner_br" [-400 -200]
           "child_ba" [-200 -200]
           "client_br" [-200 -2]
-          "controlFood_bp" [-100 -70]
-          "configureTurnstile_bp" [-100 -70]
-          "getRegistry_bf" [-100 -70]
+          "controlFood_bpc" [-100 -70]
+          "configureTurnstile_bpc" [-100 -70]
+          "getRegistry_bpc" [-100 -70]
           "registry_bs" [-70 -400]
           "food_bs" [-70 -200]
           "pass_bs" [-70 -200]
-          "fillForm_bp" [-2 -100]}
+          "fillForm_bpc" [-2 -100]}
          (mch/get-weights graph0))))
 
 (deftest get-relationships-test
-  (is (= #{["partner_br" "configureTurnstile_bp" :assignment]
-           ["partner_br" "controlFood_bp" :assignment]
+  (is (= #{["partner_br" "configureTurnstile_bpc" :assignment]
+           ["partner_br" "controlFood_bpc" :assignment]
            ["child_ba" "client_br" :assignment]
-           ["client_br" "fillForm_bp" :assignment]
-           ["controlFood_bp" "food_bs" :realization]
-           ["configureTurnstile_bp" "pass_bs" :realization]
-           ["getRegistry_bf" "registry_bs" :realization]
+           ["client_br" "fillForm_bpc" :assignment]
+           ["controlFood_bpc" "food_bs" :realization]
+           ["configureTurnstile_bpc" "pass_bs" :realization]
+           ["getRegistry_bpc" "registry_bs" :realization]
            ["registry_bs" "partner_br" :serving]
            ["food_bs" "child_ba" :serving]
            ["pass_bs" "child_ba" :serving]
-           ["fillForm_bp" "getRegistry_bf" :flow]}
+           ["fillForm_bpc" "getRegistry_bpc" :flow]}
          (set (mch/get-relationships graph0)))))
 
 (deftest get-prioritized-relationships-test
-  (is (= [["partner_br" "configureTurnstile_bp" :assignment]
-          ["partner_br" "controlFood_bp" :assignment]
+  (is (= [["partner_br" "configureTurnstile_bpc" :assignment]
+          ["partner_br" "controlFood_bpc" :assignment]
           ["child_ba" "client_br" :assignment]
-          ["client_br" "fillForm_bp" :assignment]
-          ["controlFood_bp" "food_bs" :realization]
-          ["configureTurnstile_bp" "pass_bs" :realization]
-          ["getRegistry_bf" "registry_bs" :realization]
+          ["client_br" "fillForm_bpc" :assignment]
+          ["controlFood_bpc" "food_bs" :realization]
+          ["configureTurnstile_bpc" "pass_bs" :realization]
+          ["getRegistry_bpc" "registry_bs" :realization]
           ["registry_bs" "partner_br" :serving]
           ["food_bs" "child_ba" :serving]
           ["pass_bs" "child_ba" :serving]
-          ["fillForm_bp" "getRegistry_bf" :flow]]
+          ["fillForm_bpc" "getRegistry_bpc" :flow]]
          (mch/get-prioritized-relationships graph0))))
 
 (deftest match-rule
@@ -196,37 +196,37 @@
                              [[:realization :a :b] [:serving :c :b] [:access :c :a]]))))))
 
 (deftest derivate-relationships-once-test
-  (is (= {"child_ba" {"fillForm_bp" #{{:type :assignment}}
-                      "getRegistry_bf" #{{:type :flow}}}
-          "client_br" {"getRegistry_bf" #{{:type :flow}}}
-          "configureTurnstile_bp" {"child_ba" #{{:type :serving}}}
-          "controlFood_bp" {"child_ba" #{{:type :serving}}}
-          "getRegistry_bf" {"partner_br" #{{:type :serving}}}
+  (is (= {"child_ba" {"fillForm_bpc" #{{:type :assignment}}
+                      "getRegistry_bpc" #{{:type :flow}}}
+          "client_br" {"getRegistry_bpc" #{{:type :flow}}}
+          "configureTurnstile_bpc" {"child_ba" #{{:type :serving}}}
+          "controlFood_bpc" {"child_ba" #{{:type :serving}}}
+          "getRegistry_bpc" {"partner_br" #{{:type :serving}}}
           "partner_br" {"child_ba" #{{:type :serving}}
                         "food_bs" #{{:type :realization}}
                         "pass_bs" #{{:type :realization}}}}
          (mch/derivate-relationships-once rs/certain-rules graph0)))
-  (is (= {"fillForm_bp" {"registry_bs" #{{:type :flow}}}
+  (is (= {"fillForm_bpc" {"registry_bs" #{{:type :flow}}}
           "food_bs" {"client_br" #{{:type :serving}}
-                     "fillForm_bp" #{{:type :serving}}}
+                     "fillForm_bpc" #{{:type :serving}}}
           "registry_bs" {"child_ba" #{{:type :serving}}
                          "client_br" #{{:type :serving}}
-                         "configureTurnstile_bp" #{{:type :serving}}
-                         "controlFood_bp" #{{:type :serving}}
-                         "fillForm_bp" #{{:type :serving}}
+                         "configureTurnstile_bpc" #{{:type :serving}}
+                         "controlFood_bpc" #{{:type :serving}}
+                         "fillForm_bpc" #{{:type :serving}}
                          "food_bs" #{{:type :serving}}
                          "pass_bs" #{{:type :serving}}}
           "pass_bs" {"client_br" #{{:type :serving}}
-                     "fillForm_bp" #{{:type :serving}}}}
+                     "fillForm_bpc" #{{:type :serving}}}}
          (mch/derivate-relationships-once rs/potential-rules graph0))))
 
 (deftest derivate-relationships-test
-  (is (= {"child_ba" {"fillForm_bp" #{{:type :assignment}}
-                      "getRegistry_bf" #{{:type :flow}}}
-          "client_br" {"getRegistry_bf" #{{:type :flow}}}
-          "configureTurnstile_bp" {"child_ba" #{{:type :serving}}}
-          "controlFood_bp" {"child_ba" #{{:type :serving}}}
-          "getRegistry_bf" {"partner_br" #{{:type :serving}}}
+  (is (= {"child_ba" {"fillForm_bpc" #{{:type :assignment}}
+                      "getRegistry_bpc" #{{:type :flow}}}
+          "client_br" {"getRegistry_bpc" #{{:type :flow}}}
+          "configureTurnstile_bpc" {"child_ba" #{{:type :serving}}}
+          "controlFood_bpc" {"child_ba" #{{:type :serving}}}
+          "getRegistry_bpc" {"partner_br" #{{:type :serving}}}
           "partner_br" {"child_ba" #{{:type :serving}}
                         "food_bs" #{{:type :realization}}
                         "pass_bs" #{{:type :realization}}}}
