@@ -205,7 +205,7 @@
           "partner_br" {"child_ba" {:type :serving}
                         "food_bs" {:type :realization}
                         "pass_bs" {:type :realization}}}
-         (mch/derivate-relationships-once rs/certain-rules graph0)))
+         (:derivated-graph (mch/derivate-relationships-once rs/certain-rules graph0 #{}))))
   (is (= {"fillForm_bp" {"registry_bs" {:type :flow}}
           "food_bs" {"client_br" {:type :serving}
                      "fillForm_bp" {:type :serving}}
@@ -218,7 +218,7 @@
                          "pass_bs" {:type :serving}}
           "pass_bs" {"client_br" {:type :serving}
                      "fillForm_bp" {:type :serving}}}
-         (mch/derivate-relationships-once rs/potential-rules graph0))))
+         (:derivated-graph (mch/derivate-relationships-once rs/potential-rules graph0 #{})))))
 
 (deftest derivate-relationships-test
   (is (= {"child_ba" {"fillForm_bp" {:type :assignment}
@@ -231,7 +231,7 @@
                         "food_bs" {:type :realization}
                         "pass_bs" {:type :realization}}}
          (mch/derivate-relationships rs/certain-rules graph0)))
-  (is (= (mch/derivate-relationships-once rs/certain-rules graph0)
+  (is (= (:derivated-graph (mch/derivate-relationships-once rs/certain-rules graph0 #{}))
          (mch/derivate-relationships rs/certain-rules graph0)))
-  (is (= (mch/derivate-relationships-once rs/potential-rules graph0)
+  (is (= (:derivated-graph (mch/derivate-relationships-once rs/potential-rules graph0 #{}))
          (mch/derivate-relationships rs/potential-rules graph0))))

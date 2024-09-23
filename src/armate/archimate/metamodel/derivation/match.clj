@@ -70,25 +70,24 @@
     (get-relationships (partial sort-by (comp #(weights % [0 0]) first))
                        graph)))
 
-(defn check-rule
+(defn valid?
   [rule]
   (let [[[_ f1 t1] [_ f2 t2] [_ fr tr]] rule]
-    (assert (not= f1 t1))
-    (assert (not= f2 t2))
-    (assert (not= fr tr))
-    (assert (or (and (= f1 f2) (not= t1 t2))
-                (and (= f1 t2) (not= t1 f2))
-                (and (= t1 f2) (not= f1 t2))
-                (and (= t1 t2) (not= f1 f2))))
-    (assert (or (and (= f1 fr) (not= t1 tr))
-                (and (= f1 tr) (not= t1 fr))
-                (and (= t1 fr) (not= f1 tr))
-                (and (= t1 tr) (not= f1 fr))))
-    (assert (or (and (= f2 fr) (not= t2 tr))
-                (and (= f2 tr) (not= t2 fr))
-                (and (= t2 fr) (not= f2 tr))
-                (and (= t2 tr) (not= f2 fr))))
-    rule))
+    (and (not= f1 t1)
+         (not= f2 t2)
+         (not= fr tr)
+         (or (and (= f1 f2) (not= t1 t2))
+             (and (= f1 t2) (not= t1 f2))
+             (and (= t1 f2) (not= f1 t2))
+             (and (= t1 t2) (not= f1 f2)))
+         (or (and (= f1 fr) (not= t1 tr))
+             (and (= f1 tr) (not= t1 fr))
+             (and (= t1 fr) (not= f1 tr))
+             (and (= t1 tr) (not= f1 fr)))
+         (or (and (= f2 fr) (not= t2 tr))
+             (and (= f2 tr) (not= t2 fr))
+             (and (= t2 fr) (not= f2 tr))
+             (and (= t2 tr) (not= f2 fr))))))
 
 (def rel-kin-map
   (reduce (fn [acc group]
@@ -151,35 +150,49 @@
          (reduce append iter-map))))
 
 (defn derivate-relationships-once
-  [rules graph]
+  [rules graph passed-relations]
   (let [rules-map (make-rules-map rules)]
     (loop [forward-graph graph
            reverse-graph (reverse-graph graph)
            derivated-graph {}
-           relations (get-prioritized-relationships graph)]
-      (if (empty? relations)
-        derivated-graph
-        (let [relation (first relations)
-              [from to rel] relation
-              iter-map (reduce (partial match-rule from to)
-                               {:forward-graph forward-graph
-                                :reverse-graph reverse-graph
-                                :derivated-graph derivated-graph
-                                :derivated-relations []}
-                               (rules-map rel))]
-          (recur (:forward-graph iter-map)
-                 (:reverse-graph iter-map)
-                 (:derivated-graph iter-map)
-                 (into (rest relations)
-                       (:derivated-relations iter-map))))))))
+           follow-relations (get-prioritized-relationships graph)
+           passed-relations passed-relations]
+      (if (empty? follow-relations)
+        {:derivated-graph derivated-graph
+         :passed-relations passed-relations}
+        (let [relation (first follow-relations)]
+          (if (passed-relations relation)
+            (recur forward-graph
+                   reverse-graph
+                   derivated-graph
+                   (rest follow-relations)
+                   passed-relations)
+            (let [[from to rel] relation
+                  iter-map (reduce (partial match-rule from to)
+                                   {:forward-graph forward-graph
+                                    :reverse-graph reverse-graph
+                                    :derivated-graph derivated-graph
+                                    :derivated-relations []}
+                                   (rules-map rel))]
+              (recur (:forward-graph iter-map)
+                     (:reverse-graph iter-map)
+                     (:derivated-graph iter-map)
+                     (into (rest follow-relations)
+                           (remove passed-relations
+                                   (:derivated-relations iter-map)))
+                     (conj passed-relations relation)))))))))
 
 (defn derivate-relationships
   [rules source-graph]
-  (doseq [rule rules] (check-rule rule))
+  {:pre (every? valid? rules)}
   (loop [graph source-graph
-         derivated-graph {}]
-    (let [next-derivated-graph (derivate-relationships-once rules graph)]
+         derivated-graph {}
+         passed-relations #{}]
+    (let [result (derivate-relationships-once rules graph passed-relations)
+          {next-derivated-graph :derivated-graph
+           next-passed-relations :passed-relations} result]
       (if (empty? next-derivated-graph)
         derivated-graph
         (recur (merge-with merge graph next-derivated-graph)
-               (merge-with merge derivated-graph next-derivated-graph))))))
+               (merge-with merge derivated-graph next-derivated-graph)
+               next-passed-relations)))))
