@@ -1,5 +1,7 @@
 (ns armate.derivation.match
-  (:require [armate.derivation.rules :as rs]))
+  (:require [clojure.set :refer [intersection]]
+            [armate.derivation.rules :as rs]
+            [armate.utils :as u]))
 
 (defn get-rel-wieght
   [rel]
@@ -28,8 +30,11 @@
 (defn reverse-graph
   [graph]
   (reduce-kv (fn [acc from nbrs]
-               (reduce-kv (fn [a to rel]
-                            (assoc-in a [to from] rel))
+               (reduce-kv (fn [a to rels]
+                            (reduce (fn [a2 rel]
+                                      (update-in a2 [to from] u/fnil-conj-set rel))
+                                    a
+                                    rels))
                           acc
                           nbrs))
              {}
@@ -44,8 +49,10 @@
    (->> (prepare graph)
         (mapcat (fn [[from nbrs]]
                   (->> (prepare nbrs)
-                       (map (fn [[to rel]]
-                              [from to (rel-key rel)]))))))))
+                       (mapcat (fn [[to rels]]
+                                 (map (fn [rel]
+                                        [from to (rel-key rel)])
+                                      rels)))))))))
 
 (defn get-weights
   [graph]
@@ -53,6 +60,7 @@
                             (map (juxt first
                                        (fn [[_ nbrs]]
                                          (->> (vals nbrs)
+                                              (reduce concat)
                                               (map :type)
                                               (map get-rel-wieght)
                                               (reduce +)))))
@@ -113,14 +121,16 @@
                          forward-graph
                          reverse-graph)
         check-relation (fn [f t]
-                         (-> (get-in checking-graph [f t])
-                             :type
-                             kin))
+                         (->> (get-in checking-graph [f t])
+                              (map :type)
+                              (into #{})
+                              (intersection kin)
+                              (seq)))
         add-relation (fn [acc f t]
                        (-> acc
-                           (assoc-in [:forward-graph f t] relation)
-                           (assoc-in [:reverse-graph t f] relation)
-                           (assoc-in [:derivated-graph f t] relation)
+                           (update-in [:forward-graph f t] u/fnil-conj-set relation)
+                           (update-in [:reverse-graph t f] u/fnil-conj-set relation)
+                           (update-in [:derivated-graph f t] u/fnil-conj-set relation)
                            (update :derivated-relations conj [f t result-rel])))
         exists? (if (#{f2 t2} f1)
                   (partial check-relation to)
@@ -144,55 +154,42 @@
                    ; (= t1 t2)
                    (reverse-graph to))
                  (dissoc from))))
-         (filter (comp (partial = next-rel) :type second))
+         (filter (comp (partial some (comp (partial = next-rel) :type)) second))
          (map first)
          (remove exists?)
          (reduce append iter-map))))
 
 (defn derivate-relationships-once
-  [rules graph passed-relations]
+  [rules graph]
   (let [rules-map (make-rules-map rules)]
     (loop [forward-graph graph
            reverse-graph (reverse-graph graph)
            derivated-graph {}
-           follow-relations (get-prioritized-relationships graph)
-           passed-relations passed-relations]
+           follow-relations (get-prioritized-relationships graph)]
       (if (empty? follow-relations)
-        {:derivated-graph derivated-graph
-         :passed-relations passed-relations}
-        (let [relation (first follow-relations)]
-          (if (passed-relations relation)
-            (recur forward-graph
-                   reverse-graph
-                   derivated-graph
-                   (rest follow-relations)
-                   passed-relations)
-            (let [[from to rel] relation
-                  iter-map (reduce (partial match-rule from to)
-                                   {:forward-graph forward-graph
-                                    :reverse-graph reverse-graph
-                                    :derivated-graph derivated-graph
-                                    :derivated-relations []}
-                                   (rules-map rel))]
-              (recur (:forward-graph iter-map)
-                     (:reverse-graph iter-map)
-                     (:derivated-graph iter-map)
-                     (into (rest follow-relations)
-                           (remove passed-relations
-                                   (:derivated-relations iter-map)))
-                     (conj passed-relations relation)))))))))
+        derivated-graph
+        (let [relation (first follow-relations)
+              [from to rel] relation
+              iter-map (reduce (partial match-rule from to)
+                               {:forward-graph forward-graph
+                                :reverse-graph reverse-graph
+                                :derivated-graph derivated-graph
+                                :derivated-relations []}
+                               (rules-map rel))]
+          (recur (:forward-graph iter-map)
+                 (:reverse-graph iter-map)
+                 (:derivated-graph iter-map)
+                 (into (rest follow-relations)
+                       (:derivated-relations iter-map))))))))
 
 (defn derivate-relationships
   [rules source-graph]
   {:pre (every? valid? rules)}
-  (loop [graph source-graph
-         derivated-graph {}
-         passed-relations #{}]
-    (let [result (derivate-relationships-once rules graph passed-relations)
-          {next-derivated-graph :derivated-graph
-           next-passed-relations :passed-relations} result]
-      (if (empty? next-derivated-graph)
-        derivated-graph
-        (recur (merge-with merge graph next-derivated-graph)
-               (merge-with merge derivated-graph next-derivated-graph)
-               next-passed-relations)))))
+  (let [deep-merge (partial merge-with into)]
+    (loop [graph source-graph
+           derivated-graph {}]
+      (let [next-derivated-graph (derivate-relationships-once rules graph)]
+        (if (empty? next-derivated-graph)
+          derivated-graph
+          (recur (merge-with deep-merge graph next-derivated-graph)
+                 (merge-with deep-merge derivated-graph next-derivated-graph)))))))

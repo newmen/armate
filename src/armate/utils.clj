@@ -1,5 +1,8 @@
 (ns armate.utils)
 
+(def fnil-conj-set
+  (fnil conj #{}))
+
 (defn dissoc-if-nil
   [hm & ks]
   (apply dissoc hm
