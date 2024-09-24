@@ -75,7 +75,8 @@
 (defn get-prioritized-relationships
   [graph]
   (let [weights (get-weights graph)]
-    (get-relationships (partial sort-by (comp #(weights % [0 0]) first))
+    (get-relationships (partial sort-by (fn [[from & _]]
+                                          (conj (weights from [0 0]) from)))
                        graph)))
 
 (defn valid?

@@ -176,41 +176,41 @@
                                     "$aComponent"
                                     "jar:archimate/application-component"] :line 1})))
   (is (= {:body {:line 1 :inside []
-                 :title "X" :type "$aComponent"
-                 :shape "rectangle" :skin nil :layer nil}
+                 :title "X" :alias "x" :type "$aComponent"
+                 :shape "rectangle" :skin nil :layer nil :color nil}
           :in [:elements "x"]}
          (arch/match-block {:parts ["rectangle" "X" "as" "x" "<<$aComponent>>"] :line 1})))
   (is (= {:body {:line 1 :inside []
-                 :title "X" :type "$aComponent"
-                 :shape "rectangle" :skin "pin" :layer nil}
+                 :title "X" :alias "x" :type "$aComponent"
+                 :shape "rectangle" :skin "pin" :layer nil :color nil}
           :in [:elements "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>><<pin>>"] :line 1})))
   (is (= {:body {:line 1 :inside []
-                 :title "X" :type "$aComponent"
-                 :shape "rectangle" :skin "pin" :layer nil}
+                 :title "X" :alias "x" :type "$aComponent"
+                 :shape "rectangle" :skin "pin" :layer nil :color nil}
           :in [:elements "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>>" "<<pin>>"] :line 1})))
   (is (= {:body {:line 1 :inside []
-                 :title "X" :type "$aComponent"
-                 :shape "rectangle" :skin "pin" :layer "#Application"}
+                 :title "X" :alias "x" :type "$aComponent"
+                 :shape "rectangle" :skin "pin" :layer "#Application" :color nil}
           :in [:elements "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>><<pin>>" "#Application"] :line 1})))
   (is (= {:body {:line 1 :inside []
-                 :title "X" :type "$aComponent"
-                 :shape "rectangle" :skin "pin" :layer "#Application"}
+                 :title "X" :alias "x" :type "$aComponent"
+                 :shape "rectangle" :skin "pin" :layer "#Application" :color nil}
           :in [:elements "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>>" "<<pin>>" "#Application"] :line 1})))
   (is (= {:body {:line 1 :inside []
-                 :title "X" :type "$aComponent"
-                 :shape "rectangle" :skin nil :layer "#Application"}
+                 :title "X" :alias "x" :type "$aComponent"
+                 :shape "rectangle" :skin nil :layer "#Application" :color nil}
           :in [:elements "x"]}
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
@@ -240,6 +240,7 @@
            :business-product
            :business-role
            :business-service
+           :technology-artifact
            :technology-collaboration
            :technology-interaction
            :technology-node
