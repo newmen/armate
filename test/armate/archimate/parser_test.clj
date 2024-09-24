@@ -142,10 +142,10 @@
   (is (= [["<<$aCollaboration>>" "<<$aCollaboration>>"] ["<<platform>>" "<<platform>>"]]
          (re-seq arch/fur-re "<<$aCollaboration>><<platform>>"))))
 
-(deftest cut-fur-test
-  (is (= ["rectangle" "db"] (arch/cut-fur "rectangle<<db>>")))
-  (is (= ["$aCollaboration" "platform"] (arch/cut-fur "<<$aCollaboration>><<platform>>")))
-  (is (= ["$aCollaboration"] (arch/cut-fur "<<$aCollaboration>>"))))
+(deftest cut-furs-test
+  (is (= ["rectangle" "db"] (arch/cut-furs "rectangle<<db>>")))
+  (is (= ["$aCollaboration" "platform"] (arch/cut-furs "<<$aCollaboration>><<platform>>")))
+  (is (= ["$aCollaboration"] (arch/cut-furs "<<$aCollaboration>>"))))
 
 (deftest cut1-test
   (is (= "archimate/Archimate" (arch/cut1 "<archimate/Archimate>"))))
@@ -170,7 +170,7 @@
           :in [:skins :default]}
          (arch/match-block {:parts ["skinparam"] :line 1
                             :props [["fontColor" "#eeeeee"]]})))
-  (is (= {:body {:line 1 :kind :application-component}
+  (is (= {:body {:line 1 :alias "$aComponent" :kind :application-component}
           :in [:types "$aComponent"]}
          (arch/match-block {:parts ["sprite"
                                     "$aComponent"

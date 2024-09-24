@@ -2,6 +2,11 @@
   (:require [clojure.test :refer :all]
             [armate.utils :as u]))
 
+(deftest fnil-conj-set-test
+  (is (= #{1 2} (u/fnil-conj-set nil 1 2)))
+  (is (= {:a #{2}} (update {} :a u/fnil-conj-set 2)))
+  (is (= {:a #{1 2}} (update {:a #{1}} :a u/fnil-conj-set 2))))
+
 (deftest dissoc-if-nil-test
   (is (= {:a 1}
          (u/dissoc-if-nil {:a 1 :b nil} :b)))
