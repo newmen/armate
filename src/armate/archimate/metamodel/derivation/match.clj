@@ -79,25 +79,6 @@
                                           (conj (weights from [0 0]) from)))
                        graph)))
 
-(defn valid?
-  [rule]
-  (let [[[_ f1 t1] [_ f2 t2] [_ fr tr]] rule]
-    (and (not= f1 t1)
-         (not= f2 t2)
-         (not= fr tr)
-         (or (and (= f1 f2) (not= t1 t2))
-             (and (= f1 t2) (not= t1 f2))
-             (and (= t1 f2) (not= f1 t2))
-             (and (= t1 t2) (not= f1 f2)))
-         (or (and (= f1 fr) (not= t1 tr))
-             (and (= f1 tr) (not= t1 fr))
-             (and (= t1 fr) (not= f1 tr))
-             (and (= t1 tr) (not= f1 fr)))
-         (or (and (= f2 fr) (not= t2 tr))
-             (and (= f2 tr) (not= t2 fr))
-             (and (= t2 fr) (not= f2 tr))
-             (and (= t2 tr) (not= f2 fr))))))
-
 (def rel-kin-map
   (reduce (fn [acc group]
             (reduce (fn [a rel]
@@ -121,7 +102,7 @@
         checking-graph (if (#{f1 t1} fr)
                          forward-graph
                          reverse-graph)
-        check-relation (fn [f t]
+        have-relation? (fn [f t]
                          (->> (get-in checking-graph [f t])
                               (map :type)
                               (into #{})
@@ -134,8 +115,8 @@
                            (update-in [:derivated-graph f t] u/fnil-conj-set relation)
                            (update :derivated-relations conj [f t result-rel])))
         exists? (if (#{f2 t2} f1)
-                  (partial check-relation to)
-                  (partial check-relation from))
+                  (partial have-relation? to)
+                  (partial have-relation? from))
         append (if (= f1 fr)
                  #(add-relation %1 from %2)
                  (if (= f1 tr)
@@ -185,7 +166,7 @@
 
 (defn derivate-relationships
   [rules source-graph]
-  {:pre (every? valid? rules)}
+  ;; {:pre (every? rs/valid? rules)} ; already checked by rules_test/check-invariants-test
   (let [deep-merge (partial merge-with into)]
     (loop [graph source-graph
            derivated-graph {}]

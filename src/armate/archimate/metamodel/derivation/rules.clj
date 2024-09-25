@@ -135,6 +135,52 @@
        (map (fn [[crel rrel]]
               [[crel :group :a] [rrel :group :c] [rrel :a :c]]))))
 
+(defn valid?
+  [rule]
+  (let [[[_ f1 t1] [_ f2 t2] [_ fr tr]] rule]
+    (and (not= f1 t1)
+         (not= f2 t2)
+         (not= fr tr)
+         (or (and (= f1 f2) (not= t1 t2))
+             (and (= f1 t2) (not= t1 f2))
+             (and (= t1 f2) (not= f1 t2))
+             (and (= t1 t2) (not= f1 f2)))
+         (or (and (= f1 fr) (not= t1 tr))
+             (and (= f1 tr) (not= t1 fr))
+             (and (= t1 fr) (not= f1 tr))
+             (and (= t1 tr) (not= f1 fr)))
+         (or (and (= f2 fr) (not= t2 tr))
+             (and (= f2 tr) (not= t2 fr))
+             (and (= t2 fr) (not= f2 tr))
+             (and (= t2 tr) (not= f2 fr))))))
+
+(defn normalize
+  [rule]
+  {:pre [(valid? rule)]
+   :post [(valid? %)]}
+  (let [[[r1 f1 t1] [r2 f2 t2] [r3 f3 t3]] rule
+        f1' :a
+        t1' :b
+        check2 #(if (= f1 %) f1'
+                    (if (= t1 %) t1' :c))
+        f2' (check2 f2)
+        t2' (check2 t2)
+        f3' (check2 f3)
+        t3' (check2 t3)]
+    [[r1 f1' t1'] [r2 f2' t2'] [r3 f3' t3']]))
+
+(defn check-invariants
+  [rules]
+  (:invariants
+   (reduce (fn [acc rule]
+             (let [norm (normalize rule)]
+               (if-let [invariant (get-in acc [:checked norm])]
+                 (update-in acc [:invariants invariant] (fnil conj []) rule)
+                 (assoc-in acc [:checked norm] rule))))
+           {:checked {}
+            :invariants {}}
+           rules)))
+
 (comment
 
   (count certain-rules)
