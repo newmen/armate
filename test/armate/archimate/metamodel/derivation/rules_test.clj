@@ -24,5 +24,9 @@
                                [[:access :c :b] [:realization :a :b] [:access :c :a]]
                                [[:access :c :a] [:realization :b :a] [:access :c :b]]
                                [[:access :b :a] [:realization :c :a] [:access :b :c]]])))
-  (is (thrown? UnsupportedOperationException
-               (rs/check-invariants [[:flow :a :b] [:flow :c :d] [:flow :a :d]]))))
+  (doseq [rule [[[:flow :a :b] [:flow :c :d] [:flow :a :d]]
+                [[:flow :a :b] [:flow :b :a] [:flow :a :b]]
+                [[:flow :a :b] [:flow :c :b] [:flow :c :c]]
+                [[:flow :a :b] [:flow :a :d] [:flow :d :a]]
+                [[:flow :a :b] [:flow :a :d] [:flow :x :d]]]]
+    (is (thrown? UnsupportedOperationException (rs/check-invariants rule)))))
