@@ -161,12 +161,12 @@
   (let [[[r1 f1 t1] [r2 f2 t2] [r3 f3 t3]] rule
         f1' :a
         t1' :b
-        check2 #(if (= f1 %) f1'
+        match2 #(if (= f1 %) f1'
                     (if (= t1 %) t1' :c))
-        f2' (check2 f2)
-        t2' (check2 t2)
-        f3' (check2 f3)
-        t3' (check2 t3)]
+        f2' (match2 f2)
+        t2' (match2 t2)
+        f3' (match2 f3)
+        t3' (match2 t3)]
     [[r1 f1' t1'] [r2 f2' t2'] [r3 f3' t3']]))
 
 (defn check-invariants
