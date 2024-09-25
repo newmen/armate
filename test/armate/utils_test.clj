@@ -1,5 +1,5 @@
 (ns armate.utils-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [armate.utils :as u]))
 
 (deftest fnil-conj-set-test

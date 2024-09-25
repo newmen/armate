@@ -1,5 +1,5 @@
 (ns armate.archimate-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [clojure.string :as s]
             [armate.archimate :as arch]))
 
@@ -80,23 +80,23 @@
          (arch/apply-variables {"$a" "1"} "a line with $a variable"))))
 
 (deftest rel-f-re-test
-  (is (= ["Rel_Assignment_Up" "Assignment"]
+  (is (= ["Rel_Assignment_Up" "Assignment" "Up"]
          (re-matches arch/rel-f-re "Rel_Assignment_Up")))
-  (is (= ["Rel_Assignment_up" "Assignment"]
+  (is (= ["Rel_Assignment_up" "Assignment" "up"]
          (re-matches arch/rel-f-re "Rel_Assignment_up")))
-  (is (= ["Rel_Assignment" "Assignment"]
+  (is (= ["Rel_Assignment" "Assignment" nil]
          (re-matches arch/rel-f-re "Rel_Assignment")))
-  (is (= ["Rel_Access_r" "Access_r"]
+  (is (= ["Rel_Access_r" "Access_r" nil]
          (re-matches arch/rel-f-re "Rel_Access_r")))
-  (is (= ["Rel_Access" "Access"]
+  (is (= ["Rel_Access" "Access" nil]
          (re-matches arch/rel-f-re "Rel_Access"))))
 
 (deftest match-rel-b-test
   (is (= ["*--" "*--" ""] (arch/match-rel-b "*--")))
   (is (= ["*-" "*-" ""] (arch/match-rel-b "*-")))
-  (is (= ["*-up-" "*-" "-"] (arch/match-rel-b "*-up-")))
-  (is (= ["<|.down." "<|." "."] (arch/match-rel-b "<|.down.")))
-  (is (= ["---left--#" "---" "--#"] (arch/match-rel-b "---left--#")))
+  (is (= ["*-up-" "*-" "up" "-"] (arch/match-rel-b "*-up-")))
+  (is (= ["<|.DOWN." "<|." "DOWN" "."] (arch/match-rel-b "<|.DOWN.")))
+  (is (= ["---Left--#" "---" "Left" "--#"] (arch/match-rel-b "---Left--#")))
   (is (= ["-----#" "-----" "#"] (arch/match-rel-b "-----#"))))
 
 (deftest pin-re-test
@@ -106,34 +106,36 @@
   (is (= ["----" "" "----" ""] (re-matches arch/pin-re "----"))))
 
 (deftest b-matches-test
-  (is (= {:type :composition :reverse? true :raw "---left--*" :cut "-*"}
+  (is (= {:type :composition :reverse? true :direction :left :raw "---left--*" :cut "-*"}
          (arch/b-matches "---left--*")))
-  (is (= {:type :unknown :raw "---left--#" :cut "-#"}
+  (is (= {:type :unknown :raw "---left--#" :direction :left :cut "-#"}
          (arch/b-matches "---left--#")))
-  (is (= {:type :unknown :raw "<|.down." :cut "<|."}
+  (is (= {:type :unknown :raw "<|.down." :direction :down :cut "<|."}
          (arch/b-matches "<|.down.")))
-  (is (= {:type :unknown :raw "<|.." :cut "<|."}
+  (is (= {:type :unknown :raw "<|.." :direction nil :cut "<|."}
          (arch/b-matches "<|..")))
-  (is (= {:type :specialization :raw "--down-|>" :cut "-|>"}
+  (is (= {:type :specialization :direction :down :raw "--down-|>" :cut "-|>"}
          (arch/b-matches "--down-|>")))
-  (is (= {:type :specialization :raw "--|>" :cut "-|>"}
+  (is (= {:type :specialization :direction nil :raw "--|>" :cut "-|>"}
          (arch/b-matches "--|>")))
-  (is (= {:type :specialization :raw "-|>" :cut "-|>"}
+  (is (= {:type :specialization :direction nil :raw "-|>" :cut "-|>"}
          (arch/b-matches "-|>")))
   (is (nil? (arch/b-matches "hello"))))
 
 (deftest match-rel-test
-  (is (= {:type :assignment :from "A" :to "B" :desc "desc"}
+  (is (= {:type :assignment :from "A" :to "B" :direction nil :desc "desc"}
          (arch/match-rel ["Rel_Assignment" "A" "B" "desc"])))
-  (is (= {:type :assignment :from "A" :to "B" :desc "desc"}
+  (is (= {:type :assignment :from "A" :to "B" :direction :up :desc "desc"}
          (arch/match-rel ["Rel_Assignment_Up" "A" "B" "desc"])))
-  (is (= {:type :serving :raw "-->" :cut "->" :desc nil :from "A" :to "B"}
+  (is (= {:type :serving :raw "-->" :cut "->" :direction nil :desc nil :from "A" :to "B"}
          (arch/match-rel ["A" "-->" "B" nil])))
-  (is (= {:type :specialization :reverse? true :raw "<|--" :cut "<|-" :desc nil :from "B" :to "A"}
+  (is (= {:type :specialization :reverse? true :direction nil
+          :raw "<|--" :cut "<|-" :desc nil :from "B" :to "A"}
          (arch/match-rel ["A" "<|--" "B" nil])))
-  (is (= {:type :unknown :raw ".." :cut "." :desc nil :from "A" :to "B"}
+  (is (= {:type :unknown  :direction nil :raw ".." :cut "." :desc nil :from "A" :to "B"}
          (arch/match-rel ["A" ".." "B" nil])))
-  (is (= {:type :unknown :from "A" :to "B" :desc "desc" :raw "Rel_Some" :cut :some}
+  (is (= {:type :unknown :direction nil :from "A" :to "B" :desc "desc"
+          :raw "Rel_Some" :cut :some}
          (arch/match-rel ["Rel_Some" "A" "B" "desc"]))))
 
 (deftest fur-re-test
@@ -160,13 +162,14 @@
          (arch/match-block {:parts ["@startuml" "\"Какое-то длинное описание\""] :line 1})))
   (is (= {:body {:line 1} :in [:end]}
          (arch/match-block {:parts ["@enduml"] :line 1})))
-  (is (= {:body {:line 1} :in [:includes "archimate/Archimate"]}
+  (is (= {:body {:line 1 :package "archimate/Archimate"}
+          :in [:includes "archimate/Archimate"]}
          (arch/match-block {:parts ["!include" "<archimate/Archimate>"] :line 1})))
-  (is (= {:body {:line 1 :props [["fontColor" "#eeeeee"]]}
+  (is (= {:body {:line 1 :shape "rectangle" :alias "sub" :props [["fontColor" "#eeeeee"]]}
           :in [:skins "rectangle" "sub"]}
          (arch/match-block {:parts ["skinparam" "rectangle<<sub>>"] :line 1
                             :props [["fontColor" "#eeeeee"]]})))
-  (is (= {:body {:line 1 :props [["fontColor" "#eeeeee"]]}
+  (is (= {:body {:line 1 :shape nil :alias nil :props [["fontColor" "#eeeeee"]]}
           :in [:skins :default]}
          (arch/match-block {:parts ["skinparam"] :line 1
                             :props [["fontColor" "#eeeeee"]]})))
@@ -216,10 +219,11 @@
                                     "X" "as" "x"
                                     "<<$aComponent>>" "#Application"] :line 1})))
   (is (= {:body {:line 1 :type :composition :raw "*-up-" :cut "*-" :desc nil
-                 :from "manager" :to "docsI"}
+                 :direction :up :from "manager" :to "docsI"}
           :in [:relations "manager" "docsI"]}
          (arch/match-block {:parts ["manager" "*-up-" "docsI"] :line 1})))
-  (is (= {:body {:line 1 :type :assignment :from "profitI" :to "calcS" :desc nil}
+  (is (= {:body {:line 1 :type :assignment :desc nil
+                 :direction :up :from "profitI" :to "calcS"}
           :in [:relations "profitI" "calcS"]}
          (arch/match-block {:parts ["Rel_Assignment_Up" "profitI" "calcS" nil] :line 1})))
   (is (= {:body {:line 1 :parts ["blah"]} :in [:unknowns]}
@@ -282,42 +286,44 @@ c1 -[hidden]> c2
     (is (= [{:level :error
              :kind :undefined-relation-type
              :in [:relations "c1" "c2"]
-             :body {:line 17 :type :unknown :raw "."
+             :body {:line 17 :type :unknown :raw "." :direction nil
                     :from :application-component
                     :to :application-component}}]
            (lint-content (make-content "."))))
     (is (= [{:level :warn
              :kind :unspecified-relation-type
              :in [:relations "c1" "c2"]
-             :body {:line 17 :type :serving :raw "->"
+             :body {:line 17 :type :serving :raw "->" :direction nil
                     :from :application-component
                     :to :application-component}}]
            (lint-content (make-content "->"))))
     (is (= [{:level :error
              :kind :undefined-relation-from
              :in [:relations "c3" "c2"]
-             :body {:line 17 :type :composition :raw "*-"
+             :body {:line 17 :type :composition :raw "*-" :direction nil
                     :from "c3" :to :application-component}}]
            (lint-content (s/replace (make-content "*-") "c1 *- c2" "c3 *- c2"))))
     (is (= [{:level :error
              :kind :undefined-relation-to
              :in [:relations "c1" "c3"]
-             :body {:line 17 :type :composition :raw "*-"
+             :body {:line 17 :type :composition :raw "*-" :direction nil
                     :from :application-component :to "c3"}}]
            (lint-content (s/replace (make-content "*-") "c1 *- c2" "c1 *- c3"))))
     (is (= [{:level :error
              :kind :undefined-relation-from
              :in [:relations "c3" "c4"]
-             :body {:line 17 :type :composition :raw "*-" :from "c3" :to "c4"}}
+             :body {:line 17 :type :composition :raw "*-" :direction nil
+                    :from "c3" :to "c4"}}
             {:level :error
              :kind :undefined-relation-to
              :in [:relations "c3" "c4"]
-             :body {:line 17 :type :composition :raw "*-" :from "c3" :to "c4"}}]
+             :body {:line 17 :type :composition :raw "*-" :direction nil
+                    :from "c3" :to "c4"}}]
            (lint-content (s/replace (make-content "*-") "c1 *- c2" "c3 *- c4"))))
     (is (= [{:level :warn
              :kind :relation-between-elements-already-present
              :in [:relations "c2" "c1"]
-             :body {:line 18 :type :composition :raw "-*" :reverse? true
+             :body {:line 18 :type :composition :raw "-*" :direction nil :reverse? true
                     :from :application-component :to :application-component}}]
            (lint-content (s/replace (make-content "*-") "c1 *- c2" "c1 *- c2\nc1 -* c2"))))
     (is (= [{:level :warn :kind :missing-start}

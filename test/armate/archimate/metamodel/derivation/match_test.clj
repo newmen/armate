@@ -1,5 +1,5 @@
 (ns armate.derivation.match-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [armate.derivation.rules :as rs]
             [armate.derivation.match :as mch]))
 
