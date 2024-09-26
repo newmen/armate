@@ -127,12 +127,12 @@
          (arch/match-rel ["Rel_Assignment" "A" "B" "desc"])))
   (is (= {:type :assignment :from "A" :to "B" :direction :up :desc "desc"}
          (arch/match-rel ["Rel_Assignment_Up" "A" "B" "desc"])))
-  (is (= {:type :serving :raw "-->" :cut "->" :direction nil :desc nil :from "A" :to "B"}
+  (is (= {:type :serving :raw "-->" :cut "->" :direction nil :from "A" :to "B"}
          (arch/match-rel ["A" "-->" "B" nil])))
   (is (= {:type :specialization :reverse? true :direction nil
-          :raw "<|--" :cut "<|-" :desc nil :from "B" :to "A"}
+          :raw "<|--" :cut "<|-" :from "B" :to "A"}
          (arch/match-rel ["A" "<|--" "B" nil])))
-  (is (= {:type :unknown  :direction nil :raw ".." :cut "." :desc nil :from "A" :to "B"}
+  (is (= {:type :unknown  :direction nil :raw ".." :cut "." :from "A" :to "B"}
          (arch/match-rel ["A" ".." "B" nil])))
   (is (= {:type :unknown :direction nil :from "A" :to "B" :desc "desc"
           :raw "Rel_Some" :cut :some}
@@ -218,7 +218,7 @@
          (arch/match-block {:parts ["rectangle"
                                     "X" "as" "x"
                                     "<<$aComponent>>" "#Application"] :line 1})))
-  (is (= {:body {:line 1 :type :composition :raw "*-up-" :cut "*-" :desc nil
+  (is (= {:body {:line 1 :type :composition :raw "*-up-" :cut "*-"
                  :direction :up :from "manager" :to "docsI"}
           :in [:relations "manager" "docsI"]}
          (arch/match-block {:parts ["manager" "*-up-" "docsI"] :line 1})))

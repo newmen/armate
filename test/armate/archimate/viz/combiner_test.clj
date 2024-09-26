@@ -30,7 +30,7 @@ Group(a1, \"Application\") #ffaa00 {
 }
 
 c2_ai -right-* c1_acp
-Rel_Aggregation_Left(c1_acp, c2_ai)
+Rel_Aggregation_Left(c1_acp, c2_ai, \"Duplicate relation\")
 
 c1_acp -[hidden]-> c2_ai
 

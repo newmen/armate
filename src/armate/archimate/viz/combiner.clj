@@ -114,14 +114,13 @@
   [[from to {:keys [type direction raw reverse? desc]}]]
   [(if raw
      (let [parts [from raw to]
-           parts2 (if reverse? (reverse parts) parts)
-           parts3 (if desc (into parts2 [desc]) parts2)]
-       (s/join " " parts3))
+           parts2 (if reverse? (reverse parts) parts)]
+       (s/join " " parts2))
      (let [func (apply str (concat ["Rel_" (s/capitalize (name type))]
                                    (when direction
                                      [(str "_" (s/capitalize (name direction)))])))
            args [from to]
-           args2 (if desc (into args [desc]) args)]
+           args2 (if desc (into args [(wrap-str desc)]) args)]
        (make-call func args2)))])
 
 (defn reorder
