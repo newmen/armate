@@ -11,12 +11,6 @@
   [items]
   (sort-by sort-line-key items))
 
-(defn sbl-map
-  [f hm]
-  (->> (vals hm)
-       (sort-by-lines)
-       (map f)))
-
 (defn wrap-str
   [text]
   (str "\"" text "\""))
@@ -156,24 +150,29 @@
           elements
           (reverse (reorder elements))))
 
+(defn sbl-map
+  [f hm]
+  (->> (vals hm)
+       (sort-by-lines)
+       (mapcat f)))
+
 (defn get-relations
   [key context]
   (->> (mch/get-relationships identity identity (key context))
        (remove (comp (partial = :nesting) :derivate last))
        (sort-by (comp sort-line-key last))
-       (map get-relation)))
+       (mapcat get-relation)))
 
 (defn generate-puml
   [context]
-  (->> [[(get-start (:start context))]
+  (->> [(get-start (:start context))
         (sbl-map get-include (:includes context))
         (sbl-map get-skin (:skins context))
         (sbl-map get-type (:types context))
         (sbl-map get-element (nest-inside (:elements context)))
         (get-relations :relations context)
         (get-relations :hidden context)
-        [end]]
+        end]
        (remove empty?)
-       (map (partial map (partial s/join "\n")))
        (map (partial s/join "\n"))
        (s/join "\n\n")))
