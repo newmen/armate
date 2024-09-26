@@ -166,11 +166,11 @@
           :in [:includes "archimate/Archimate"]}
          (arch/match-block {:parts ["!include" "<archimate/Archimate>"] :line 1})))
   (is (= {:body {:line 1 :shape "rectangle" :alias "sub" :props [["fontColor" "#eeeeee"]]}
-          :in [:skins "rectangle" "sub"]}
+          :in [:skins ["rectangle" "sub"]]}
          (arch/match-block {:parts ["skinparam" "rectangle<<sub>>"] :line 1
                             :props [["fontColor" "#eeeeee"]]})))
   (is (= {:body {:line 1 :shape nil :alias nil :props [["fontColor" "#eeeeee"]]}
-          :in [:skins :default]}
+          :in [:skins [:default]]}
          (arch/match-block {:parts ["skinparam"] :line 1
                             :props [["fontColor" "#eeeeee"]]})))
   (is (= {:body {:line 1 :alias "$aComponent" :kind :application-component}
@@ -323,9 +323,17 @@ c1 -[hidden]> c2
     (is (= [{:level :warn
              :kind :relation-between-elements-already-present
              :in [:relations "c2" "c1"]
-             :body {:line 18 :type :composition :raw "-*" :direction nil :reverse? true
+             :body {:line 18 :type :aggregation :raw "-o" :direction nil :reverse? true
                     :from :application-component :to :application-component}}]
-           (lint-content (s/replace (make-content "*-") "c1 *- c2" "c1 *- c2\nc1 -* c2"))))
+           (lint-content (s/replace (make-content "*-") "c1 *- c2" "c1 *- c2\nc1 -o c2"))))
+    (is (= [{:level :error
+             :kind :duplicate
+             :in [:relations "c1" "c2"]
+             :body {:line 18 :type :composition :direction nil
+                    :from :application-component :to :application-component}}]
+           (lint-content (s/replace (make-content "*-")
+                                    "c1 *- c2"
+                                    "Rel_Composition(c1, c2)\nRel_Composition(c1, c2)"))))
     (is (= [{:level :warn :kind :missing-start}
             {:level :warn :kind :missing-end}]
            (lint-content (s/replace (make-content "*-") #"@\w+" ""))))
