@@ -12,8 +12,9 @@
   (sort-by sort-line-key items))
 
 (defn sbl-map
-  [f items]
-  (->> (sort-by-lines items)
+  [f hm]
+  (->> (vals hm)
+       (sort-by-lines)
        (map f)))
 
 (defn wrap-str
@@ -26,48 +27,40 @@
 
 (defn get-start
   [start]
-  (str "@startuml" (if-let [title (:title start)]
-                     (str " " (wrap-str title))
-                     "")))
+  [(str "@startuml" (if-let [title (:title start)]
+                      (str " " (wrap-str title))
+                      ""))])
 
 (def end
-  "@enduml")
+  ["@enduml"])
 
 (defn get-include
   [include]
-  (str "!include <" (:package include) ">"))
+  [(str "!include <" (:package include) ">")])
 
-(defn shift
-  [lines]
-  (->> (s/split lines #"\n")
-       (map (partial str indent))
-       (s/join "\n")))
-
-(defn nest
+(defn nest-lines
   [title items item-f]
   (if (empty? items)
-    title
-    (s/join "\n" (concat [(str title " {")]
-                         (->> (sort-by-lines items)
-                              (map (comp shift item-f)))
-                         ["}"]))))
+    [title]
+    (concat [(str title " {")]
+            (->> (sort-by-lines items)
+                 (mapcat (comp (partial map (partial str indent)) item-f)))
+            ["}"])))
 
 (defn get-skin
-  [skin]
-  (let [shape (:shape skin)
-        alias (:alias skin)
-        target (if shape
+  [{:keys [alias shape props]}]
+  (let [target (when shape
                  (str shape (if alias
                               (wrap-fur alias)
-                              ""))
-                 "")]
-    (nest (str "skinparam " target)
-          (:props skin)
-          (comp (partial s/join " ") :parts))))
+                              "")))]
+    (nest-lines (str "skinparam" (when target
+                                   (str " " target)))
+                props
+                (comp vector (partial s/join " ") :parts))))
 
 (defn get-type
   [type]
-  (str "sprite " (:alias type) " jar:archimate/" (name (:kind type))))
+  [(str "sprite " (:alias type) " jar:archimate/" (name (:kind type)))])
 
 (defn make-call
   [func args]
@@ -77,9 +70,9 @@
 (defn build-element
   [parts-f element]
   (let [parts (parts-f element)]
-    (nest (s/join " " parts)
-          (:inside element)
-          get-element)))
+    (nest-lines (s/join " " parts)
+                (:inside element)
+                get-element)))
 
 (def get-group
   (partial build-element
@@ -103,7 +96,7 @@
                        (->> [type skin]
                             (remove nil?)
                             (map wrap-fur)
-                            (s/join "")
+                            (apply str)
                             (list))
                        (when-not skin
                          (when layer
@@ -119,24 +112,23 @@
 
 (defn get-relation
   [[from to {:keys [type direction raw reverse? desc]}]]
-  (if raw
-    (let [parts [from raw to]
-          parts2 (if reverse? (reverse parts) parts)
-          parts3 (if desc (into parts2 [desc]) parts2)]
-      (s/join " " parts3))
-    (let [func (s/join "" (concat ["Rel_" (s/capitalize (name type))]
-                                  (when direction
-                                    [(str "_" (s/capitalize (name direction)))])))
-          args [from to]
-          args2 (if desc (into args [desc]) args)]
-      (make-call func args2))))
+  [(if raw
+     (let [parts [from raw to]
+           parts2 (if reverse? (reverse parts) parts)
+           parts3 (if desc (into parts2 [desc]) parts2)]
+       (s/join " " parts3))
+     (let [func (apply str (concat ["Rel_" (s/capitalize (name type))]
+                                   (when direction
+                                     [(str "_" (s/capitalize (name direction)))])))
+           args [from to]
+           args2 (if desc (into args [desc]) args)]
+       (make-call func args2)))])
 
-(defn resort
+(defn reorder
   [elements]
   (loop [elements (vals elements)
          added #{}
          result []]
-    (println (first elements))
     (if (empty? elements)
       result
       (let [tail (rest elements)
@@ -151,18 +143,19 @@
                  added
                  result))))))
 
-(defn reorganize
+(defn nest-inside
   [elements]
-  (vals (reduce (fn [acc element]
-                  (let [alias (:alias element)
-                        in (:in element)]
-                    (if in
-                      (-> acc
-                          (dissoc alias)
-                          (update-in [in :inside] (fnil conj []) element))
-                      acc)))
-                elements
-                (reverse (resort elements)))))
+  (reduce (fn [acc element]
+            (let [alias (:alias element)
+                  in (:in element)]
+              (if in
+                (let [actual (acc alias)]
+                  (-> acc
+                      (dissoc alias)
+                      (update-in [in :inside] (fnil conj []) actual)))
+                acc)))
+          elements
+          (reverse (reorder elements))))
 
 (defn get-relations
   [key context]
@@ -174,13 +167,14 @@
 (defn generate-puml
   [context]
   (->> [[(get-start (:start context))]
-        (sbl-map get-include (vals (:includes context)))
-        (sbl-map get-skin (vals (:skins context)))
-        (sbl-map get-type (vals (:types context)))
-        (sbl-map get-element (reorganize (:elements context)))
+        (sbl-map get-include (:includes context))
+        (sbl-map get-skin (:skins context))
+        (sbl-map get-type (:types context))
+        (sbl-map get-element (nest-inside (:elements context)))
         (get-relations :relations context)
         (get-relations :hidden context)
         [end]]
        (remove empty?)
+       (map (partial map (partial s/join "\n")))
        (map (partial s/join "\n"))
        (s/join "\n\n")))
