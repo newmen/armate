@@ -37,4 +37,4 @@ c1_acp -[hidden]-> c2_ai
 @enduml")
 
 (deftest generate-puml-test
-  (is (= puml (viz/generate-puml (arch/analyze (arch/get-blocks puml))))))
+  (is (= puml (viz/generate-puml (arch/analyze-content puml)))))

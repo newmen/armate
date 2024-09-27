@@ -254,7 +254,7 @@
 
 (deftest lint-content-test
   (letfn [(lint-content [content]
-            (:lints (arch/analyze (arch/get-blocks content))))
+            (:lints (arch/analyze-content content)))
           (make-content [rel]
             (str "
 @startuml
