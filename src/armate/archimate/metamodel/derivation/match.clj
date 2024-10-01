@@ -10,12 +10,12 @@
       (inc dynamic-index)
       (let [dependency-index (.indexOf rs/dependency-rels rel)]
         (if-not (neg? dependency-index)
-          (* 10 (inc dependency-index))
+          (* 100 (inc dependency-index))
           (let [structural-index (.indexOf rs/structural-rels rel)]
             (if-not (neg? structural-index)
-              (* 100 (inc structural-index))
+              (* 1000 (inc structural-index))
               (if (= :specialization rel)
-                1000
+                10000
                 (throw (ex-info "Unknown relation" {:rel rel}))))))))))
 
 (defn make-rules-map
@@ -53,6 +53,9 @@
                                  (map (fn [rel]
                                         [from to (rel-key rel)])
                                       rels)))))))))
+
+(def get-unordered-relationships
+  (partial get-relationships identity identity))
 
 (defn get-weights
   [graph]

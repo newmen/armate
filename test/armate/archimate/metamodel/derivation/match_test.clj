@@ -17,9 +17,9 @@
    "registry_bs" {"partner_br" #{{:type :serving}}}})
 
 (deftest get-rel-wieght-test
-  (is (= 1000 (mch/get-rel-wieght :specialization)))
-  (is (= 300 (mch/get-rel-wieght :aggregation)))
-  (is (= 40 (mch/get-rel-wieght :access_r)))
+  (is (= 10000 (mch/get-rel-wieght :specialization)))
+  (is (= 3000 (mch/get-rel-wieght :aggregation)))
+  (is (= 400 (mch/get-rel-wieght :access_r)))
   (is (= 2 (mch/get-rel-wieght :flow))))
 
 (deftest make-rules-map-test
@@ -47,16 +47,16 @@
          (mch/reverse-graph graph0))))
 
 (deftest get-weights-test
-  (is (= {"partner_br" [-400 -200]
-          "child_ba" [-200 -200]
-          "client_br" [-200 -2]
-          "controlFood_bpc" [-100 -70]
-          "configureTurnstile_bpc" [-100 -70]
-          "getRegistry_bpc" [-100 -70]
-          "registry_bs" [-70 -400]
-          "food_bs" [-70 -200]
-          "pass_bs" [-70 -200]
-          "fillForm_bpc" [-2 -100]}
+  (is (= {"partner_br" [-4000 -2000]
+          "child_ba" [-2000 -2000]
+          "client_br" [-2000 -2]
+          "controlFood_bpc" [-1000 -700]
+          "configureTurnstile_bpc" [-1000 -700]
+          "getRegistry_bpc" [-1000 -700]
+          "registry_bs" [-700 -4000]
+          "food_bs" [-700 -2000]
+          "pass_bs" [-700 -2000]
+          "fillForm_bpc" [-2 -1000]}
          (mch/get-weights graph0))))
 
 (deftest get-relationships-test

@@ -8,8 +8,13 @@
   #(:line % 999999))
 
 (defn sort-by-lines
-  [items]
-  (sort-by sort-line-key items))
+  ([items]
+   (sort-by sort-line-key items))
+  ([weights items]
+   (let [groups (group-by #(contains? % :line) items)]
+     (concat (sort-by-lines (groups true []))
+             (sort-by (comp weights :alias)
+                      (groups false []))))))
 
 (defn wrap-str
   [text]
@@ -105,17 +110,20 @@
     (get-shape element)))
 
 (defn get-relation
-  [[from to {:keys [type direction raw reverse? desc]}]]
+  [[from to {:keys [type direction raw reverse? desc]
+             :as relation}]]
   [(if raw
      (let [parts [from raw to]
            parts2 (if reverse? (reverse parts) parts)]
        (s/join " " parts2))
-     (let [func (apply str (concat ["Rel_" (s/capitalize (name type))]
-                                   (when direction
-                                     [(str "_" (s/capitalize (name direction)))])))
-           args [from to]
-           args2 (if desc (into args [(wrap-str desc)]) args)]
-       (make-call func args2)))])
+     (if type
+       (let [func (apply str (concat ["Rel_" (s/capitalize (name type))]
+                                     (when direction
+                                       [(str "_" (s/capitalize (name direction)))])))
+             args [from to]
+             args2 (if desc (into args [(wrap-str desc)]) args)]
+         (make-call func args2))
+       (throw (ex-info "A relation without type" relation))))])
 
 (defn reorder
   [elements]
@@ -150,29 +158,61 @@
           elements
           (reverse (reorder elements))))
 
-(defn sbl-map
-  [f hm]
+(defn sbl-map-with
+  [sf mf hm]
   (->> (vals hm)
-       (sort-by-lines)
-       (mapcat f)))
+       (sf)
+       (mapcat mf)))
+
+(def sbl-map
+  (partial sbl-map-with sort-by-lines))
+
+(defn ebl-map
+  [weights f hm]
+  (sbl-map-with (partial sort-by-lines weights) f hm))
 
 (defn get-relations
-  [key context]
-  (->> (mch/get-relationships identity identity (key context))
-       (remove (comp (partial = :nesting) :derivate last))
-       (sort-by (comp sort-line-key last))
-       (mapcat get-relation)))
+  [grsf key context]
+  (let [sf (if (= mch/get-unordered-relationships grsf)
+             (partial sort-by (comp sort-line-key last))
+             identity)]
+    (->> (grsf (key context))
+         (remove (comp (partial = :nesting) :derivate last))
+         (sf)
+         (mapcat get-relation))))
 
 (defn generate-puml
+  ([context]
+   (generate-puml sbl-map
+                  (partial get-relations mch/get-unordered-relationships)
+                  context))
+  ([elf relf context]
+   (->> [(get-start (:start context))
+         (sbl-map get-include (:includes context))
+         (sbl-map get-skin (:skins context))
+         (sbl-map get-type (:types context))
+         (elf get-element (nest-inside (:elements context)))
+         (relf :relations context)
+         (get-relations mch/get-unordered-relationships :hidden context)
+         end]
+        (remove empty?)
+        (map (partial s/join "\n"))
+        (s/join "\n\n"))))
+
+(defn get-widths
   [context]
-  (->> [(get-start (:start context))
-        (sbl-map get-include (:includes context))
-        (sbl-map get-skin (:skins context))
-        (sbl-map get-type (:types context))
-        (sbl-map get-element (nest-inside (:elements context)))
-        (get-relations :relations context)
-        (get-relations :hidden context)
-        end]
-       (remove empty?)
-       (map (partial s/join "\n"))
-       (s/join "\n\n")))
+  (->> (mch/get-weights (:relations context))
+       (map (juxt first (fn [[alias ws]]
+                          (conj ws (get-in context [:elements alias :kind]) alias))))
+       (into {})))
+
+(defn on-fly-generate-puml
+  [context]
+  (let [weights (get-widths context)
+        grsf (partial mch/get-relationships
+                      (comp reverse
+                            (partial sort-by (fn [[from & _]] (weights from))))
+                      identity)]
+    (generate-puml (partial ebl-map weights)
+                   (partial get-relations grsf)
+                   context)))

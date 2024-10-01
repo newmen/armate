@@ -13,3 +13,7 @@
   (if (nil? v)
     hm
     (assoc hm k v)))
+
+(defn transpose
+  [matrix]
+  (apply mapv vector matrix))
