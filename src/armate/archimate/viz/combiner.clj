@@ -199,20 +199,36 @@
         (map (partial s/join "\n"))
         (s/join "\n\n"))))
 
-(defn get-widths
+(defn kind-index
+  [kind]
+  (.indexOf [:business-product
+             :business-service
+             :application-service
+             :application-interface] kind))
+
+(defn get-out-weights
   [context]
   (->> (mch/get-weights (:relations context))
-       (map (juxt first (fn [[alias ws]]
-                          (conj ws (get-in context [:elements alias :kind]) alias))))
+       (map (juxt first (fn [[alias [a b]]]
+                          (let [kind (get-in context [:elements alias :kind])]
+                            [(kind-index kind) (- a) (- b) alias]))))
        (into {})))
+
+(defn get-total-weights
+  [context]
+  (let [out-weights (get-out-weights context)
+        in-weights (->> (:elements context)
+                        (remove (comp out-weights :alias second))
+                        (map (fn [[alias element]]
+                               [alias [(kind-index (:kind element)) 0 0 alias]]))
+                        (into {}))]
+    (merge in-weights out-weights)))
 
 (defn on-fly-generate-puml
   [context]
-  (let [weights (get-widths context)
+  (let [weights (get-total-weights context)
         grsf (partial mch/get-relationships
-                      (comp reverse
-                            (partial sort-by (fn [[from & _]] (weights from))))
-                      identity)]
+                      (partial sort-by (fn [[from & _]] (weights from))))]
     (generate-puml (partial ebl-map weights)
                    (partial get-relations grsf)
                    context)))
