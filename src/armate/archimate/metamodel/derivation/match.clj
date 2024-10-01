@@ -44,18 +44,13 @@
   ([graph]
    (get-relationships identity graph))
   ([prepare graph]
-   (get-relationships prepare :type graph))
-  ([prepare rel-key graph]
    (->> (prepare graph)
         (mapcat (fn [[from nbrs]]
                   (->> (prepare nbrs)
                        (mapcat (fn [[to rels]]
                                  (map (fn [rel]
-                                        [from to (rel-key rel)])
+                                        [from to rel])
                                       rels)))))))))
-
-(def get-unordered-relationships
-  (partial get-relationships identity identity))
 
 (defn get-weights
   [graph]
@@ -150,7 +145,8 @@
     (loop [forward-graph graph
            reverse-graph (reverse-graph graph)
            derivated-graph {}
-           follow-relations (get-prioritized-relationships graph)]
+           follow-relations (->> (get-prioritized-relationships graph)
+                                 (map (juxt first second (comp :type last))))]
       (if (empty? follow-relations)
         derivated-graph
         (let [relation (first follow-relations)

@@ -60,31 +60,31 @@
          (mch/get-weights graph0))))
 
 (deftest get-relationships-test
-  (is (= #{["partner_br" "configureTurnstile_bpc" :assignment]
-           ["partner_br" "controlFood_bpc" :assignment]
-           ["child_ba" "client_br" :assignment]
-           ["client_br" "fillForm_bpc" :assignment]
-           ["controlFood_bpc" "food_bs" :realization]
-           ["configureTurnstile_bpc" "pass_bs" :realization]
-           ["getRegistry_bpc" "registry_bs" :realization]
-           ["registry_bs" "partner_br" :serving]
-           ["food_bs" "child_ba" :serving]
-           ["pass_bs" "child_ba" :serving]
-           ["fillForm_bpc" "getRegistry_bpc" :flow]}
+  (is (= #{["partner_br" "configureTurnstile_bpc" {:type :assignment}]
+           ["partner_br" "controlFood_bpc" {:type :assignment}]
+           ["child_ba" "client_br" {:type :assignment}]
+           ["client_br" "fillForm_bpc" {:type :assignment}]
+           ["controlFood_bpc" "food_bs" {:type :realization}]
+           ["configureTurnstile_bpc" "pass_bs" {:type :realization}]
+           ["getRegistry_bpc" "registry_bs" {:type :realization}]
+           ["registry_bs" "partner_br" {:type :serving}]
+           ["food_bs" "child_ba" {:type :serving}]
+           ["pass_bs" "child_ba" {:type :serving}]
+           ["fillForm_bpc" "getRegistry_bpc" {:type :flow}]}
          (set (mch/get-relationships graph0)))))
 
 (deftest get-prioritized-relationships-test
-  (is (= [["partner_br" "configureTurnstile_bpc" :assignment]
-          ["partner_br" "controlFood_bpc" :assignment]
-          ["child_ba" "client_br" :assignment]
-          ["client_br" "fillForm_bpc" :assignment]
-          ["configureTurnstile_bpc" "pass_bs" :realization]
-          ["controlFood_bpc" "food_bs" :realization]
-          ["getRegistry_bpc" "registry_bs" :realization]
-          ["registry_bs" "partner_br" :serving]
-          ["food_bs" "child_ba" :serving]
-          ["pass_bs" "child_ba" :serving]
-          ["fillForm_bpc" "getRegistry_bpc" :flow]]
+  (is (= [["partner_br" "configureTurnstile_bpc" {:type :assignment}]
+          ["partner_br" "controlFood_bpc" {:type :assignment}]
+          ["child_ba" "client_br" {:type :assignment}]
+          ["client_br" "fillForm_bpc" {:type :assignment}]
+          ["configureTurnstile_bpc" "pass_bs" {:type :realization}]
+          ["controlFood_bpc" "food_bs" {:type :realization}]
+          ["getRegistry_bpc" "registry_bs" {:type :realization}]
+          ["registry_bs" "partner_br" {:type :serving}]
+          ["food_bs" "child_ba" {:type :serving}]
+          ["pass_bs" "child_ba" {:type :serving}]
+          ["fillForm_bpc" "getRegistry_bpc" {:type :flow}]]
          (mch/get-prioritized-relationships graph0))))
 
 (deftest match-rule

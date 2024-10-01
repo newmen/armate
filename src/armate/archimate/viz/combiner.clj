@@ -173,7 +173,7 @@
 
 (defn get-relations
   [grsf key context]
-  (let [sf (if (= mch/get-unordered-relationships grsf)
+  (let [sf (if (= mch/get-relationships grsf)
              (partial sort-by (comp sort-line-key last))
              identity)]
     (->> (grsf (key context))
@@ -184,7 +184,7 @@
 (defn generate-puml
   ([context]
    (generate-puml sbl-map
-                  (partial get-relations mch/get-unordered-relationships)
+                  (partial get-relations mch/get-relationships)
                   context))
   ([elf relf context]
    (->> [(get-start (:start context))
@@ -193,7 +193,7 @@
          (sbl-map get-type (:types context))
          (elf get-element (nest-inside (:elements context)))
          (relf :relations context)
-         (get-relations mch/get-unordered-relationships :hidden context)
+         (get-relations mch/get-relationships :hidden context)
          end]
         (remove empty?)
         (map (partial s/join "\n"))
