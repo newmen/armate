@@ -17,3 +17,17 @@
 (defn transpose
   [matrix]
   (apply mapv vector matrix))
+
+(defn- lazy-distinct-by
+  [f coll seen]
+  (when (seq coll)
+    (let [tail (rest coll)
+          x (first coll)
+          y (f x)]
+      (if (contains? seen y)
+        (lazy-distinct-by f tail seen)
+        (cons x (lazy-seq (lazy-distinct-by f tail (conj seen y))))))))
+
+(defn distinct-by
+  [f coll]
+  (lazy-distinct-by f coll #{}))

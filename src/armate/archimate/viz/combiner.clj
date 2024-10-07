@@ -193,7 +193,7 @@
          (sbl-map get-type (:types context))
          (elf get-element (nest-inside (:elements context)))
          (relf :relations context)
-         (get-relations mch/get-relationships :hidden context)
+         (relf :hidden context)
          end]
         (remove empty?)
         (map (partial s/join "\n"))
