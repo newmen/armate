@@ -1,7 +1,7 @@
-(ns armate.viz.combiner-test
+(ns armate.archimate.viz.combiner-test
   (:require [clojure.test :refer [deftest is]]
-            [armate.archimate :as arch]
-            [armate.viz.combiner :as viz]))
+            [armate.archimate.parser :as prr]
+            [armate.archimate.viz.combiner :as viz]))
 
 (def puml
   "@startuml \"test puml generation\"
@@ -37,4 +37,4 @@ c1_acp -[hidden]-> c2_ai
 @enduml")
 
 (deftest generate-puml-test
-  (is (= puml (viz/generate-puml (arch/analyze-content puml)))))
+  (is (= puml (viz/generate-puml (prr/analyze-content puml)))))

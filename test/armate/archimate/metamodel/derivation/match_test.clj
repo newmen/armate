@@ -1,7 +1,7 @@
-(ns armate.derivation.match-test
+(ns armate.archimate.derivation.match-test
   (:require [clojure.test :refer [deftest is]]
-            [armate.derivation.rules :as rs]
-            [armate.derivation.match :as mch]))
+            [armate.archimate.derivation.rules :as drs]
+            [armate.archimate.derivation.match :as mch]))
 
 (def graph0
   {"child_ba" {"client_br" #{{:type :assignment}}}
@@ -58,20 +58,6 @@
           "pass_bs" [-700 -2000]
           "fillForm_bpc" [-2 -1000]}
          (mch/get-weights graph0))))
-
-(deftest get-relationships-test
-  (is (= #{["partner_br" "configureTurnstile_bpc" {:type :assignment}]
-           ["partner_br" "controlFood_bpc" {:type :assignment}]
-           ["child_ba" "client_br" {:type :assignment}]
-           ["client_br" "fillForm_bpc" {:type :assignment}]
-           ["controlFood_bpc" "food_bs" {:type :realization}]
-           ["configureTurnstile_bpc" "pass_bs" {:type :realization}]
-           ["getRegistry_bpc" "registry_bs" {:type :realization}]
-           ["registry_bs" "partner_br" {:type :serving}]
-           ["food_bs" "child_ba" {:type :serving}]
-           ["pass_bs" "child_ba" {:type :serving}]
-           ["fillForm_bpc" "getRegistry_bpc" {:type :flow}]}
-         (set (mch/get-relationships graph0)))))
 
 (deftest get-prioritized-relationships-test
   (is (= [["partner_br" "configureTurnstile_bpc" {:type :assignment}]
@@ -205,7 +191,7 @@
           "partner_br" {"child_ba" #{{:type :serving}}
                         "food_bs" #{{:type :realization}}
                         "pass_bs" #{{:type :realization}}}}
-         (mch/derivate-relationships-once rs/certain-rules graph0)))
+         (mch/derivate-relationships-once drs/certain-rules graph0)))
   (is (= {"fillForm_bpc" {"registry_bs" #{{:type :flow}}}
           "food_bs" {"client_br" #{{:type :serving}}
                      "fillForm_bpc" #{{:type :serving}}}
@@ -218,7 +204,7 @@
                          "pass_bs" #{{:type :serving}}}
           "pass_bs" {"client_br" #{{:type :serving}}
                      "fillForm_bpc" #{{:type :serving}}}}
-         (mch/derivate-relationships-once rs/potential-rules graph0))))
+         (mch/derivate-relationships-once drs/potential-rules graph0))))
 
 (deftest derivate-relationships-test
   (is (= {"child_ba" {"fillForm_bpc" #{{:type :assignment}}
@@ -230,8 +216,8 @@
           "partner_br" {"child_ba" #{{:type :serving}}
                         "food_bs" #{{:type :realization}}
                         "pass_bs" #{{:type :realization}}}}
-         (mch/derivate-relationships rs/certain-rules graph0)))
-  (is (= (mch/derivate-relationships-once rs/certain-rules graph0)
-         (mch/derivate-relationships rs/certain-rules graph0)))
-  (is (= (mch/derivate-relationships-once rs/potential-rules graph0)
-         (mch/derivate-relationships rs/potential-rules graph0))))
+         (mch/derivate-relationships drs/certain-rules graph0)))
+  (is (= (mch/derivate-relationships-once drs/certain-rules graph0)
+         (mch/derivate-relationships drs/certain-rules graph0)))
+  (is (= (mch/derivate-relationships-once drs/potential-rules graph0)
+         (mch/derivate-relationships drs/potential-rules graph0))))

@@ -1,6 +1,7 @@
-(ns armate.viz.combiner
+(ns armate.archimate.viz.combiner
   (:require [clojure.string :as s]
-            [armate.derivation.match :as mch]))
+            [armate.archimate.derivation.match :as mch]
+            [armate.archimate.multi-graph :as mg]))
 
 (def indent "  ")
 
@@ -173,7 +174,7 @@
 
 (defn get-relations
   [grsf key context]
-  (let [sf (if (= mch/get-relationships grsf)
+  (let [sf (if (= mg/get-relationships grsf)
              (partial sort-by (comp sort-line-key last))
              identity)]
     (->> (grsf (key context))
@@ -184,7 +185,7 @@
 (defn generate-puml
   ([context]
    (generate-puml sbl-map
-                  (partial get-relations mch/get-relationships)
+                  (partial get-relations mg/get-relationships)
                   context))
   ([elf relf context]
    (->> [(get-start (:start context))
@@ -227,7 +228,7 @@
 (defn on-fly-generate-puml
   [context]
   (let [weights (get-total-weights context)
-        grsf (partial mch/get-relationships
+        grsf (partial mg/get-relationships
                       (partial sort-by (fn [[from & _]] (weights from))))]
     (generate-puml (partial ebl-map weights)
                    (partial get-relations grsf)

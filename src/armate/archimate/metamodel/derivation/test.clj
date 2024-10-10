@@ -1,6 +1,6 @@
-(ns armate.derivation.test
-  (:require [armate.derivation.rules :as rs]
-            [armate.derivation.viz :as viz]))
+(ns armate.archimate.derivation.test
+  (:require [armate.archimate.derivation.rules :as rs]
+            [armate.archimate.derivation.viz :as viz]))
 
 (defn- select-rules
   [rules rels]

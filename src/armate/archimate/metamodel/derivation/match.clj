@@ -1,17 +1,18 @@
-(ns armate.derivation.match
+(ns armate.archimate.derivation.match
   (:require [clojure.set :refer [intersection]]
-            [armate.derivation.rules :as rs]
+            [armate.archimate.derivation.rules :as drs]
+            [armate.archimate.multi-graph :as mg]
             [armate.utils :as u]))
 
 (defn get-rel-wieght
   [rel]
-  (let [dynamic-index (.indexOf rs/dynamic-rels rel)]
+  (let [dynamic-index (.indexOf drs/dynamic-rels rel)]
     (if-not (neg? dynamic-index)
       (inc dynamic-index)
-      (let [dependency-index (.indexOf rs/dependency-rels rel)]
+      (let [dependency-index (.indexOf drs/dependency-rels rel)]
         (if-not (neg? dependency-index)
           (* 100 (inc dependency-index))
-          (let [structural-index (.indexOf rs/structural-rels rel)]
+          (let [structural-index (.indexOf drs/structural-rels rel)]
             (if-not (neg? structural-index)
               (* 1000 (inc structural-index))
               (if (= :specialization rel)
@@ -40,18 +41,6 @@
              {}
              graph))
 
-(defn get-relationships
-  ([graph]
-   (get-relationships identity graph))
-  ([prepare graph]
-   (->> (prepare graph)
-        (mapcat (fn [[from nbrs]]
-                  (->> (prepare nbrs)
-                       (mapcat (fn [[to rels]]
-                                 (map (fn [rel]
-                                        [from to rel])
-                                      rels)))))))))
-
 (defn get-weights
   [graph]
   (let [source-weights (->> graph
@@ -73,9 +62,10 @@
 (defn get-prioritized-relationships
   [graph]
   (let [weights (get-weights graph)]
-    (get-relationships (partial sort-by (fn [[from & _]]
-                                          (conj (weights from [0 0]) from)))
-                       graph)))
+    (mg/get-relationships (partial sort-by
+                                   (fn [[from & _]]
+                                     (conj (weights from [0 0]) from)))
+                          graph)))
 
 (def rel-kin-map
   (reduce (fn [acc group]
@@ -84,10 +74,10 @@
                     acc
                     group))
           {}
-          [rs/structural-rels
-           rs/dependency-rels
-           rs/dynamic-rels
-           rs/other-rels]))
+          [drs/structural-rels
+           drs/dependency-rels
+           drs/dynamic-rels
+           drs/other-rels]))
 
 (defn match-rule
   [from to
