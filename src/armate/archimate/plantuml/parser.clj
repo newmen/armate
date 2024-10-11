@@ -39,7 +39,7 @@
 (defn get-skinparam-target [parts] (let [tail (rest parts)] (if (empty? tail) [:default] (vec (cut-furs (first tail))))))
 (defn get-type-kind [parts] (keyword (s/replace-first (last parts) "jar:archimate/" "")))
 (defn get-type-block [parts] {:alias (second parts), :kind (get-type-kind parts)})
-(defn strait-string [title] (s/replace title #"(?s)\s+" " "))
+(defn strait-string [title] (s/replace title #"(?s)(\s|\\n)+" " "))
 (defn get-element-block [parts] (let [shape (first parts) title (cut-quotes (second parts)) alias (nth parts 3 nil) type (nth parts 4 nil) skin (nth parts 5 nil) layer (last parts) [type3 skin2] (when type (cut-furs type)) skin3 (if skin2 skin2 (when (fur? skin) (cut2 skin))) layer2 (if (or (= 2 (count parts)) (fur? layer)) nil layer) color (when layer2 (if (color? layer2) layer2 nil)) layer3 (if color nil layer2)] {:shape shape, :title title, :name (strait-string title), :alias alias, :type type3, :skin skin3, :layer layer3, :color color}))
 (defn get-group-block [parts] (let [[cap-type alias title color] parts title2 (cut-quotes title)] {:title title2, :name (strait-string title2), :alias alias, :type (keyword (s/lower-case cap-type)), :kind :group, :color color}))
 (defn hidden-rel? [parts] (when-let [rel (second parts)] (s/includes? rel "[hidden]")))
