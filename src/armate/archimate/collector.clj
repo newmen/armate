@@ -1,5 +1,6 @@
 (ns armate.archimate.collector
   (:require [clojure.string :as s]
+            [armate.archimate.derivation.rules :as drs]
             [armate.archimate.multi-graph :as mg]))
 
 (defn get-composed-aliases
@@ -29,35 +30,55 @@
               {:component component
                :interfaces (collect-interfaces context (:alias component))}))))
 
-(defn- select-elements
-  [binary-check
-   staying-aliases
-   context predicate]
-  (let [elements (->> (vals (:elements context))
-                      (filter predicate))
-        aliases (set (map :alias elements))
+(defn- filter-aliases
+  [context predicate]
+  (->> (vals (:elements context))
+       (filter predicate)
+       (map :alias)
+       (set)))
+
+(def structural-rels
+  (set drs/structural-rels))
+
+(defn- collect-aliases
+  [graph depth aliases]
+  (loop [depth depth
+         aliases aliases
+         first-time? true]
+    (prn depth aliases first-time?)
+    (if (zero? depth)
+      aliases
+      (let [nals (->> (mg/get-relationships graph)
+                      (filter (fn [[from to rel]]
+                                (if first-time?
+                                  (or (aliases to) (aliases from))
+                                  (and (aliases to)
+                                       (or (aliases from)
+                                           (structural-rels (:type rel)))))))
+                      (mapcat (juxt first second))
+                      (set))]
+        (recur (if (= aliases nals) 0 (dec depth))
+               nals
+               false)))))
+
+(defn select-just-elements
+  [context predicate]
+  (let [aliases (filter-aliases context predicate)
         frf (partial mg/filter-relationships
                      (fn [[from to _]]
-                       (binary-check (aliases from) (aliases to))))
-        relations (frf (:relations context))
-        aliases2 (staying-aliases aliases relations)]
+                       (and (aliases from) (aliases to))))]
     (-> context
-        (update :elements #(select-keys % aliases2))
-        (assoc :relations relations)
+        (update :elements #(select-keys % aliases))
+        (update :relations frf)
         (update :hidden frf))))
 
-(def select-just-elements
-  (partial select-elements
-           #(and %1 %2)
-           (fn [aliases _] aliases)))
-
-(def select-near-elements
-  (partial select-elements
-           #(or %1 %2)
-           (fn [_ relations]
-             (->> (mg/get-relationships relations)
-                  (mapcat (juxt first second))
-                  (set)))))
+(defn select-near-elements
+  ([context predicate]
+   (select-near-elements context predicate 1))
+  ([context predicate depth]
+   (let [aliases (->> (filter-aliases context predicate)
+                      (collect-aliases (:relations context) depth))]
+     (select-just-elements context (comp aliases :alias)))))
 
 (defn exclude-sub-titles
   [context excluding-names]
