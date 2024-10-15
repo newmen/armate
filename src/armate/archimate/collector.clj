@@ -45,7 +45,6 @@
   (loop [depth depth
          aliases aliases
          first-time? true]
-    (prn depth aliases first-time?)
     (if (zero? depth)
       aliases
       (let [nals (->> (mg/get-relationships graph)
