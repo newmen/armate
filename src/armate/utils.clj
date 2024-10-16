@@ -8,11 +8,25 @@
   (apply dissoc hm
          (filter (comp nil? hm) ks)))
 
+(defn dissoc-nils
+  [hm]
+  (reduce-kv (fn [acc k v]
+               (if (nil? v)
+                 (dissoc acc k)
+                 acc))
+             hm hm))
+
 (defn assoc-if-not-nil
   [hm k v]
   (if (nil? v)
     hm
     (assoc hm k v)))
+
+(defn update-if-not-nil
+  [hm k f & args]
+  (if (nil? (hm k))
+    hm
+    (apply update hm k f args)))
 
 (defn transpose
   [matrix]

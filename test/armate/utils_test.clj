@@ -10,14 +10,32 @@
 (deftest dissoc-if-nil-test
   (is (= {:a 1}
          (u/dissoc-if-nil {:a 1 :b nil} :b)))
+  (is (= {:a 1 :b nil}
+         (u/dissoc-if-nil {:a 1 :b nil} :a)))
   (is (= {:a 1 :b 2}
          (u/dissoc-if-nil {:a 1 :b 2 :c nil :d nil} :c :d))))
+
+(deftest dissoc-nils
+  (is (= {:a 1}
+         (u/dissoc-nils {:a 1 :b nil})))
+  (is (= {:a 1 :b 2}
+         (u/dissoc-nils {:a 1 :b 2 :c nil :d nil}))))
 
 (deftest assoc-if-not-nil-test
   (is (= {:a 1}
          (u/assoc-if-not-nil {:a 1} :b nil)))
   (is (= {:a 1 :b 2}
          (u/assoc-if-not-nil {:a 1} :b 2))))
+
+(deftest update-if-not-nil-test
+  (is (= {:a 1}
+         (u/update-if-not-nil {:a 1} :b inc)))
+  (is (= {:a 1 :b nil}
+         (u/update-if-not-nil {:a 1 :b nil} :b + 2)))
+  (is (= {:a 1 :b 2}
+         (u/update-if-not-nil {:a 1 :b 1} :b inc)))
+  (is (= {:a 1 :b 2}
+         (u/update-if-not-nil {:a 1 :b 0} :b + 2))))
 
 (deftest distinct-by
   (is (= [1 2 3] (u/distinct-by identity [1 2 3 2 3 1 3])))
