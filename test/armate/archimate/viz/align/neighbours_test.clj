@@ -1,5 +1,6 @@
 (ns armate.archimate.viz.align-test
   (:require [clojure.test :refer [deftest is]]
+            [armate.archimate.rules :as rls]
             [armate.archimate.viz.align :as alg]))
 
 (deftest build-up-down-map-test
@@ -16,6 +17,21 @@
                                           {:direction :up :line 2}}
                                      :c #{{:direction :down}}}
                                  :c {:b #{{:direction :up}}}}))))
+
+(deftest element-kinds-order-test
+  (is (= (set alg/element-kinds-order)
+         rls/possible-elements)))
+
+(deftest build-weight-map-test
+  (is (= {:a [15 17]
+          :b [46 48]
+          :c [64 66]}
+         (alg/build-weight-map {:elements {:a {:alias :a :kind :business-product}
+                                           :b {:alias :b :kind :application-service}
+                                           :c {:alias :c :kind :application-collaboration}}
+                                :relations {:a {:b #{{:direction :up}}
+                                                :c #{{:direction :down}}}
+                                            :c {:b #{{:direction :up}}}}}))))
 
 (deftest get-align-matrix-test
   (is (empty? (alg/get-align-matrix 0)))

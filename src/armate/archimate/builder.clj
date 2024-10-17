@@ -13,8 +13,8 @@
 (defn patch-raw-name
   [raw-name]
   (-> raw-name
-      (s/replace #"-|#|\+|\*|\s|\(|\)|\[|\]|\?" "_")
-      (s/replace #"\." "__")
+      (s/replace #"=|-|~|:|#|\+|\*|\s|\(|\)|\[|\]|\{|\}|\?" "_")
+      (s/replace #"\.|," "__")
       (s/replace #"/" "___")))
 
 (defn alias-title
@@ -22,6 +22,30 @@
   (-> (s/lower-case raw-name)
       (tl/transliterate)
       (patch-raw-name)))
+
+(defn only-int?
+  [string]
+  (when string
+    (re-matches #"^\d+$" string)))
+
+(defn- convert-id
+  [id]
+  (try
+    (Integer/parseInt id)
+    (catch Exception _
+      nil)))
+
+(defn- with-id
+  [type-hm id]
+  (if (empty? id)
+    type-hm
+    (u/assoc-if-not-nil type-hm
+                        :id
+                        (convert-id id))))
+
+(defn check-cache
+  [context misc-key alias]
+  (get-in context [:misc misc-key alias]))
 
 (defn get-rectangle
   ([context misc-key patch-f name type-hm]
@@ -31,23 +55,19 @@
          alias (if id
                  (str abrv id)
                  (str (patch-f name) "_" abrv))]
-     (if-let [service (get-in context [:misc misc-key alias])]
-       [context service]
-       (let [service (merge type-hm
-                            (if id
-                              {:id (try
-                                           (Integer/parseInt id)
-                                           (catch Exception _
-                                             id))}
-                              {})
-                            {:shape "rectangle"
-                             :title (cc id (subsplit name))
-                             :name name
-                             :alias alias})]
+     (if-let [element (check-cache context misc-key alias)]
+       [context element]
+       (let [element (-> (with-id type-hm id)
+                         (merge {:shape "rectangle"
+                                 :title (if (only-int? id)
+                                          (cc id (subsplit name))
+                                          (subsplit name))
+                                 :name name
+                                 :alias alias}))]
          [(-> context
-              (assoc-in [:misc misc-key alias] service)
-              (assoc-in [:elements alias] service))
-          service])))))
+              (assoc-in [:misc misc-key alias] element)
+              (assoc-in [:elements alias] element))
+          element])))))
 
 (defn get-product
   ([context product-name]
@@ -86,14 +106,19 @@
                    :layer :application})))
 
 (defn get-interface
-  [context interface-name]
-  (get-rectangle context :interfaces
-                 patch-raw-name
-                 interface-name
-                 {:type "$ai"
-                  :kind :application-interface
-                  :specie :interface
-                  :layer :application}))
+  ([context interface-name]
+   (get-interface context nil interface-name {}))
+  ([context interface-name add-params]
+   (get-interface context nil interface-name add-params))
+  ([context alias interface-name add-params]
+   (get-rectangle context :interfaces
+                  patch-raw-name
+                  alias interface-name
+                  (merge add-params
+                         {:type "$ai"
+                          :kind :application-interface
+                          :specie :interface
+                          :layer :application}))))
 
 (defn get-component
   [context component-name]
@@ -141,7 +166,7 @@
            "$ai" {:alias "$ai" :kind :application-interface}
            "$acp" {:alias "$acp" :kind :application-component}
            "$acb" {:alias "$acb" :kind :application-collaboration}
-           "$tss" {:alias "$tss" :kind :technical-system-software}}
+           "$tss" {:alias "$tss" :kind :technology-system-software}}
    :skins {[:default] {:props [{:parts ["RoundCorner" "8"]}
                                {:parts ["Shadowing" "false"]}]}
            ["rectangle"] {:shape "rectangle"

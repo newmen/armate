@@ -28,6 +28,13 @@
     hm
     (apply update hm k f args)))
 
+(defn replace-last
+  [v value]
+  (if (empty? v)
+    [value]
+    (conj (subvec v 0 (dec (count v)))
+          value)))
+
 (defn transpose
   [matrix]
   (apply mapv vector matrix))

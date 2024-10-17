@@ -17,6 +17,46 @@
                          (assoc to [(dec tu) td])))))
                {})))
 
+(def element-kinds-order
+  [:business-actor
+   :business-role
+   :business-interaction
+   :business-product
+   :business-service
+   :business-event
+   :business-function
+   :business-process
+   :business-collaboration
+   :application-service
+   :application-data-object
+   :application-interface
+   :application-component
+   :application-collaboration
+   :technology-artifact
+   :technology-system-software
+   :technology-node
+   :technology-collaboration
+   :technology-path
+   :technology-interaction])
+
+(def weight-step 5)
+
+(def kind-weights
+  (->> (range)
+       (map (partial * weight-step))
+       (map inc)
+       (zipmap element-kinds-order)))
+
+(defn build-weight-map
+  [context]
+  (reduce (fn [acc element]
+            (let [weight (kind-weights (:kind element) 1)]
+              (update acc
+                      (:alias element)
+                      (fnil (partial mapv (partial + weight)) [0 0]))))
+          (build-up-down-map (:relations context))
+          (vals (:elements context))))
+
 (defn get-align-matrix
   [total]
   (let [row (int (Math/round (Math/sqrt (double total))))
@@ -122,7 +162,7 @@
 
 (defn calc-hiddens
   [context]
-  (let [up-down-map (build-up-down-map (:relations context))]
+  (let [up-down-map (build-weight-map context)]
     (merge-with (partial merge-with into)
                 (calc-hidden-groups context up-down-map)
                 (calc-hidden-sources context up-down-map))))
