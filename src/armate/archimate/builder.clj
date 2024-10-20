@@ -175,18 +175,25 @@
    :relations {}
    :hidden {}})
 
+(defn get-relation
+  [context from to type params]
+  (let [key [:relations (:alias from) (:alias to)]
+        relation (merge params
+                        {:from (:kind from)
+                         :to (:kind to)
+                         :type type})]
+    (if (contains? (get-in context key) relation)
+      context
+      (update-in context key u/fnil-conj-set relation))))
+
 (defn add-relation
   ([context from to type direction]
    (add-relation context from to type direction nil))
   ([context from to type direction desc]
-   (let [key [:relations (:alias from) (:alias to)]
-         relation {:from (:kind from)
-                   :to (:kind to)
-                   :type type
-                   :direction direction}
-         relation2 (if desc
-                     (assoc relation :desc desc)
-                     relation)]
-     (if (contains? (get-in context key) relation2)
-       context
-       (update-in context key u/fnil-conj-set relation2)))))
+   (let [params (u/assoc-if-not-nil {:direction direction}
+                                    :desc desc)]
+     (get-relation context from to type params))))
+
+(defn add-nesting-relation
+  [context from to type]
+  (get-relation context from to type {:derivate :nesting}))

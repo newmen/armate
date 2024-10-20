@@ -5,6 +5,7 @@
 (defn build-up-down-map
   [graph]
   (->> (mg/get-relationships graph)
+       (remove (comp (partial = :nesting) :derivate last))
        (reduce (fn [acc [from to relation]]
                  (let [[fu fd] (acc from [0 0])
                        [tu td] (acc to [0 0])]
