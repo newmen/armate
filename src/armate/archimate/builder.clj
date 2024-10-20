@@ -121,14 +121,17 @@
                           :layer :application}))))
 
 (defn get-component
-  [context component-name]
-  (get-rectangle context :components
-                 patch-raw-name
-                 component-name
-                 {:type "$acp"
-                  :kind :application-component
-                  :specie :component
-                  :layer :application}))
+  ([context component-name]
+   (get-component context nil component-name {}))
+  ([context alias component-name add-params]
+   (get-rectangle context :components
+                  patch-raw-name
+                  alias component-name
+                  (merge add-params
+                         {:type "$acp"
+                          :kind :application-component
+                          :specie :component
+                          :layer :application}))))
 
 (defn get-app-collaboration
   [context collaboration-name]
