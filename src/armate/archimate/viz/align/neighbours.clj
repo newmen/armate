@@ -122,14 +122,24 @@
 (def max-in-row 2)
 (def too-many-rels 4)
 
+(defn get-groups
+  [context]
+  (concat (->> (vals (:elements context))
+               (filter :in)
+               (group-by :in)
+               (vals)
+               (filter (comp (partial < max-in-row) count))
+               (map (partial map :alias)))
+          (->> (vals (:relations context))
+               (filter (comp (partial < max-in-row) count))
+               (map keys))))
+
 (defn calc-hidden-groups
   [context up-down-map]
-  (->> (vals (:relations context))
-       (filter (comp (partial <= max-in-row) count))
+  (->> (get-groups context)
        (sort-by (comp - count))
        (reduce (fn [acc group]
-                 (let [items (->> (keys group)
-                                  (remove (:processed acc)))]
+                 (let [items (remove (:processed acc) group)]
                    (if (<= max-in-row (count items))
                      (let [matrix (get-align-matrix (count items))]
                        (-> acc
