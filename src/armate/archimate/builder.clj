@@ -200,3 +200,40 @@
 (defn add-nesting-relation
   [context from to type]
   (get-relation context from to type {:derivate :nesting}))
+
+(def proto-names-map
+  {:grpc "gRPC"
+   :rest "REST"})
+
+(def system-lang-names-map
+  {:cql "Cassandra"
+   :sql "PostgreSQL"})
+
+(defn add-technology-element
+  [context source-element in-keys names-map]
+  (when-let [type (get-in source-element in-keys)]
+    (when-let [software-name (names-map type)]
+      (let [[ctx2 software] (get-software context software-name)
+            rel-type (case (:kind source-element)
+                       :application-component :realization
+                       :application-interface :serving)]
+        (add-relation ctx2 software source-element rel-type :up)))))
+
+(defn add-proto-element
+  [context element]
+  (add-technology-element context element
+                          [:attributes :proto] proto-names-map))
+
+(defn add-system-element
+  [context element]
+  (add-technology-element context element
+                          [:attributes :language] system-lang-names-map))
+
+(defn add-software-elements
+  [context]
+  (->> (vals (:elements context))
+       (reduce (fn [acc element]
+                 (or (add-proto-element acc element)
+                     (add-system-element acc element)
+                     acc))
+               context)))

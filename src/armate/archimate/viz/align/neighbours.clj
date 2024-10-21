@@ -31,10 +31,10 @@
    :application-service
    :application-data-object
    :application-interface
+   :technology-system-software
    :application-component
    :application-collaboration
    :technology-artifact
-   :technology-system-software
    :technology-node
    :technology-collaboration
    :technology-path
