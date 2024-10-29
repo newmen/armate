@@ -11,6 +11,9 @@
    :d {:a #{{:type :flow}}
        :e #{{:type :aggregation}}}})
 
+(def transitive-graph
+  (assoc-in graph0 [:b :c] #{{:type :assignment}}))
+
 (deftest get-relationship-sets-test
   (is (= #{[:a :b #{{:type :assignment}
                     {:type :serving}}]
@@ -40,3 +43,20 @@
           :d {:e #{{:type :aggregation}}}}
          (mg/filter-relationships (comp #{:aggregation :composition} :type last)
                                   graph0))))
+
+(deftest get-nbrs-test
+  (is (empty? (mg/get-nbrs :assignment graph0 :e)))
+  (is (= #{:b :c} (mg/get-nbrs :assignment graph0 :a)))
+  (is (= #{:b} (mg/get-nbrs :serving graph0 :a))))
+
+(deftest detect-transitive-relationships-test
+  (is (empty? (mg/detect-transitive-relationships :assignment graph0)))
+  (is (= [[:a :c]]
+         (mg/detect-transitive-relationships :assignment transitive-graph)))
+  (is (empty? (mg/detect-transitive-relationships :serving transitive-graph))))
+
+(deftest erase-transitive-relationships-test
+  (is (= graph0
+         (mg/erase-transitive-relationships :assignment graph0)))
+  (is (= (update transitive-graph :a dissoc :c)
+         (mg/erase-transitive-relationships :assignment transitive-graph))))

@@ -25,7 +25,7 @@
 (deftest build-weight-map-test
   (is (= {:a [15 17]
           :b [46 48]
-          :c [64 66]}
+          :c [69 71]}
          (alg/build-weight-map {:elements {:a {:alias :a :kind :business-product}
                                            :b {:alias :b :kind :application-service}
                                            :c {:alias :c :kind :application-collaboration}}

@@ -52,3 +52,19 @@
 (defn distinct-by
   [f coll]
   (lazy-distinct-by f coll #{}))
+
+(defn make-keyword-keys
+  [obj]
+  (when obj
+    (if (map? obj)
+      (->> obj
+           (map (juxt (comp keyword first)
+                      (comp make-keyword-keys second)))
+           (into {}))
+      (if (vector? obj)
+        (mapv make-keyword-keys obj)
+        (if (set? obj)
+          (set (map make-keyword-keys obj))
+          (if (list? obj)
+            (map make-keyword-keys obj)
+            obj))))))

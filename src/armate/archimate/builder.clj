@@ -48,62 +48,73 @@
   (get-in context [:misc misc-key alias]))
 
 (defn get-rectangle
-  ([context misc-key patch-f name type-hm]
-   (get-rectangle context misc-key patch-f nil name type-hm))
-  ([context misc-key patch-f id name type-hm]
-   (let [abrv (s/join (rest (:type type-hm)))
+  ([context patch-f title type-hm]
+   (get-rectangle context patch-f nil title type-hm))
+  ([context patch-f id title type-hm]
+   (let [type-name (:type type-hm)
+         abrv (s/join (rest type-name))
          alias (if id
                  (str abrv id)
-                 (str (patch-f name) "_" abrv))]
-     (if-let [element (check-cache context misc-key alias)]
+                 (str (patch-f title) "_" abrv))
+         kind (get-in context [:types type-name :kind])
+         kind-parts (s/split (name kind) #"-")
+         specie (keyword (s/join (rest kind-parts)))
+         layer (keyword (first kind-parts))]
+     (if-let [element (check-cache context kind alias)]
        [context element]
        (let [element (-> (with-id type-hm id)
                          (merge {:shape "rectangle"
+                                 :specie specie
+                                 :kind kind
+                                 :layer layer
                                  :title (if (only-int? id)
-                                          (cc id (subsplit name))
-                                          (subsplit name))
-                                 :name name
+                                          (cc id (subsplit title))
+                                          (subsplit title))
+                                 :name title
                                  :alias alias}))]
          [(-> context
-              (assoc-in [:misc misc-key alias] element)
+              (assoc-in [:misc kind alias] element)
               (assoc-in [:elements alias] element))
           element])))))
+
+(defn get-actor
+  [context actor-name]
+  (get-rectangle context
+                 alias-title actor-name
+                 {:type "$ba"}))
+
+(defn get-role
+  [context role-name]
+  (get-rectangle context
+                 alias-title role-name
+                 {:type "$br"}))
 
 (defn get-product
   ([context product-name]
    (get-product context nil product-name))
   ([context product-id product-name]
-   (get-rectangle context :products
+   (get-rectangle context
                   alias-title
                   product-id product-name
-                  {:type "$bpd"
-                   :kind :business-product
-                   :specie :product
-                   :layer :business})))
+                  {:type "$bpd"})))
 
 (defn get-bus-service
   ([context service-name]
    (get-bus-service context nil service-name))
   ([context service-id service-name]
-   (get-rectangle context :bus-services
+   (get-rectangle context
                   alias-title
                   service-id service-name
-                  {:type "$bsv"
-                   :kind :business-service
-                   :specie :service
-                   :layer :business})))
+                  {:type "$bsv"})))
 
 (defn get-app-service
   ([context service-name]
    (get-app-service context nil service-name))
   ([context service-id service-name]
-   (get-rectangle context :app-services
+   (get-rectangle context
                   alias-title
                   service-id service-name
-                  {:type "$asv"
-                   :kind :application-service
-                   :specie :service
-                   :layer :application})))
+                  {:type "$asv"})))
 
 (defn get-interface
   ([context interface-name]
@@ -111,47 +122,35 @@
   ([context interface-name add-params]
    (get-interface context nil interface-name add-params))
   ([context alias interface-name add-params]
-   (get-rectangle context :interfaces
+   (get-rectangle context
                   patch-raw-name
                   alias interface-name
                   (merge add-params
-                         {:type "$ai"
-                          :kind :application-interface
-                          :specie :interface
-                          :layer :application}))))
+                         {:type "$ai"}))))
 
 (defn get-component
   ([context component-name]
    (get-component context nil component-name {}))
   ([context alias component-name add-params]
-   (get-rectangle context :components
+   (get-rectangle context
                   patch-raw-name
                   alias component-name
                   (merge add-params
-                         {:type "$acp"
-                          :kind :application-component
-                          :specie :component
-                          :layer :application}))))
+                         {:type "$acp"}))))
 
 (defn get-app-collaboration
   [context collaboration-name]
-  (get-rectangle context :app-collaborations
+  (get-rectangle context
                  patch-raw-name
                  collaboration-name
-                 {:type "$acb"
-                  :kind :application-collaboration
-                  :specie :collaboration
-                  :layer :application}))
+                 {:type "$acb"}))
 
 (defn get-software
   [context software-name]
-  (get-rectangle context :software
+  (get-rectangle context
                  patch-raw-name
                  software-name
-                 {:type "$tss"
-                  :kind :technology-system-software
-                  :specie :system-software
-                  :layer :technology}))
+                 {:type "$tss"}))
 
 (def init-context
   {:start {:title (str "Generated at " (Instant/now))}
@@ -163,7 +162,9 @@
           :app-collaborations {}
           :software {}} ; a cache of already created elements
    :includes {"archimate/Archimate" {:package "archimate/Archimate"}}
-   :types {"$bpd" {:alias "$bpd" :kind :business-product}
+   :types {"$ba" {:alias "$ba" :kind :business-actor}
+           "$br" {:alias "$br" :kind :business-role}
+           "$bpd" {:alias "$bpd" :kind :business-product}
            "$bsv" {:alias "$bsv" :kind :business-service}
            "$asv" {:alias "$asv" :kind :application-service}
            "$ai" {:alias "$ai" :kind :application-interface}

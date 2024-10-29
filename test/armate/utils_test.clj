@@ -48,3 +48,24 @@
 (deftest distinct-by
   (is (= [1 2 3] (u/distinct-by identity [1 2 3 2 3 1 3])))
   (is (= [0 1 2] (take 3 (u/distinct-by identity (range))))))
+
+(deftest make-keyword-keys-test
+  (is (nil? (u/make-keyword-keys nil)))
+  (is (= 42
+         (u/make-keyword-keys 42)))
+  (is (= :x
+         (u/make-keyword-keys :x)))
+  (is (= "x"
+         (u/make-keyword-keys "x")))
+  (is (= ["x" "y"]
+         (u/make-keyword-keys ["x" "y"])))
+  (is (= #{"x" "y"}
+         (u/make-keyword-keys #{"x" "y"})))
+  (is (= '("x" "y")
+         (u/make-keyword-keys '("x" "y"))))
+  (is (= {:x "y"}
+         (u/make-keyword-keys {"x" "y"})))
+  (is (= {:x {:y "z"}}
+         (u/make-keyword-keys {"x" {"y" "z"}})))
+  (is (= [{:a "b"} {:x {:y "z"}}]
+         (u/make-keyword-keys [{"a" "b"} {"x" {"y" "z"}}]))))
