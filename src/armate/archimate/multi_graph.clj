@@ -2,6 +2,22 @@
   (:require [clojure.set :as o]
             [armate.utils :as u]))
 
+(defn reverse-graph
+  [graph]
+  (reduce-kv (fn [acc from nbrs]
+               (reduce-kv (fn [a to rels]
+                            (reduce (fn [a2 rel]
+                                      (let [rel2 (-> rel
+                                                     (u/assoc-if-not-nil :from (:to rel))
+                                                     (u/assoc-if-not-nil :to (:from rel)))]
+                                        (update-in a2 [to from] u/fnil-conj-set rel2)))
+                                    a
+                                    rels))
+                          acc
+                          nbrs))
+             {}
+             graph))
+
 (defn get-relationship-sets
   ([graph]
    (get-relationship-sets identity graph))
@@ -72,3 +88,50 @@
                                (assoc to-rels to (set rels2))
                                (dissoc to-rels to))))))
                graph)))
+
+(defn detect-cyclic1-relationships
+  [rel-type graph]
+  (let [gnf (partial get-nbrs rel-type graph)]
+    (->> (keys graph)
+         (mapcat (fn [from]
+                   (let [nbrs (gnf from)]
+                     (->> nbrs
+                          (remove (comp empty? (partial o/intersection #{from}) gnf))
+                          (map (partial hash-set from))))))
+         (set))))
+
+(defn get-vertex-weight
+  [rel-type forward-graph reversed-graph vertex]
+  (let [forward-nbrs (get-nbrs rel-type forward-graph vertex)
+        reversed-nbrs (get-nbrs rel-type reversed-graph vertex)]
+    [(count reversed-nbrs)
+     (count forward-nbrs)
+     vertex]))
+
+(defn range-vertices
+  [rel-type forward-graph reversed-graph vertices]
+  (sort-by (partial get-vertex-weight rel-type forward-graph reversed-graph)
+           vertices))
+
+(defn erase-cyclic1-relationships
+  [rel-type forward-graph]
+  (let [cyclic-rels (detect-cyclic1-relationships rel-type forward-graph)]
+    (if (empty? cyclic-rels)
+      forward-graph
+      (let [reversed-graph (reverse-graph forward-graph)]
+        (:forward
+         (reduce (fn [acc pair]
+                   (let [{fg :forward rg :reversed} acc
+                         [from to] (range-vertices rel-type fg rg pair)
+                         xf (fn [a in]
+                              (let [rels (->> (get-in a in)
+                                              (remove (comp (partial = rel-type) :type)))]
+                                (if (seq rels)
+                                  (assoc a in (set rels))
+                                  (update-in a (drop-last in) dissoc (last in)))))]
+                     (-> acc
+                         (xf [:forward from to])
+                         (xf [:reversed to from]))))
+                 {:forward forward-graph
+                  :reversed reversed-graph}
+                 cyclic-rels))))))

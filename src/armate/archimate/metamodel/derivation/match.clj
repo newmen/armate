@@ -28,19 +28,6 @@
                     (sort-by (comp - get-rel-wieght first second) group))))
        (into {})))
 
-(defn reverse-graph
-  [graph]
-  (reduce-kv (fn [acc from nbrs]
-               (reduce-kv (fn [a to rels]
-                            (reduce (fn [a2 rel]
-                                      (update-in a2 [to from] u/fnil-conj-set rel))
-                                    a
-                                    rels))
-                          acc
-                          nbrs))
-             {}
-             graph))
-
 (defn get-weights
   [graph]
   (let [source-weights (->> graph
@@ -133,7 +120,7 @@
   [rules graph]
   (let [rules-map (make-rules-map rules)]
     (loop [forward-graph graph
-           reverse-graph (reverse-graph graph)
+           reverse-graph (mg/reverse-graph graph)
            derivated-graph {}
            follow-relations (->> (get-prioritized-relationships graph)
                                  (map (juxt first second (comp :type last))))]
