@@ -7,7 +7,10 @@
   (reduce-kv (fn [acc from nbrs]
                (reduce-kv (fn [a to rels]
                             (reduce (fn [a2 rel]
-                                      (let [rel2 (-> rel
+                                      (let [rd (case (:direction rel)
+                                                 :up :down
+                                                 :down :up)
+                                            rel2 (-> (u/assoc-if-not-nil rel :direction rd)
                                                      (u/assoc-if-not-nil :from (:to rel))
                                                      (u/assoc-if-not-nil :to (:from rel)))]
                                         (update-in a2 [to from] u/fnil-conj-set rel2)))
@@ -56,18 +59,22 @@
                {})))
 
 (defn get-nbrs
-  [rel-type graph from]
+  [predicate graph from]
   (->> (graph from)
-       (filter (comp (partial some (comp (partial = rel-type)
-                                         :type))
-                     second))
+       (filter (comp (partial some predicate) second))
        (map first)
        (remove (partial = from))
        (set)))
 
+(defn get-type-nbrs
+  [rel-type graph from]
+  (get-nbrs (comp (partial = rel-type) :type)
+            graph
+            from))
+
 (defn detect-transitive-relationships
   [rel-type graph]
-  (let [gnf (partial get-nbrs rel-type graph)]
+  (let [gnf (partial get-type-nbrs rel-type graph)]
     (->> (keys graph)
          (mapcat (fn [from]
                    (let [nbrs (gnf from)]
@@ -91,7 +98,7 @@
 
 (defn detect-cyclic1-relationships
   [rel-type graph]
-  (let [gnf (partial get-nbrs rel-type graph)]
+  (let [gnf (partial get-type-nbrs rel-type graph)]
     (->> (keys graph)
          (mapcat (fn [from]
                    (let [nbrs (gnf from)]
@@ -102,8 +109,8 @@
 
 (defn get-vertex-weight
   [rel-type forward-graph reversed-graph vertex]
-  (let [forward-nbrs (get-nbrs rel-type forward-graph vertex)
-        reversed-nbrs (get-nbrs rel-type reversed-graph vertex)]
+  (let [forward-nbrs (get-type-nbrs rel-type forward-graph vertex)
+        reversed-nbrs (get-type-nbrs rel-type reversed-graph vertex)]
     [(count reversed-nbrs)
      (count forward-nbrs)
      vertex]))

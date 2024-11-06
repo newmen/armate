@@ -49,10 +49,10 @@
          (mg/filter-relationships (comp #{:aggregation :composition} :type last)
                                   graph0))))
 
-(deftest get-nbrs-test
-  (is (empty? (mg/get-nbrs :assignment graph0 :e)))
-  (is (= #{:b :c} (mg/get-nbrs :assignment graph0 :a)))
-  (is (= #{:b} (mg/get-nbrs :serving graph0 :a))))
+(deftest get-type-nbrs-test
+  (is (empty? (mg/get-type-nbrs :assignment graph0 :e)))
+  (is (= #{:b :c} (mg/get-type-nbrs :assignment graph0 :a)))
+  (is (= #{:b} (mg/get-type-nbrs :serving graph0 :a))))
 
 (deftest detect-transitive-relationships-test
   (is (empty? (mg/detect-transitive-relationships :assignment graph0)))
