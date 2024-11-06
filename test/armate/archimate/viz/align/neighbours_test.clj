@@ -16,16 +16,40 @@
          (alg/build-up-down-map {:a {:b #{{:direction :up :line 1}
                                           {:direction :up :line 2}}
                                      :c #{{:direction :down}}}
-                                 :c {:b #{{:direction :up}}}}))))
+                                 :c {:b #{{:direction :up}}}})))
+  (is (= {:a [-3 1]
+          :b [-2 0]
+          :c [0 1]
+          :d [0 1]
+          :e [0 1]
+          :f [0 1]}
+         (alg/build-up-down-map {:a {:b #{{:direction :down}}
+                                     :c #{{:direction :up}}
+                                     :d #{{:direction :up}}
+                                     :e #{{:direction :up}}}
+                                 :b {:f #{{:direction :up}}}})))
+  (is (= {:a [-2 -1]
+          :b [0 3]
+          :c [-4 0]
+          :e [0 1]
+          :d [0 1]}
+         (alg/build-up-down-map {:a {:b #{{:direction :up :line 1}
+                                          {:direction :up :line 2}}
+                                     :c #{{:direction :down}}
+                                     :d #{{:derivate :nesting}}
+                                     :e #{{:derivate :nesting}}}
+                                 :c {:b #{{:direction :up}}}
+                                 :d {:c #{{:direction :down}}}
+                                 :e {:c #{{:direction :down}}}}))))
 
 (deftest element-kinds-order-test
   (is (= (set alg/element-kinds-order)
          rls/possible-elements)))
 
 (deftest build-weight-map-test
-  (is (= {:a [15 17]
-          :b [46 48]
-          :c [69 71]}
+  (is (= {:a [15 17 :a]
+          :b [46 48 :b]
+          :c [69 71 :c]}
          (alg/build-weight-map {:elements {:a {:alias :a :kind :business-product}
                                            :b {:alias :b :kind :application-service}
                                            :c {:alias :c :kind :application-collaboration}}
@@ -104,30 +128,52 @@
                                        :raw "-[hidden]->"}}}}
                             [:a :b]))))
 
+(deftest get-groups-test
+  (is (empty? (alg/get-groups {})))
+  (is (empty?
+       (with-redefs [alg/max-in-row 2]
+         (alg/get-groups {:relations {:a {:b #{{:type :composition :direction :down}}
+                                          :c #{{:type :assignment :direction :up}}
+                                          :d #{{:type :assignment :direction :up}}}
+                                      :b {:e #{{:type :assignment :direction :up}}}}
+                          :elements {:a {:kind :application-component}
+                                     :b {:kind :application-component}
+                                     :c {:kind :application-interface}
+                                     :d {:kind :application-interface}
+                                     :e {:kind :application-interface}}}))))
+  (is (= #{#{:d :h} #{:e :f :g}}
+         (with-redefs [alg/max-in-row 1]
+           (alg/get-groups {:relations {:a {:b #{{:type :composition :direction :down}}
+                                            :c #{{:type :assignment :direction :up}}}
+                                        :b {:e #{{:type :assignment :direction :up}}}}
+                            :elements {:a {:kind :application-component :alias :a}
+                                       :b {:kind :application-component :alias :b}
+                                       :c {:kind :application-interface :alias :c :in :h}
+                                       :d {:kind :application-interface :alias :d :in :b}
+                                       :e {:kind :application-interface :alias :e :in :a}
+                                       :f {:kind :application-interface :alias :f :in :a}
+                                       :g {:kind :application-interface :alias :g :in :a}
+                                       :h {:kind :application-interface :alias :h :in :b}}})))))
+
 (deftest calc-hidden-groups
   (is (= {} (alg/calc-hidden-groups {} {})))
-  (is (= {:b {:d #{{:from :application-component
+  (is (empty?
+       (with-redefs [alg/max-in-row 2]
+         (let [graph {:a {:b #{{:type :composition :direction :down}}
+                          :c #{{:type :assignment :direction :up}}
+                          :d #{{:type :assignment :direction :up}}}
+                      :b {:e #{{:type :assignment :direction :up}}}}]
+           (alg/calc-hidden-groups {:relations graph
+                                    :elements {:a {:kind :application-component}
+                                               :b {:kind :application-component}
+                                               :c {:kind :application-interface}
+                                               :d {:kind :application-interface}
+                                               :e {:kind :application-interface}}}
+                                   (alg/build-up-down-map graph))))))
+  (is (= {:c {:d #{{:from :application-interface
                     :to :application-interface
                     :raw "-[hidden]->"}}}
-          :c {:d #{{:from :application-interface
-                    :to :application-interface
-                    :raw "-[hidden]->"}}}}
-         (with-redefs [alg/max-in-row 2]
-           (let [graph {:a {:b #{{:type :composition :direction :down}}
-                            :c #{{:type :assignment :direction :up}}
-                            :d #{{:type :assignment :direction :up}}}
-                        :b {:e #{{:type :assignment :direction :up}}}}]
-             (alg/calc-hidden-groups {:relations graph
-                                      :elements {:a {:kind :application-component}
-                                                 :b {:kind :application-component}
-                                                 :c {:kind :application-interface}
-                                                 :d {:kind :application-interface}
-                                                 :e {:kind :application-interface}}}
-                                     (alg/build-up-down-map graph))))))
-  (is (= {:b {:d #{{:from :application-component
-                    :to :application-interface
-                    :raw "-[hidden]->"}}}
-          :c {:e #{{:from :application-interface
+          :e {:d #{{:from :application-interface
                     :to :application-interface
                     :raw "-[hidden]->"}}}}
          (with-redefs [alg/max-in-row 2]
@@ -203,33 +249,29 @@
 
 (deftest calc-hiddens-test
   (is (= {} (alg/calc-hiddens {})))
-  (is (= {:b {:d #{{:from :application-component
+  (is (= {:c {:f #{{:from :application-interface
                     :to :application-interface
                     :raw "-[hidden]->"}}}
-          :c {:d #{{:from :application-interface
+          :d {:f #{{:from :application-interface
                     :to :application-interface
                     :raw "-[hidden]->"}}}}
-         (with-redefs [alg/max-in-row 2
+         (with-redefs [alg/max-in-row 1
                        alg/too-many-rels 2]
            (alg/calc-hiddens {:relations {:a {:b #{{:type :composition :direction :down}}
                                               :c #{{:type :assignment :direction :up}}
-                                              :d #{{:type :assignment :direction :up}}}
+                                              :d #{{:type :assignment :direction :up}}
+                                              :f #{{:type :assignment :direction :up}}}
                                           :b {:e #{{:type :assignment :direction :up}}}}
                               :elements {:a {:kind :application-component}
                                          :b {:kind :application-component}
                                          :c {:kind :application-interface}
                                          :d {:kind :application-interface}
-                                         :e {:kind :application-interface}}}))))
-  (is (= {:b {:d #{{:from :application-component
+                                         :e {:kind :application-interface}
+                                         :f {:kind :application-interface}}}))))
+  (is (= {:e {:f #{{:from :application-interface
                     :to :application-interface
                     :raw "-[hidden]->"}}}
-          :c {:d #{{:from :application-interface
-                    :to :application-interface
-                    :raw "-[hidden]->"}}}
-          :e {:h #{{:from :application-interface
-                    :to :application-component
-                    :raw "-[hidden]->"}}}
-          :f {:h #{{:from :application-interface
+          :h {:i #{{:from :application-component
                     :to :application-component
                     :raw "-[hidden]->"}}}
           :a {:g #{{:from :application-component
@@ -242,7 +284,8 @@
                                               :d #{{:type :assignment :direction :up}}}
                                           :g {:e #{{:type :assignment :direction :up}}
                                               :f #{{:type :assignment :direction :up}}
-                                              :h #{{:type :aggregation :direction :up}}}}
+                                              :h #{{:type :aggregation :direction :up}}
+                                              :i #{{:type :aggregation :direction :up}}}}
                               :elements {:a {:kind :application-component}
                                          :b {:kind :application-component}
                                          :c {:kind :application-interface}
@@ -250,23 +293,19 @@
                                          :e {:kind :application-interface}
                                          :f {:kind :application-interface}
                                          :g {:kind :application-component}
-                                         :h {:kind :application-component}}}))))
+                                         :h {:kind :application-component}
+                                         :i {:kind :application-component}}}))))
   (is (= {:b {:d #{{:from :application-component
                     :to :application-interface
                     :raw "-[hidden]->"}}}
           :c {:d #{{:from :application-interface
                     :to :application-interface
                     :raw "-[hidden]->"}}}
-          :e {:f #{{:from :application-interface
-                    :to :application-interface
-                    :raw "-[hidden]->"}}}
-          :h {:f #{{:from :application-component
-                    :to :application-interface
-                    :raw "-[hidden]->"}}}
           :g {:a #{{:from :application-component
                     :to :application-component
                     :raw "-[hidden]->"}}}}
-         (with-redefs [alg/too-many-rels 2]
+         (with-redefs [alg/max-in-row 2
+                       alg/too-many-rels 2]
            (alg/calc-hiddens {:relations {:a {:b #{{:type :composition :direction :up}}
                                               :c #{{:type :assignment :direction :up}}
                                               :d #{{:type :assignment :direction :up}}}

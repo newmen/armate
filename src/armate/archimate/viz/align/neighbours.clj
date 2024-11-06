@@ -4,19 +4,27 @@
 
 (defn build-up-down-map
   [graph]
-  (->> (mg/get-relationships graph)
-       (remove (comp (partial = :nesting) :derivate last))
-       (reduce (fn [acc [from to relation]]
-                 (let [[fu fd] (acc from [0 0])
-                       [tu td] (acc to [0 0])]
-                   (if (= :up (:direction relation))
-                     (-> acc
-                         (assoc from [(dec fu) fd])
-                         (assoc to [tu (inc td)]))
-                     (-> acc
-                         (assoc from [fu (inc fd)])
-                         (assoc to [(dec tu) td])))))
-               {})))
+  (let [data (->> (mg/get-relationships graph)
+                  (reduce (fn [acc [from to relation]]
+                            (if (= :nesting (:derivate relation))
+                              (update acc :nesting conj [from to])
+                              (let [[fu fd] (get-in acc [:udmap from] [0 0])
+                                    [tu td] (get-in acc [:udmap to] [0 0])]
+                                (if (= :up (:direction relation))
+                                  (-> acc
+                                      (assoc-in [:udmap from] [(dec fu) fd])
+                                      (assoc-in [:udmap to] [tu (inc td)]))
+                                  (-> acc
+                                      (assoc-in [:udmap from] [fu (inc fd)])
+                                      (assoc-in [:udmap to] [(dec tu) td]))))))
+                          {:udmap {}
+                           :nesting []}))]
+    (reduce (fn [acc [from to]]
+              (let [[fu fd] (acc from [0 0])
+                    [tu td] (acc to [0 0])]
+                (assoc acc from [(+ fu tu) (- fd td)])))
+            (:udmap data)
+            (:nesting data))))
 
 (def element-kinds-order
   [:business-actor
@@ -51,10 +59,15 @@
 (defn build-weight-map
   [context]
   (reduce (fn [acc element]
-            (let [weight (kind-weights (:kind element) 1)]
+            (let [weight (kind-weights (:kind element) 1)
+                  alias (:alias element)]
               (update acc
-                      (:alias element)
-                      (fnil (partial mapv (partial + weight)) [0 0]))))
+                      alias
+                      (fn [base]
+                        (if base
+                          (let [[u d] base]
+                            [(+ u weight) (+ d weight) alias])
+                          [weight weight alias])))))
           (build-up-down-map (:relations context))
           (vals (:elements context))))
 
@@ -119,52 +132,57 @@
                   :raw "-[hidden]->"}]
     (update-in acc [from to] u/fnil-conj-set relation)))
 
-(def max-in-row 2)
-(def too-many-rels 4)
+(def max-in-row 3)
+(def too-many-rels 5)
 
 (defn get-groups
   [context]
-  (concat (->> (vals (:elements context))
-               (filter :in)
-               (group-by :in)
-               (vals)
-               (filter (comp (partial < max-in-row) count))
-               (map (partial map :alias)))
-          (->> (vals (:relations context))
-               (filter (comp (partial < max-in-row) count))
-               (map keys))))
+  (let [only-large (comp (partial < max-in-row) count)
+        groups (concat (->> (vals (:elements context))
+                            (filter :in)
+                            (group-by :in)
+                            (vals)
+                            (filter only-large)
+                            (map (partial map :alias)))
+                       (->> (vals (:relations context))
+                            (mapcat (fn [hm]
+                                      (->> hm
+                                           (mapcat (fn [[to rels]]
+                                                     (map (partial vector to) rels)))
+                                           (remove (comp (partial = :nesting)
+                                                         :derivate
+                                                         second))
+                                           (group-by (comp :direction second))
+                                           (vals)
+                                           (filter only-large))))
+                            (map (partial map first))
+                            (map (partial map (fn [alias]
+                                                (or (get-in context [:elements alias :in])
+                                                    alias))))))]
+    (set (map set groups))))
 
 (defn calc-hidden-groups
   [context up-down-map]
   (->> (get-groups context)
        (sort-by (comp - count))
-       (reduce (fn [acc group]
-                 (let [items (remove (:processed acc) group)]
-                   (if (<= max-in-row (count items))
-                     (let [matrix (get-align-matrix (count items))]
-                       (-> acc
-                           (update :processed into items)
-                           (assoc :hidden
-                                  (->> (sort-by up-down-map items)
-                                       (align-items-with matrix)
-                                       (get-hidden-pairs)
-                                       (reduce (partial add-ud-hidden context)
-                                               (:hidden acc))))))
-                     acc)))
-               {:hidden {}
-                :processed #{}})
-       :hidden))
+       (reduce (fn [acc aliases]
+                 (let [matrix (get-align-matrix (count aliases))]
+                   (->> (sort-by up-down-map aliases)
+                        (align-items-with matrix)
+                        (get-hidden-pairs)
+                        (reduce (partial add-ud-hidden context) acc))))
+               {})))
 
 (defn calc-hidden-sources
   [context up-down-map]
   (let [graph (:relations context)
-        items (->> (keys graph)
-                   (filter (fn [item]
-                             (let [[u d] (up-down-map item)]
-                               (> (- d u) too-many-rels)))))
-        ;; matrix (get-align-pyramid (count items))
-        matrix (repeat (count items) 1)]
-    (->> (sort-by up-down-map items)
+        aliases (->> (keys graph)
+                     (filter (fn [alias]
+                               (let [[u d _] (up-down-map alias)]
+                                 (> (- d u) too-many-rels)))))
+        ;; matrix (get-align-pyramid (count aliases))
+        matrix (repeat (count aliases) 1)]
+    (->> (sort-by up-down-map aliases)
          (reverse)
          (align-items-with matrix)
          (get-hidden-pairs)
@@ -180,5 +198,5 @@
 
 (defn append-hidden-aligns
   [context]
-  (assoc context :hidden
-         (calc-hiddens context)))
+  (->> (calc-hiddens context)
+       (assoc context :hidden)))
