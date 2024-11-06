@@ -4,22 +4,24 @@
 
 (defn reverse-graph
   [graph]
-  (reduce-kv (fn [acc from nbrs]
-               (reduce-kv (fn [a to rels]
-                            (reduce (fn [a2 rel]
-                                      (let [rd (case (:direction rel)
-                                                 :up :down
-                                                 :down :up)
-                                            rel2 (-> (u/assoc-if-not-nil rel :direction rd)
-                                                     (u/assoc-if-not-nil :from (:to rel))
-                                                     (u/assoc-if-not-nil :to (:from rel)))]
-                                        (update-in a2 [to from] u/fnil-conj-set rel2)))
-                                    a
-                                    rels))
-                          acc
-                          nbrs))
-             {}
-             graph))
+  (reduce-kv
+   (fn [acc from nbrs]
+     (reduce-kv
+      (fn [a to rels]
+        (reduce (fn [a2 rel]
+                  (let [rd (case (:direction rel)
+                             :up :down
+                             :down :up)
+                        rel2 (-> (u/assoc-if-not-nil rel :direction rd)
+                                 (u/assoc-if-not-nil :from (:to rel))
+                                 (u/assoc-if-not-nil :to (:from rel)))]
+                    (update-in a2 [to from] u/fnil-conj-set rel2)))
+                a
+                rels))
+      acc
+      nbrs))
+   {}
+   graph))
 
 (defn get-relationship-sets
   ([graph]
