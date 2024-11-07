@@ -165,14 +165,14 @@
   (is (= {:body {:line 1 :package "archimate/Archimate"}
           :in [:includes "archimate/Archimate"]}
          (prr/match-block {:parts ["!include" "<archimate/Archimate>"] :line 1})))
-  (is (= {:body {:line 1 :shape "rectangle" :alias "sub" :props [["fontColor" "#eeeeee"]]}
+  (is (= {:body {:line 1 :shape "rectangle" :alias "sub" :props [["fontColor" "#f1f3f1"]]}
           :in [:skins ["rectangle" "sub"]]}
          (prr/match-block {:parts ["skinparam" "rectangle<<sub>>"] :line 1
-                            :props [["fontColor" "#eeeeee"]]})))
-  (is (= {:body {:line 1 :shape nil :alias nil :props [["fontColor" "#eeeeee"]]}
+                            :props [["fontColor" "#f1f3f1"]]})))
+  (is (= {:body {:line 1 :shape nil :alias nil :props [["fontColor" "#f1f3f1"]]}
           :in [:skins [:default]]}
          (prr/match-block {:parts ["skinparam"] :line 1
-                            :props [["fontColor" "#eeeeee"]]})))
+                            :props [["fontColor" "#f1f3f1"]]})))
   (is (= {:body {:line 1 :alias "$aComponent" :kind :application-component}
           :in [:types "$aComponent"]}
          (prr/match-block {:parts ["sprite"
@@ -240,7 +240,7 @@
 !include <archimate/Archimate>
 
 skinparam rectangle<<sub>> {
-  backgroundColor #2cc7fe
+  backgroundColor #99d6ff
 }
 
 sprite $aComponent $app-component

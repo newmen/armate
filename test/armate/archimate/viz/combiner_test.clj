@@ -16,7 +16,7 @@ skinparam rectangle {
   BorderThickness 1
 }
 skinparam rectangle<<sub>> {
-  backgroundColor #2cc7fe
+  backgroundColor #99d6ff
 }
 
 sprite $acp jar:archimate/application-component
