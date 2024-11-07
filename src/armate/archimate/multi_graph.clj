@@ -11,7 +11,8 @@
         (reduce (fn [a2 rel]
                   (let [rd (case (:direction rel)
                              :up :down
-                             :down :up)
+                             :down :up
+                             nil)
                         rel2 (-> (u/assoc-if-not-nil rel :direction rd)
                                  (u/assoc-if-not-nil :from (:to rel))
                                  (u/assoc-if-not-nil :to (:from rel)))]
