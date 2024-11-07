@@ -1,10 +1,12 @@
 (ns armate.archimate.viz.align.layers
   (:require [clojure.set :as o]
+            [clojure.math.combinatorics :as combo]
             [armate.archimate.multi-graph :as mg]
             [armate.archimate.viz.align.common :as cmn]
             [armate.archimate.viz.align.grid :as grid]
             [armate.utils :as u]))
 
+(def split-groups? false)
 (def max-in-row 3)
 (def too-many-rels 5)
 
@@ -90,34 +92,19 @@
                      (split-group udf group)
                      (list group)))))))
 
-(defn permute-join-layers
-  [layer1 layer2]
-  (let [n1 (count layer1)
-        n2 (count layer2)
-        n (min n1 n2)
-        m (max n1 n2)
-        k (int (/ m n))
-        extf (fn [min-row min-n max-n]
-               (let [d (- max-n (* min-n k))]
-                 (concat (mapcat (partial repeat k) min-row)
-                         (repeat d (first min-row)))))
-        [lu ld] (cond
-                  (< n1 n2) [(extf layer1 n1 n2) layer2]
-                  (> n1 n2) [layer1 (extf layer2 n2 n1)]
-                  :else [layer1 layer2])]
-    (map vector lu ld)))
-
 (defn transform-layers-into-pairs
   [layers]
   (->> (partition 2 1 layers)
-       (mapcat (partial apply permute-join-layers))))
+       (mapcat (partial apply combo/cartesian-product))))
 
 (defn get-groups-pairs
   [context udf]
-  (->> (cmn/get-groups max-in-row context)
-       (mapcat (fn [group]
-                 (->> (split-group udf group)
-                      (transform-layers-into-pairs))))))
+  (if split-groups?
+    (->> (cmn/get-groups max-in-row context)
+         (mapcat (fn [group]
+                   (->> (split-group udf group)
+                        (transform-layers-into-pairs)))))
+    []))
 
 (defn get-hidden-pairs
   [context]
