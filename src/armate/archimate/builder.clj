@@ -139,11 +139,14 @@
                          {:type "$acp"}))))
 
 (defn get-app-collaboration
-  [context collaboration-name]
-  (get-rectangle context
-                 patch-raw-name
-                 collaboration-name
-                 {:type "$acb"}))
+  ([context collaboration-name]
+   (get-app-collaboration context collaboration-name {}))
+  ([context collaboration-name add-params]
+   (get-rectangle context
+                  patch-raw-name
+                  collaboration-name
+                  (merge add-params
+                         {:type "$acb"}))))
 
 (defn get-software
   [context software-name]
@@ -174,7 +177,17 @@
    :skins {[:default] {:props [{:parts ["RoundCorner" "8"]}
                                {:parts ["Shadowing" "false"]}]}
            ["rectangle"] {:shape "rectangle"
-                          :props [{:parts ["BorderThickness" "1"]}]}}
+                          :props [{:parts ["BorderThickness" "1"]}]}
+           ["rectangle" "sub"] {:shape "rectangle"
+                                :alias "sub"
+                                :props [{:parts ["backgroundColor" "#99d6ff"]}]}
+           ["rectangle" "db"] {:shape "rectangle"
+                               :alias "db"
+                               :props [{:parts ["backgroundColor" "#85c2ff"]}]}
+           ["rectangle" "platform"] {:shape "rectangle"
+                                     :alias "platform"
+                                     :props [{:parts ["backgroundColor" "#a6b2b5"]}
+                                             {:parts ["fontColor" "#f1f3f1"]}]}}
    :elements {}
    :relations {}
    :hidden {}})
