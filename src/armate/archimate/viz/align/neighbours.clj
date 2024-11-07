@@ -159,6 +159,24 @@
        (get-owner elements owner visited2)
        alias))))
 
+(defn get-many-nbrs
+  [context]
+  (->> (vals (:relations context))
+       (mapcat (fn [hm]
+                 (->> hm
+                      (mapcat (fn [[to rels]]
+                                (map (partial vector to) rels)))
+                      (remove (comp (partial = :nesting)
+                                    :derivate
+                                    second))
+                      (group-by (comp :direction second))
+                      (vals)
+                      (filter (comp (partial < max-in-row) count)))))
+       (map (partial map first))
+       (map (partial map (partial get-owner (:elements context))))
+       (map set)
+       (set)))
+
 (defn get-long-rows
   [context]
   (let [elements (:elements context)
@@ -178,7 +196,7 @@
 (defn calc-hidden-groups
   [context up-down-map]
   (->> (get-groups context)
-       (concat (get-long-rows context))
+       (concat (get-many-nbrs context))
        (reduce (fn [acc aliases]
                  (let [matrix (get-align-matrix (count aliases))]
                    (->> (sort-by up-down-map aliases)
