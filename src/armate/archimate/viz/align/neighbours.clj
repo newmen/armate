@@ -1,6 +1,6 @@
 (ns armate.archimate.viz.align.neighbours
   (:require [armate.archimate.multi-graph :as mg]
-            [armate.archimate.viz.grid :as grid]
+            [armate.archimate.viz.align.common :as cmn]
             [armate.utils :as u]))
 
 (defn build-up-down-map
@@ -72,22 +72,6 @@
           (build-up-down-map (:relations context))
           (vals (:elements context))))
 
-(defn get-align-matrix
-  [total]
-  (let [row (int (Math/round (Math/sqrt (double total))))
-        rest (- total (* row row))
-        matrix (repeat row row)]
-    (if (pos? rest)
-      (map +
-           matrix
-           (concat (repeat rest 1) (repeat 0)))
-      (let [rest2 (+ row rest)]
-        (if (< rest2 (/ row 2))
-          (map +
-               (drop-last matrix)
-               (concat (repeat rest2 1) (repeat 0)))
-          matrix)))))
-
 (defn get-align-pyramid
   [total]
   (loop [remaining total
@@ -125,39 +109,8 @@
        (map vec)
        (into (sorted-set))))
 
-(defn add-ud-hidden
-  [context acc [from to]]
-  (let [gf #(get-in context [:elements % :kind])
-        relation {:from (gf from)
-                  :to (gf to)
-                  :raw "-[hidden]->"}]
-    (update-in acc [from to] u/fnil-conj-set relation)))
-
 (def max-in-row 3)
 (def too-many-rels 5)
-
-(defn get-groups
-  [context]
-  (->> (vals (:elements context))
-       (filter :in)
-       (group-by :in)
-       (vals)
-       (filter (comp (partial < max-in-row) count))
-       (map (partial map :alias))
-       (map set)
-       (set)))
-
-(defn get-owner
-  ([elements alias]
-   (get-owner elements alias #{}))
-  ([elements alias visited]
-   (let [visited2 (conj visited alias)
-         element (elements alias)
-         owner (:in element)]
-     (if (and owner
-              (not (visited2 owner)))
-       (get-owner elements owner visited2)
-       alias))))
 
 (defn get-many-nbrs
   [context]
@@ -173,36 +126,20 @@
                       (vals)
                       (filter (comp (partial < max-in-row) count)))))
        (map (partial map first))
-       (map (partial map (partial get-owner (:elements context))))
+       (map (partial map (partial cmn/get-owner (:elements context))))
        (map set)
        (set)))
 
-(defn get-long-rows
-  [context]
-  (let [elements (:elements context)
-        aliases (->> (vals elements)
-                     (remove :in)
-                     (map :alias)
-                     (set))
-        graph (->> (mg/get-relationship-sets (:relations context))
-                   (reduce (fn [acc [from to rels]]
-                             (let [[from2 to2] (->> [from to]
-                                                    (mapv (partial get-owner elements)))]
-                               (assoc-in acc [from2 to2] rels)))
-                           {}))]
-    (->> (grid/split-into-layers graph aliases)
-         (filter (comp (partial < max-in-row) count)))))
-
 (defn calc-hidden-groups
   [context up-down-map]
-  (->> (get-groups context)
+  (->> (cmn/get-groups max-in-row context)
        (concat (get-many-nbrs context))
        (reduce (fn [acc aliases]
-                 (let [matrix (get-align-matrix (count aliases))]
+                 (let [matrix (cmn/get-align-matrix (count aliases))]
                    (->> (sort-by up-down-map aliases)
                         (align-items-with matrix)
                         (get-hidden-pairs)
-                        (reduce (partial add-ud-hidden context) acc))))
+                        (reduce (partial cmn/add-ud-hidden context) acc))))
                {})))
 
 (defn calc-hidden-sources
@@ -218,7 +155,7 @@
          (reverse)
          (align-items-with matrix)
          (get-hidden-pairs)
-         (reduce (partial add-ud-hidden context)
+         (reduce (partial cmn/add-ud-hidden context)
                  {}))))
 
 (defn calc-hiddens

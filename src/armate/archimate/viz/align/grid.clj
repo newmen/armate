@@ -1,4 +1,4 @@
-(ns armate.archimate.viz.grid
+(ns armate.archimate.viz.align.grid
   (:require [armate.utils :as u]))
 
 (defn get-deps

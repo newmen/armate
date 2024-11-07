@@ -1,6 +1,6 @@
-(ns armate.archimate.viz.grid-test
+(ns armate.archimate.viz.align.grid-test
   (:require [clojure.test :refer [deftest is]]
-            [armate.archimate.viz.grid :as grid]))
+            [armate.archimate.viz.align.grid :as grid]))
 
 (def graph0
   {:a {:b #{{:type :composition :direction :down}}

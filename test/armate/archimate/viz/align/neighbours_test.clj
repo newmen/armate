@@ -57,20 +57,6 @@
                                                 :c #{{:direction :down}}}
                                             :c {:b #{{:direction :up}}}}}))))
 
-(deftest get-align-matrix-test
-  (is (empty? (alg/get-align-matrix 0)))
-  (is (= [1] (alg/get-align-matrix 1)))
-  (is (= [2] (alg/get-align-matrix 2)))
-  (is (= [2 2] (alg/get-align-matrix 3)))
-  (is (= [2 2] (alg/get-align-matrix 4)))
-  (is (= [3 2] (alg/get-align-matrix 5)))
-  (is (= [3 3] (alg/get-align-matrix 6)))
-  (is (= [4 3] (alg/get-align-matrix 7)))
-  (is (= [3 3 3] (alg/get-align-matrix 8)))
-  (is (= [3 3 3] (alg/get-align-matrix 9)))
-  (is (= [4 3 3] (alg/get-align-matrix 10)))
-  (is (= [4 4 3] (alg/get-align-matrix 11))))
-
 (deftest get-align-pyramid-test
   (is (empty? (alg/get-align-pyramid 0)))
   (is (= [1] (alg/get-align-pyramid 1)))
@@ -106,54 +92,6 @@
          (alg/get-hidden-pairs [[1 3] [2 4]])))
   (is (= #{[1 3] [2 3] [3 4] [5 6]}
          (alg/get-hidden-pairs [[1 3 4] [2 3 4] [5 6]]))))
-
-(deftest add-ud-hidden-test
-  (is (= {:a {:b #{{:from :application-component
-                    :to :application-interface
-                    :raw "-[hidden]->"}}}}
-         (alg/add-ud-hidden {:elements {:a {:kind :application-component}
-                                        :b {:kind :application-interface}}}
-                            {}
-                            [:a :b])))
-  (is (= {:a {:b #{{:from :application-component
-                    :to :application-interface
-                    :raw "-[hidden]->"}}
-              :c #{{:from :application-component
-                    :to :application-component
-                    :raw "-[hidden]->"}}}}
-         (alg/add-ud-hidden {:elements {:a {:kind :application-component}
-                                        :b {:kind :application-interface}}}
-                            {:a {:c #{{:from :application-component
-                                       :to :application-component
-                                       :raw "-[hidden]->"}}}}
-                            [:a :b]))))
-
-(deftest get-groups-test
-  (is (empty? (alg/get-groups {})))
-  (is (empty?
-       (with-redefs [alg/max-in-row 2]
-         (alg/get-groups {:relations {:a {:b #{{:type :composition :direction :down}}
-                                          :c #{{:type :assignment :direction :up}}
-                                          :d #{{:type :assignment :direction :up}}}
-                                      :b {:e #{{:type :assignment :direction :up}}}}
-                          :elements {:a {:kind :application-component}
-                                     :b {:kind :application-component}
-                                     :c {:kind :application-interface}
-                                     :d {:kind :application-interface}
-                                     :e {:kind :application-interface}}}))))
-  (is (= #{#{:d :h} #{:e :f :g}}
-         (with-redefs [alg/max-in-row 1]
-           (alg/get-groups {:relations {:a {:b #{{:type :composition :direction :down}}
-                                            :c #{{:type :assignment :direction :up}}}
-                                        :b {:e #{{:type :assignment :direction :up}}}}
-                            :elements {:a {:kind :application-component :alias :a}
-                                       :b {:kind :application-component :alias :b}
-                                       :c {:kind :application-interface :alias :c :in :h}
-                                       :d {:kind :application-interface :alias :d :in :b}
-                                       :e {:kind :application-interface :alias :e :in :a}
-                                       :f {:kind :application-interface :alias :f :in :a}
-                                       :g {:kind :application-interface :alias :g :in :a}
-                                       :h {:kind :application-interface :alias :h :in :b}}})))))
 
 (deftest calc-hidden-groups
   (is (= {} (alg/calc-hidden-groups {} {})))
