@@ -1,7 +1,7 @@
-(ns armate.archimate.viz.align-test
+(ns armate.archimate.viz.align.neighbours-test
   (:require [clojure.test :refer [deftest is]]
             [armate.archimate.rules :as rls]
-            [armate.archimate.viz.align :as alg]))
+            [armate.archimate.viz.align.neighbours :as alg]))
 
 (deftest build-up-down-map-test
   (is (= {:a [-1 1]

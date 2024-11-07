@@ -1,4 +1,4 @@
-(ns armate.archimate.viz.align
+(ns armate.archimate.viz.align.neighbours
   (:require [armate.archimate.multi-graph :as mg]
             [armate.archimate.viz.grid :as grid]
             [armate.utils :as u]))
