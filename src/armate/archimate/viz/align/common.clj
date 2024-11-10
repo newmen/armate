@@ -1,5 +1,6 @@
 (ns armate.archimate.viz.align.common
-  (:require [armate.utils :as u]))
+  (:require [armate.archimate.multi-graph :as mg]
+            [armate.utils :as u]))
 
 (defn get-align-matrix
   [total]
@@ -25,6 +26,16 @@
                   :raw "-[hidden]->"}]
     (update-in acc [from to] u/fnil-conj-set relation)))
 
+(defn split-by-dirs
+  [to-rels]
+  (->> to-rels
+       (mapcat (fn [[to rels]]
+                 (map (partial vector to) rels)))
+       (remove (comp (partial = :nesting)
+                     :derivate
+                     second))
+       (group-by (comp :direction second))))
+
 (defn get-owner
   ([elements alias]
    (get-owner elements alias #{}))
@@ -36,6 +47,16 @@
               (not (visited2 owner)))
        (get-owner elements owner visited2)
        alias))))
+
+(defn generalize-relations
+  [context]
+  (let [elements (:elements context)]
+    (->> (mg/get-relationship-sets (:relations context))
+         (reduce (fn [acc [from to rels]]
+                   (let [[f2 t2] (->> [from to]
+                                      (mapv (partial get-owner elements)))]
+                     (assoc-in acc [f2 t2] rels)))
+                 {}))))
 
 (defn get-groups
   [max-in-row context]

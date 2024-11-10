@@ -1,7 +1,6 @@
 (ns armate.archimate.viz.align.layers
   (:require [clojure.set :as o]
             [clojure.math.combinatorics :as combo]
-            [armate.archimate.multi-graph :as mg]
             [armate.archimate.viz.align.common :as cmn]
             [armate.archimate.viz.align.grid :as grid]
             [armate.utils :as u]))
@@ -10,16 +9,6 @@
 (def max-in-row 3)
 (def too-many-rels 5)
 
-(defn split-by-dirs
-  [to-rels]
-  (->> to-rels
-       (mapcat (fn [[to rels]]
-                 (map (partial vector to) rels)))
-       (remove (comp (partial = :nesting)
-                     :derivate
-                     second))
-       (group-by (comp :direction second))))
-
 (defn calc-groups
   [groups]
   (->> (map (juxt first (comp count second)) groups)
@@ -27,22 +16,17 @@
 
 (defn get-uds-map
   [graph]
-  (->> (map (juxt first (comp calc-groups split-by-dirs second)) graph)
+  (->> (map (juxt first (comp calc-groups cmn/split-by-dirs second)) graph)
        (into {})))
 
 (defn get-grid
   [context]
-  (let [elements (:elements context)
-        aliases (->> (vals elements)
+  (let [graph (cmn/generalize-relations context)
+        aliases (->> (:elements context)
+                     (vals)
                      (remove :in)
                      (map :alias)
-                     (set))
-        graph (->> (mg/get-relationship-sets (:relations context))
-                   (reduce (fn [acc [from to rels]]
-                             (let [[f2 t2] (->> [from to]
-                                                (mapv (partial cmn/get-owner elements)))]
-                               (assoc-in acc [f2 t2] rels)))
-                           {}))]
+                     (set))]
     (grid/split-into-layers graph aliases)))
 
 (defn get-many-rels-elements

@@ -115,14 +115,8 @@
 (defn get-many-nbrs
   [context]
   (->> (vals (:relations context))
-       (mapcat (fn [hm]
-                 (->> hm
-                      (mapcat (fn [[to rels]]
-                                (map (partial vector to) rels)))
-                      (remove (comp (partial = :nesting)
-                                    :derivate
-                                    second))
-                      (group-by (comp :direction second))
+       (mapcat (fn [to-rels]
+                 (->> (cmn/split-by-dirs to-rels)
                       (vals)
                       (filter (comp (partial < max-in-row) count)))))
        (map (partial map first))
