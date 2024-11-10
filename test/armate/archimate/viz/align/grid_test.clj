@@ -1,5 +1,6 @@
 (ns armate.archimate.viz.align.grid-test
   (:require [clojure.test :refer [deftest is]]
+            [armate.archimate.multi-graph :as mg]
             [armate.archimate.viz.align.grid :as grid]))
 
 (def graph0
@@ -18,13 +19,6 @@
    :e {:g #{{:type :assignment :direction :up}}}
    :g {:h #{{:type :assignment :direction :up}}}})
 
-(defn get-nodes
-  [graph]
-  (set (mapcat (comp (partial apply concat)
-                     (juxt (comp vector first)
-                           (comp keys second)))
-               graph)))
-
 (deftest get-deps-test
   (is (= {:ud {} :du {}}
          (grid/get-deps {})))
@@ -37,13 +31,13 @@
 
 (deftest find-layers-test
   (let [deps (grid/get-deps graph0)
-        nodes (get-nodes graph0)]
+        nodes (mg/get-nodes graph0)]
     (is (= {:a 2 :b 1 :c 3 :d 3 :e 2 :f 0}
            (grid/find-layers (:ud deps) nodes)))
     (is (= {:a 1 :b 2 :c 0 :d 0 :e 0 :f 3}
            (grid/find-layers (:du deps) nodes))))
   (let [deps (grid/get-deps graph1)
-        nodes (get-nodes graph1)]
+        nodes (mg/get-nodes graph1)]
     (is (= {:a 2 :b 1 :c 3 :d 3 :e 2 :f 0 :g 3 :h 4}
            (grid/find-layers (:ud deps) nodes)))
     (is (= {:a 1 :b 3 :c 0 :d 0 :e 2 :f 4 :g 1 :h 0}
@@ -51,14 +45,16 @@
 
 (deftest assign-layers
   (is (= {:a 1 :b 2 :c 0 :d 0 :e 1 :f 3}
-         (grid/assign-layers graph0 (get-nodes graph0))))
+         (grid/assign-layers graph0 (mg/get-nodes graph0))))
   (is (= {:a 2 :b 3 :c 1 :d 1 :e 2 :f 4 :g 1 :h 0}
-         (grid/assign-layers graph1 (get-nodes graph1)))))
+         (grid/assign-layers graph1 (mg/get-nodes graph1))))
+  (is (= {:a 2 :b 3 :c 1 :e 2}
+         (grid/assign-layers graph1 [:a :b :c :e]))))
 
 (deftest get-layers-test
   (let [ctxf (fn [graph]
                {:relations graph
-                :elements (->> (get-nodes graph)
+                :elements (->> (mg/get-nodes graph)
                                (map #(vector % {}))
                                (into {}))})]
     (is (= [#{:c :d} #{:a :e} #{:b} #{:f}]

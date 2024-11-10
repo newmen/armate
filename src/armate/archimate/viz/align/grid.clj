@@ -1,5 +1,6 @@
 (ns armate.archimate.viz.align.grid
-  (:require [armate.utils :as u]))
+  (:require [armate.archimate.multi-graph :as mg]
+            [armate.utils :as u]))
 
 (defn get-deps
   [graph]
@@ -41,12 +42,15 @@
   [deps align-path layers]
   (reduce (fn [acc slice]
             (reduce (fn [a node]
-                      (assoc a node
-                             (->> (get-in deps [:ud node])
-                                  (map a)
-                                  (map dec)
-                                  (cons (a node))
-                                  (apply max))))
+                      (if-let [layer (a node)]
+                        (assoc a node
+                               (->> (get-in deps [:ud node])
+                                    (map a)
+                                    (remove nil?)
+                                    (map dec)
+                                    (cons layer)
+                                    (apply max)))
+                        a))
                     acc
                     slice))
           layers
@@ -59,12 +63,14 @@
        (mapv (comp set (partial map first) second))))
 
 (defn assign-layers
-  [graph aliases]
+  [graph target-aliases]
   (let [deps (get-deps graph)
-        ud-layers (find-layers (:du deps) aliases)
-        du-layers (find-layers (:ud deps) aliases)
+        all-aliases (mg/get-nodes graph)
+        ud-layers (find-layers (:du deps) all-aliases)
+        du-layers (find-layers (:ud deps) all-aliases)
         du-gls (group-by-layers du-layers)]
-    (align-layers deps du-gls ud-layers)))
+    (-> (align-layers deps du-gls ud-layers)
+        (select-keys target-aliases))))
 
 (defn split-into-layers
   [graph aliases]

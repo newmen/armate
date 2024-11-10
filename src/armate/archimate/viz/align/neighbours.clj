@@ -1,6 +1,7 @@
 (ns armate.archimate.viz.align.neighbours
   (:require [armate.archimate.multi-graph :as mg]
             [armate.archimate.viz.align.common :as cmn]
+            [armate.archimate.viz.align.grid :as grid]
             [armate.utils :as u]))
 
 (defn build-up-down-map
@@ -126,15 +127,20 @@
 
 (defn calc-hidden-groups
   [context up-down-map]
-  (->> (cmn/get-groups max-in-row context)
-       (concat (get-many-nbrs context))
-       (reduce (fn [acc aliases]
-                 (let [matrix (cmn/get-align-matrix (count aliases))]
-                   (->> (sort-by up-down-map aliases)
-                        (align-items-with matrix)
-                        (get-hidden-pairs)
-                        (reduce (partial cmn/add-ud-hidden context) acc))))
-               {})))
+  (let [original-grels (:relations context)
+        many-groups (->> (cmn/get-groups max-in-row context)
+                         (mapcat (partial grid/split-into-layers original-grels)))
+        general-grels (cmn/generalize-relations context)
+        many-nbrs (->> (get-many-nbrs context)
+                       (mapcat (partial grid/split-into-layers general-grels)))]
+    (->> (concat many-groups many-nbrs)
+         (reduce (fn [acc aliases]
+                   (let [matrix (cmn/get-align-matrix (count aliases))]
+                     (->> (sort-by up-down-map aliases)
+                          (align-items-with matrix)
+                          (get-hidden-pairs)
+                          (reduce (partial cmn/add-ud-hidden context) acc))))
+                 {}))))
 
 (defn calc-hidden-sources
   [context up-down-map]

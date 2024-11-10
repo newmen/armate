@@ -2,6 +2,13 @@
   (:require [clojure.set :as o]
             [armate.utils :as u]))
 
+(defn get-nodes
+  [graph]
+  (set (mapcat (comp (partial apply concat)
+                     (juxt (comp vector first)
+                           (comp keys second)))
+               graph)))
+
 (defn reverse-graph
   [graph]
   (reduce-kv
