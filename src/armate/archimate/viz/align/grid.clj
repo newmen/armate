@@ -38,28 +38,38 @@
          (assoc from (inc (apply max (:near-layers data))))))))
 
 (defn align-layers
-  [deps layers]
-  (->> layers
-       (map (fn [[node layer]]
-              [node (->> (get-in deps [:ud node])
-                         (map layers)
-                         (map dec)
-                         (cons layer)
-                         (apply max))]))
-       (into {})))
+  [deps align-path layers]
+  (reduce (fn [acc slice]
+            (reduce (fn [a node]
+                      (assoc a node
+                             (->> (get-in deps [:ud node])
+                                  (map a)
+                                  (map dec)
+                                  (cons (a node))
+                                  (apply max))))
+                    acc
+                    slice))
+          layers
+          align-path))
+
+(defn group-by-layers
+  [layers]
+  (->> (group-by second layers)
+       (sort-by first)
+       (mapv (comp set (partial map first) second))))
 
 (defn assign-layers
   [graph aliases]
   (let [deps (get-deps graph)
-        layers (find-layers (:du deps) aliases)]
-    (align-layers deps layers)))
+        ud-layers (find-layers (:du deps) aliases)
+        du-layers (find-layers (:ud deps) aliases)
+        du-gls (group-by-layers du-layers)]
+    (align-layers deps du-gls ud-layers)))
 
 (defn split-into-layers
   [graph aliases]
   (->> (assign-layers graph aliases)
-       (group-by second)
-       (sort-by first)
-       (mapv (comp set (partial map first) second))))
+       (group-by-layers)))
 
 (defn get-layers
   [context]
