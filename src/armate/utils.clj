@@ -68,3 +68,10 @@
           (if (list? obj)
             (map make-keyword-keys obj)
             obj))))))
+
+(defn make-int-or-float
+  [number]
+  (let [inum (int number)]
+    (if (zero? (- number inum))
+      inum
+      (float number))))

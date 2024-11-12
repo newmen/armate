@@ -69,3 +69,9 @@
          (u/make-keyword-keys {"x" {"y" "z"}})))
   (is (= [{:a "b"} {:x {:y "z"}}]
          (u/make-keyword-keys [{"a" "b"} {"x" {"y" "z"}}]))))
+
+(deftest make-int-or-float-test
+  (is (= 1 (u/make-int-or-float 1N)))
+  (is (= 1 (u/make-int-or-float 1.0)))
+  (is (= 0.5 (u/make-int-or-float (/ 1 2))))
+  (is (= 0.5 (u/make-int-or-float 0.5))))
