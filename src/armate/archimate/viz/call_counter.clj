@@ -28,13 +28,41 @@
                    (update-in acc [from to] u/fnil-conj-set rel2)))
                {})))
 
+(defn rerate-buckets
+  [buckets]
+  (if (= 1 (count buckets))
+    (let [fb (first buckets)]
+      [(:tn fb) (:calls fb)])
+    (let [totals (map :tn buckets)
+          max-calls-n (apply + totals)]
+      [max-calls-n
+       (reduce
+        (fn [acc bucket]
+          (let [tn (:tn bucket)
+                x (/ tn (- max-calls-n tn))]
+            (reduce-kv
+             (fn [a1 rel-type ftc]
+               (reduce-kv
+                (fn [a2 fa tc]
+                  (reduce-kv
+                   (fn [a3 ta c]
+                     (update-in a3 [rel-type fa ta] (fnil + 0)
+                                (Math/round (float (+ c (/ c x))))))
+                   a2
+                   tc))
+                a1
+                ftc))
+             acc
+             (:calls bucket))))
+        {}
+        buckets)])))
+
 (defn rate-calls
   [context]
-  (when-let [tn (get-in context [:misc :counters :counter])]
-    (when (< 1 tn)
-      (when-let [counters (get-in context [:misc :counters :calls])]
-        (let [max-calls-n (get-max-number counters)]
-          (update context :relations (partial rate-relations counters max-calls-n)))))))
+  (let [buckets (vals (get-in context [:misc :counters :buckets]))]
+    (when (< 1 (apply + (map :tn buckets)))
+      (let [[tn counters] (rerate-buckets buckets)]
+        (update context :relations (partial rate-relations counters tn))))))
 
 (defn add-call-rates
   [context]
