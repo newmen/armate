@@ -11,13 +11,15 @@
 
 (defn get-percent
   [max-calls-n n]
-  (str (/ (Math/round (* 10000 (float (/ n max-calls-n)))) 100.0) "%"))
+  (str (u/round 2 (* (/ n max-calls-n) 100)) "%"))
 
 (defn rate-relation
   [counters max-calls-n fa ta relation]
   (let [rt (:type relation)]
     (if-let [n (get-in counters [rt fa ta])]
-      (assoc relation :desc (get-percent max-calls-n n))
+      (-> relation
+          (assoc :rate (/ n max-calls-n))
+          (assoc :desc (get-percent max-calls-n n)))
       relation)))
 
 (defn rate-relations

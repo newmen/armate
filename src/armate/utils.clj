@@ -75,3 +75,9 @@
     (if (zero? (- number inum))
       inum
       (float number))))
+
+(defn round
+  "Round a double to the given precision (number of significant digits)"
+  [precision number]
+  (let [factor (Math/pow 10 precision)]
+    (/ (Math/round (* number factor)) factor)))
