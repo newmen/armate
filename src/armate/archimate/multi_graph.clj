@@ -93,6 +93,22 @@
                           (apply o/union)
                           (map (partial vector from)))))))))
 
+(defn mark-transitive-relationships
+  [rel-type graph]
+  (->> (detect-transitive-relationships rel-type graph)
+       (reduce (fn [acc [from to]]
+                 (update acc from
+                         (fn [to-rels]
+                           (update to-rels to
+                                   (fn [rels]
+                                     (->> rels
+                                          (map (fn [rel]
+                                                 (if (= rel-type (:type rel))
+                                                   (assoc rel :desc "transitive")
+                                                   rel)))
+                                          (set)))))))
+               graph)))
+
 (defn erase-transitive-relationships
   [rel-type graph]
   (->> (detect-transitive-relationships rel-type graph)

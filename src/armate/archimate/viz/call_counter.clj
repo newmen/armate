@@ -19,7 +19,9 @@
     (if-let [n (get-in counters [rt fa ta])]
       (-> relation
           (assoc :rate (/ n max-calls-n))
-          (assoc :desc (get-percent max-calls-n n)))
+          (update :desc
+                  #(if (nil? %1) %2 (str %1 "\\n" %2))
+                  (get-percent max-calls-n n)))
       relation)))
 
 (defn rate-relations
