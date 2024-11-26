@@ -50,13 +50,14 @@
 
 (defn generalize-relations
   [context]
-  (let [elements (:elements context)]
-    (->> (mg/get-relationship-sets (:relations context))
+  (let [elements (:elements context)
+        graph (:relations context)]
+    (->> (mg/get-relationship-sets graph)
          (reduce (fn [acc [from to rels]]
                    (let [[f2 t2] (->> [from to]
                                       (mapv (partial get-owner elements)))]
                      (assoc-in acc [f2 t2] rels)))
-                 {}))))
+                 graph))))
 
 (defn get-groups
   [max-in-row context]

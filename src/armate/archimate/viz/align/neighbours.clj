@@ -4,6 +4,12 @@
             [armate.archimate.viz.align.grid :as grid]
             [armate.utils :as u]))
 
+(def allow-align-twice?
+  true)
+
+(def groups-as-columns?
+  true)
+
 (defn build-up-down-map
   [graph]
   (let [data (->> (mg/get-relationships graph)
@@ -127,20 +133,37 @@
 
 (defn calc-hidden-groups
   [context up-down-map]
-  (let [original-grels (:relations context)
-        many-groups (->> (cmn/get-groups max-in-row context)
-                         (mapcat (partial grid/split-into-layers original-grels)))
-        general-grels (cmn/generalize-relations context)
-        many-nbrs (->> (get-many-nbrs context)
-                       (mapcat (partial grid/split-into-layers general-grels)))]
-    (->> (concat many-groups many-nbrs)
-         (reduce (fn [acc aliases]
-                   (let [matrix (cmn/get-align-matrix (count aliases))]
-                     (->> (sort-by up-down-map aliases)
-                          (align-items-with matrix)
-                          (get-hidden-pairs)
-                          (reduce (partial cmn/add-ud-hidden context) acc))))
-                 {}))))
+  (let [general-grels (cmn/generalize-relations context)
+        group-matrix (when groups-as-columns?
+                       (->> (cmn/get-groups 2 context)
+                            (map (fn [group]
+                                   (->> (grid/split-into-layers general-grels group)
+                                        (mapcat (partial sort-by up-down-map))
+                                        (vector))))))
+        many-matrix (->> (get-many-nbrs context)
+                         (mapcat (partial grid/split-into-layers general-grels))
+                         (map (fn [aliases]
+                                (let [matrix (cmn/get-align-matrix (count aliases))]
+                                  (->> (sort-by up-down-map aliases)
+                                       (align-items-with matrix))))))]
+    (:hidden
+     (reduce (fn [acc columns]
+               (let [acf #(->> (get-hidden-pairs %)
+                               (reduce (partial cmn/add-ud-hidden context)
+                                       (:hidden acc)))]
+                 (if allow-align-twice?
+                   (assoc acc :hidden (acf columns))
+                   (let [clmn2 (->> columns
+                                    (map (partial remove (:visited acc)))
+                                    (filter (comp (partial < 1) count)))]
+                     (if (empty? clmn2)
+                       acc
+                       (-> acc
+                           (assoc :hidden (acf clmn2))
+                           (update :visited into (apply concat clmn2))))))))
+             {:hidden {}
+              :visited #{}}
+             (concat group-matrix many-matrix)))))
 
 (defn calc-hidden-sources
   [context up-down-map]

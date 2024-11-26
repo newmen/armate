@@ -145,7 +145,8 @@
    (get-rectangle context
                   patch-raw-name
                   collaboration-name
-                  (merge add-params
+                  (merge {:skin "platform"}
+                         add-params
                          {:type "$acb"}))))
 
 (defn get-software
