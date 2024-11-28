@@ -75,7 +75,9 @@
                       :business-role #{:serving}}
    :technology-artifact {:application-component #{:realization}}
    :technology-collaboration {:application-interface #{:realization}
-                              :technology-node #{:aggregation}}
+                              :technology-collaboration #{:aggregation}
+                              :technology-node #{:aggregation}
+                              :technology-system-software #{:aggregation}}
    :technology-interaction {:technology-collaboration #{:access}
                             :technology-node #{:access}
                             :technology-system-software #{:access}}
