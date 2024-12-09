@@ -1,5 +1,6 @@
 (ns armate.archimate.metamodel.core
-  (:require [armate.archimate.metamodel.solver :as slv]))
+  (:require [armate.archimate.metamodel.solver :as slv]
+            [armate.archimate.metamodel.derivation.rules :as drs]))
 
 (def business-layer
   [:business-interface :business-internal-active
@@ -76,20 +77,10 @@
                                      :location
                                      :business-product
                                      :implementation-plateau}}
-              :relationship {:structural [:realization
-                                          :assignment
-                                          :aggregation
-                                          :composition]
-                             :dependency [:association
-                                          :influence
-                                          :access
-                                          :access_r
-                                          :access_w
-                                          :access_rw
-                                          :serving]
-                             :dynamic [:triggering
-                                       :flow]
-                             :other [:specialization]}
+              :relationship {:structural drs/structural-rels
+                             :dependency drs/dependency-rels
+                             :dynamic drs/dynamic-rels
+                             :other drs/other-rels}
               :connector #{:and :or}}}))
 
 (def layers
