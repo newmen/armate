@@ -1,6 +1,6 @@
-(ns armate.archimate.derivation.core
-  (:require [armate.archimate.derivation.match :as mch]
-            [armate.archimate.derivation.rules :as drs]
+(ns armate.archimate.metamodel.derivation.core
+  (:require [armate.archimate.metamodel.derivation.match :as mch]
+            [armate.archimate.metamodel.derivation.rules :as drs]
             [armate.archimate.multi-graph :as mg]
             [armate.archimate.rules :as rls]
             [armate.utils :as u]))

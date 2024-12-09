@@ -1,6 +1,6 @@
-(ns armate.archimate.derivation.rules-test
+(ns armate.archimate.metamodel.derivation.rules-test
   (:require [clojure.test :refer [deftest is]]
-            [armate.archimate.derivation.rules :as drs]))
+            [armate.archimate.metamodel.derivation.rules :as drs]))
 
 (deftest normalize-test
   (is (= [[:specialization :a :b] [:flow :c :b] [:flow :c :a]]

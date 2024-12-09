@@ -1,6 +1,6 @@
-(ns armate.archimate.derivation.test
-  (:require [armate.archimate.derivation.rules :as rs]
-            [armate.archimate.derivation.viz :as viz]))
+(ns armate.archimate.metamodel.derivation.test
+  (:require [armate.archimate.metamodel.derivation.rules :as rs]
+            [armate.archimate.metamodel.derivation.viz :as viz]))
 
 (defn- select-rules
   [rules rels]

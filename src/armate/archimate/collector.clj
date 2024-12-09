@@ -1,6 +1,6 @@
 (ns armate.archimate.collector
   (:require [clojure.string :as s]
-            [armate.archimate.derivation.rules :as drs]
+            [armate.archimate.metamodel.derivation.rules :as drs]
             [armate.archimate.multi-graph :as mg]))
 
 (defn get-composed-aliases

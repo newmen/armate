@@ -1,4 +1,4 @@
-(ns armate.archimate.derivation.rules
+(ns armate.archimate.metamodel.derivation.rules
   "Appendix B: Relationships (Normative)
    https://pubs.opengroup.org/architecture/archimate3-doc/ch-relationships-Normative.html
    There are no any restriction rules here, due to this project uses only a subset of ArchiMate 3.2."

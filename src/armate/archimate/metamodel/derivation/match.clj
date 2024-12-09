@@ -1,6 +1,6 @@
-(ns armate.archimate.derivation.match
-  (:require [clojure.set :refer [intersection]]
-            [armate.archimate.derivation.rules :as drs]
+(ns armate.archimate.metamodel.derivation.match
+  (:require [clojure.set :as o]
+            [armate.archimate.metamodel.derivation.rules :as drs]
             [armate.archimate.multi-graph :as mg]
             [armate.utils :as u]))
 
@@ -81,7 +81,7 @@
                          (->> (get-in checking-graph [f t])
                               (map :type)
                               (into #{})
-                              (intersection kin)
+                              (o/intersection kin)
                               (seq)))
         add-relation (fn [acc f t]
                        (-> acc

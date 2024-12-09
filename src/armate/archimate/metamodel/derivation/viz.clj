@@ -1,4 +1,4 @@
-(ns armate.archimate.derivation.viz
+(ns armate.archimate.metamodel.derivation.viz
   (:require [clojure.string :as s]))
 
 (def ^:private suffixes (atom {}))

@@ -1,6 +1,6 @@
 (ns armate.archimate.viz.combiner
   (:require [clojure.string :as s]
-            [armate.archimate.derivation.match :as mch]
+            [armate.archimate.metamodel.derivation.match :as mch]
             [armate.archimate.multi-graph :as mg]))
 
 (def indent "  ")

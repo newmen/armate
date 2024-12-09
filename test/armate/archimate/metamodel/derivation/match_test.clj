@@ -1,7 +1,7 @@
-(ns armate.archimate.derivation.match-test
+(ns armate.archimate.metamodel.derivation.match-test
   (:require [clojure.test :refer [deftest is]]
-            [armate.archimate.derivation.rules :as drs]
-            [armate.archimate.derivation.match :as mch]))
+            [armate.archimate.metamodel.derivation.rules :as drs]
+            [armate.archimate.metamodel.derivation.match :as mch]))
 
 (def graph0
   {"child_ba" {"client_br" #{{:type :assignment}}}
