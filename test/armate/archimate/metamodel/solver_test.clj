@@ -3,8 +3,7 @@
             [armate.archimate.metamodel.solver :as slv]))
 
 (deftest build-flat-hierarchy-test
-  (is (= {}
-         (slv/build-flat-hierarchy {})))
+  (is (= {} (slv/build-flat-hierarchy {})))
   (is (= {:a #{:a}}
          (slv/build-flat-hierarchy {:a #{}})))
   (is (= {:a #{:a}
@@ -48,8 +47,7 @@
                                     :c #{:a}}))))
 
 (deftest multiply-relationships-test
-  (is (= {}
-         (slv/multiply-relationships {} {} {})))
+  (is (= {} (slv/multiply-relationships {} {} {})))
   (is (= {:b {:e #{1} :f #{2 3} :g #{3 5} :b #{4} :i #{5} :j #{5}}
           :c {:e #{1} :i #{6}}
           :d {:e #{1} :f #{2 3} :g #{3 5} :b #{4} :i #{5} :j #{5}}

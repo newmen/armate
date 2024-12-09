@@ -177,7 +177,8 @@
                                                 :implementation-gap #{:association}}
                 :composite {:motivation-requirement #{:influence :realization}
                             :motivation-meaning #{:association}
-                            :motivation-value #{:association}}
+                            :motivation-value #{:association}
+                            :relationship #{:aggregation :composition}}
                 :strategy-course-of-action {:strategy-course-of-action #{:triggering :flow :serving}
                                             :motivation-outcome #{:influence :realization}
                                             :motivation-requirement #{:influence :realization}}
