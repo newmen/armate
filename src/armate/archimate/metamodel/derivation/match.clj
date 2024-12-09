@@ -1,6 +1,7 @@
 (ns armate.archimate.metamodel.derivation.match
   (:require [clojure.set :as o]
             [armate.archimate.metamodel.derivation.rules :as drs]
+            [armate.archimate.metamodel.solver :as slv]
             [armate.archimate.multi-graph :as mg]
             [armate.utils :as u]))
 
@@ -142,12 +143,11 @@
 
 (defn derivate-relationships
   [rules source-graph]
-  ;; {:pre (every? rs/valid? rules)} ; already checked by rules_test/check-invariants-test
-  (let [deep-merge (partial merge-with into)]
-    (loop [graph source-graph
-           derivated-graph {}]
-      (let [next-derivated-graph (derivate-relationships-once rules graph)]
-        (if (empty? next-derivated-graph)
-          derivated-graph
-          (recur (merge-with deep-merge graph next-derivated-graph)
-                 (merge-with deep-merge derivated-graph next-derivated-graph)))))))
+  ;; {:pre (every? drs/valid? rules)} ; already checked by rules_test/check-invariants-test
+  (loop [graph source-graph
+         derivated-graph {}]
+    (let [next-derivated-graph (derivate-relationships-once rules graph)]
+      (if (empty? next-derivated-graph)
+        derivated-graph
+        (recur (slv/merge-into graph next-derivated-graph)
+               (slv/merge-into derivated-graph next-derivated-graph))))))

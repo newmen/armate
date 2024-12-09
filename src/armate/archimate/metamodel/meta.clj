@@ -131,178 +131,196 @@
           event #{:triggering :flow}
           passive #{:access_r :access_w :access_rw}}})
 
-(def relationships
+(def base-relationships
   (slv/multiply-relationships
    hierarchy layers
-   (merge-with (partial merge-with into)
-               {:grouping {:concept #{:aggregation :composition}}
-                :location {:concept #{:aggregation :composition}
-                           :strategy-resource #{:realization}
-                           :implementation-gap #{:association}}
-                :motivation {:motivation #{:influence}}
-                :motivation-stakeholder {:motivation-meaning #{:association}
-                                         :motivation-value #{:association}
-                                         :motivation-driver #{:association}}
-                :motivation-meaning {:motivation-stakeholder #{:association}
-                                     [:structure #{:strategy :core}] #{:association}
-                                     [:behavior #{:strategy :core}] #{:association}
-                                     :composite #{:association}}
-                :motivation-value {:motivation-stakeholder #{:association}
-                                   :motivation-outcome #{:association}
-                                   [:structure #{:strategy :core}] #{:association}
-                                   [:behavior #{:strategy :core}] #{:association}
-                                   :composite #{:association}}
-                :motivation-driver {:motivation-stakeholder #{:association}
-                                    :motivation-assessment #{:association}
-                                    :motivation-goal #{:association}}
-                :motivation-assessment {:motivation-driver #{:association}
-                                        :motivation-goal #{:association}}
-                :motivation-goal {:motivation-driver #{:association}
-                                  :motivation-assessment #{:association}}
-                :motivation-outcome {:motivation-value #{:association}
-                                     :motivation-goal #{:realization}}
-                :motivation-principle {:motivation-outcome #{:realization}}
-                :motivation-requirement {:motivation-outcome #{:realization}
-                                         :motivation-principle #{:realization}}
-                :business-internal-active {:motivation-stakeholder #{:assignment}
-                                           :implementation-workpackage #{:assignment}
-                                           :implementation-event #{:assignment}}
-                [:structure #{:strategy :core}] {:motivation-requirement #{:influence :realization}
-                                                 :motivation-meaning #{:association}
-                                                 :motivation-value #{:association}
-                                                 :implementation-gap #{:association}}
-                [:behavior #{:strategy :core}] {:motivation-requirement #{:influence :realization}
-                                                :motivation-meaning #{:association}
-                                                :motivation-value #{:association}
-                                                :implementation-gap #{:association}}
-                :composite {:motivation-requirement #{:influence :realization}
-                            :motivation-meaning #{:association}
-                            :motivation-value #{:association}
-                            :relationship #{:aggregation :composition}}
-                :strategy-course-of-action {:strategy-course-of-action #{:triggering :flow :serving}
-                                            :motivation-outcome #{:influence :realization}
-                                            :motivation-requirement #{:influence :realization}}
-                :strategy-behavior {:strategy-behavior #{:triggering :flow :serving}
-                                    :strategy-course-of-action #{:serving :realization}
-                                    :motivation-requirement #{:influence :realization}}
-                :strategy-resource {:strategy-behavior #{:assignment}
-                                    :motivation-requirement #{:influence :realization}}
-                [:internal-behavior #{:core}] {:strategy-behavior #{:realization}}
-                [:external-behavior #{:core}] {:strategy-behavior #{:realization}}
-                [:active #{:core}] {:strategy-resource #{:realization}}
-                [:passive #{:core}] {:strategy-resource #{:realization}}
-                :business-actor {:business-role #{:assignment}}
-                :business-collaboration {:business-internal-active #{:aggregation}}
-                :business-representation {:business-object #{:realization}}
-                :business-product {:business-service #{:aggregation :composition}
-                                   :business-contract #{:aggregation :composition}
-                                   :business-passive #{:aggregation :composition}
-                                   :application-service #{:aggregation :composition}
-                                   :application-data-object #{:aggregation :composition}
-                                   :technology-service #{:aggregation :composition}
-                                   :technology-passive #{:aggregation :composition}
-                                   :implementation-gap #{:association}}
-                :application-component {:application-component #{:realization}}
-                :application-collaboration {:application-internal-active #{:aggregation}}
-                :technology-internal-active {:technology-path #{:association}}
-                :technology-path {:technology-internal-active #{:aggregation :association}}
-                :technology-communication-network {:technology-path #{:realization}
-                                                   :technology-device #{:aggregation :association}
-                                                   :technology-system-software #{:aggregation :association}}
-                :technology-device {:technology-communication-network #{:association}
-                                    :technology-system-software #{:aggregation :composition :assignment}
-                                    :technology-artifact #{:assignment}}
-                :technology-node {:technology-device #{:aggregation :composition}
-                                  :technology-system-software #{:aggregation :composition}
-                                  :physical-equipment #{:aggregation :composition}
-                                  :physical-facility #{:aggregation :composition}}
-                :technology-system-software {:technology-communication-network #{:association}
-                                             :technology-system-software #{:assignment}
-                                             :technology-artifact #{:assignment}}
-                :technology-collaboration {:technology-internal-active #{:aggregation}}
-                :technology-artifact {:technology-system-software #{:realization}
-                                      :application-data-object #{:realization}
-                                      :application-internal-active #{:realization}}
-                :physical-material {:physical-equipment #{:realization}
-                                    :physical-distribution-network #{:association}}
-                :technology-internal-behavior {:physical-material #{:access_r :access_w :access_rw}
-                                               :business-internal-behavior #{:realization}
-                                               :application-internal-behavior #{:realization}}
-                :physical-equipment {:physical-material #{:assignment}
-                                     :technology-internal-behavior #{:assignment}
-                                     :technology-device #{:aggregation :composition}}
-                :physical-facility {:business-internal-active #{:assignment}
-                                    :technology-node #{:aggregation :composition :assignment}
-                                    :physical-equipment #{:aggregation :composition}
-                                    :physical-distribution-network #{:association}}
-                :physical-distribution-network {:technology-path #{:realization}
-                                                :physical-equipment #{:aggregation}
-                                                :physical-facility #{:aggregation :association}}
-                :business-service {:application-internal-behavior #{:serving}
-                                   :application-internal-active #{:serving}
-                                   :technology-internal-behavior #{:serving}
-                                   :technology-internal-active #{:serving}}
-                :business-interface {:application-internal-active #{:serving}
-                                     :technology-internal-active #{:serving}}
-                :application-data-object {:business-object #{:realization}}
-                :application-event {:business-event #{:realization}}
-                :application-internal-behavior {:business-internal-behavior #{:realization}}
-                :application-service {:business-internal-behavior #{:serving}
-                                      :business-service #{:realization}
-                                      :business-internal-active #{:serving}
-                                      :technology-internal-behavior #{:serving}
-                                      :technology-internal-active #{:serving}}
-                :application-interface {:business-internal-active #{:serving}
-                                        :business-interface #{:realization}
-                                        :technology-internal-active #{:serving}}
-                :technology-passive {:business-object #{:realization}}
-                :technology-event {:business-event #{:realization}
-                                   :application-event #{:realization}}
-                :technology-service {:business-internal-behavior #{:serving}
-                                     :business-service #{:realization}
-                                     :business-internal-active #{:serving}
-                                     :application-internal-behavior #{:serving}
-                                     :application-service #{:realization}
-                                     :application-internal-active #{:serving}}
-                :technology-interface {:business-internal-active #{:serving}
-                                       :business-interface #{:realization}
-                                       :application-internal-active #{:serving}
-                                       :application-interface #{:realization}}
-                :implementation-workpackage {:implementation-workpackage #{:triggering :flow}
-                                             :implementation-event #{:triggering :flow}
-                                             :implementation-deriverable #{:access_r :access_w :access_rw :realization}
-                                             [:structure #{:strategy :core}] #{:realization}
-                                             [:behavior #{:strategy :core}] #{:realization}
-                                             :business-product #{:realization}
-                                             :location #{:realization}
-                                             :motivation-requirement #{:influence :realization}}
-                :implementation-event {:implementation-workpackage #{:triggering :flow}
-                                       :implementation-event #{:triggering :flow}
-                                       :implementation-deriverable #{:access_r :access_w :access_rw}
-                                       :implementation-plateau #{:triggering}}
-                :implementation-deriverable {:implementation-plateau #{:realization}
-                                             [:structure #{:strategy :core}] #{:realization}
-                                             [:behavior #{:strategy :core}] #{:realization}
-                                             :business-product #{:realization}
-                                             :location #{:realization}
-                                             :motivation-requirement #{:influence :realization}}
-                :implementation-gap {:implementation-plateau #{:association}
-                                     [:structure #{:strategy :core}] #{:association}
-                                     [:behavior #{:strategy :core}] #{:association}
-                                     :business-product #{:association}
-                                     :location #{:association}}
-                :implementation-plateau {:implementation-gap #{:association}
-                                         :implementation-event #{:triggering}
-                                         :implementation-plateau #{:triggering}
-                                         :relationship #{:aggregation :composition}
-                                         :connector #{:aggregation :composition}
-                                         [:structure #{:strategy :core}] #{:aggregation :composition :realization}
-                                         [:behavior #{:strategy :core}] #{:aggregation :composition :realization}
-                                         :business-product #{:aggregation :composition :realization}
-                                         :location #{:aggregation :composition :realization}
-                                         :motivation-outcome #{:aggregation :composition}
-                                         :motivation-goal #{:aggregation :composition}
-                                         :motivation-requirement #{:aggregation :composition}}}
-               (apply metamodel business-layer)
-               (apply metamodel application-layer)
-               (apply metamodel technology-layer))))
+   (slv/merge-into
+    {:grouping {:concept #{:aggregation :composition}}
+     :location {:concept #{:aggregation :composition}
+                :strategy-resource #{:realization}
+                :implementation-gap #{:association}}
+     :motivation {:motivation #{:influence}}
+     :motivation-stakeholder {:motivation-meaning #{:association}
+                              :motivation-value #{:association}
+                              :motivation-driver #{:association}}
+     :motivation-meaning {:motivation-stakeholder #{:association}
+                          [:structure #{:strategy :core}] #{:association}
+                          [:behavior #{:strategy :core}] #{:association}
+                          :composite #{:association}}
+     :motivation-value {:motivation-stakeholder #{:association}
+                        :motivation-outcome #{:association}
+                        [:structure #{:strategy :core}] #{:association}
+                        [:behavior #{:strategy :core}] #{:association}
+                        :composite #{:association}}
+     :motivation-driver {:motivation-stakeholder #{:association}
+                         :motivation-assessment #{:association}
+                         :motivation-goal #{:association}}
+     :motivation-assessment {:motivation-driver #{:association}
+                             :motivation-goal #{:association}}
+     :motivation-goal {:motivation-driver #{:association}
+                       :motivation-assessment #{:association}}
+     :motivation-outcome {:motivation-value #{:association}
+                          :motivation-goal #{:realization}}
+     :motivation-principle {:motivation-outcome #{:realization}}
+     :motivation-requirement {:motivation-outcome #{:realization}
+                              :motivation-principle #{:realization}}
+     :business-internal-active {:motivation-stakeholder #{:assignment}
+                                :implementation-workpackage #{:assignment}
+                                :implementation-event #{:assignment}}
+     [:structure #{:strategy :core}] {:motivation-requirement #{:influence :realization}
+                                      :motivation-meaning #{:association}
+                                      :motivation-value #{:association}
+                                      :implementation-gap #{:association}}
+     [:behavior #{:strategy :core}] {:motivation-requirement #{:influence :realization}
+                                     :motivation-meaning #{:association}
+                                     :motivation-value #{:association}
+                                     :implementation-gap #{:association}}
+     :composite {:motivation-requirement #{:influence :realization}
+                 :motivation-meaning #{:association}
+                 :motivation-value #{:association}
+                 :relationship #{:aggregation :composition}}
+     :strategy-course-of-action {:strategy-course-of-action #{:triggering :flow :serving}
+                                 :motivation-outcome #{:influence :realization}
+                                 :motivation-requirement #{:influence :realization}}
+     :strategy-behavior {:strategy-behavior #{:triggering :flow :serving}
+                         :strategy-course-of-action #{:serving :realization}
+                         :motivation-requirement #{:influence :realization}}
+     :strategy-resource {:strategy-behavior #{:assignment}
+                         :motivation-requirement #{:influence :realization}}
+     [:internal-behavior #{:core}] {:strategy-behavior #{:realization}}
+     [:external-behavior #{:core}] {:strategy-behavior #{:realization}}
+     [:active #{:core}] {:strategy-resource #{:realization}}
+     [:passive #{:core}] {:strategy-resource #{:realization}}
+     :business-actor {:business-role #{:assignment}}
+     :business-collaboration {:business-internal-active #{:aggregation}}
+     :business-representation {:business-object #{:realization}}
+     :business-product {:business-service #{:aggregation :composition}
+                        :business-contract #{:aggregation :composition}
+                        :business-passive #{:aggregation :composition}
+                        :application-service #{:aggregation :composition}
+                        :application-data-object #{:aggregation :composition}
+                        :technology-service #{:aggregation :composition}
+                        :technology-passive #{:aggregation :composition}
+                        :implementation-gap #{:association}}
+     :application-component {:application-component #{:realization}}
+     :application-collaboration {:application-internal-active #{:aggregation}}
+     :technology-internal-active {:technology-path #{:association}}
+     :technology-path {:technology-internal-active #{:aggregation :association}}
+     :technology-communication-network {:technology-path #{:realization}
+                                        :technology-device #{:aggregation :association}
+                                        :technology-system-software #{:aggregation :association}}
+     :technology-device {:technology-communication-network #{:association}
+                         :technology-system-software #{:aggregation :composition :assignment}
+                         :technology-artifact #{:assignment}}
+     :technology-node {:technology-device #{:aggregation :composition}
+                       :technology-system-software #{:aggregation :composition}
+                       :physical-equipment #{:aggregation :composition}
+                       :physical-facility #{:aggregation :composition}}
+     :technology-system-software {:technology-communication-network #{:association}
+                                  :technology-system-software #{:assignment}
+                                  :technology-artifact #{:assignment}}
+     :technology-collaboration {:technology-internal-active #{:aggregation}}
+     :technology-artifact {:technology-system-software #{:realization}
+                           :application-data-object #{:realization}
+                           :application-internal-active #{:realization}}
+     :physical-material {:physical-equipment #{:realization}
+                         :physical-distribution-network #{:association}}
+     :technology-internal-behavior {:physical-material #{:access_r :access_w :access_rw}
+                                    :business-internal-behavior #{:realization}
+                                    :application-internal-behavior #{:realization}}
+     :physical-equipment {:physical-material #{:assignment}
+                          :technology-internal-behavior #{:assignment}
+                          :technology-device #{:aggregation :composition}}
+     :physical-facility {:business-internal-active #{:assignment}
+                         :technology-node #{:aggregation :composition :assignment}
+                         :physical-equipment #{:aggregation :composition}
+                         :physical-distribution-network #{:association}}
+     :physical-distribution-network {:technology-path #{:realization}
+                                     :physical-equipment #{:aggregation}
+                                     :physical-facility #{:aggregation :association}}
+     :business-service {:application-internal-behavior #{:serving}
+                        :application-internal-active #{:serving}
+                        :technology-internal-behavior #{:serving}
+                        :technology-internal-active #{:serving}}
+     :business-interface {:application-internal-active #{:serving}
+                          :technology-internal-active #{:serving}}
+     :application-data-object {:business-object #{:realization}}
+     :application-event {:business-event #{:realization}}
+     :application-internal-behavior {:business-internal-behavior #{:realization}}
+     :application-service {:business-internal-behavior #{:serving}
+                           :business-service #{:realization}
+                           :business-internal-active #{:serving}
+                           :technology-internal-behavior #{:serving}
+                           :technology-internal-active #{:serving}}
+     :application-interface {:business-internal-active #{:serving}
+                             :business-interface #{:realization}
+                             :technology-internal-active #{:serving}}
+     :technology-passive {:business-object #{:realization}}
+     :technology-event {:business-event #{:realization}
+                        :application-event #{:realization}}
+     :technology-service {:business-internal-behavior #{:serving}
+                          :business-service #{:realization}
+                          :business-internal-active #{:serving}
+                          :application-internal-behavior #{:serving}
+                          :application-service #{:realization}
+                          :application-internal-active #{:serving}}
+     :technology-interface {:business-internal-active #{:serving}
+                            :business-interface #{:realization}
+                            :application-internal-active #{:serving}
+                            :application-interface #{:realization}}
+     :implementation-workpackage {:implementation-workpackage #{:triggering :flow}
+                                  :implementation-event #{:triggering :flow}
+                                  :implementation-deriverable #{:access_r :access_w :access_rw :realization}
+                                  [:structure #{:strategy :core}] #{:realization}
+                                  [:behavior #{:strategy :core}] #{:realization}
+                                  :business-product #{:realization}
+                                  :location #{:realization}
+                                  :motivation-requirement #{:influence :realization}}
+     :implementation-event {:implementation-workpackage #{:triggering :flow}
+                            :implementation-event #{:triggering :flow}
+                            :implementation-deriverable #{:access_r :access_w :access_rw}
+                            :implementation-plateau #{:triggering}}
+     :implementation-deriverable {:implementation-plateau #{:realization}
+                                  [:structure #{:strategy :core}] #{:realization}
+                                  [:behavior #{:strategy :core}] #{:realization}
+                                  :business-product #{:realization}
+                                  :location #{:realization}
+                                  :motivation-requirement #{:influence :realization}}
+     :implementation-gap {:implementation-plateau #{:association}
+                          [:structure #{:strategy :core}] #{:association}
+                          [:behavior #{:strategy :core}] #{:association}
+                          :business-product #{:association}
+                          :location #{:association}}
+     :implementation-plateau {:implementation-gap #{:association}
+                              :implementation-event #{:triggering}
+                              :implementation-plateau #{:triggering}
+                              :relationship #{:aggregation :composition}
+                              :connector #{:aggregation :composition}
+                              [:structure #{:strategy :core}] #{:aggregation :composition :realization}
+                              [:behavior #{:strategy :core}] #{:aggregation :composition :realization}
+                              :business-product #{:aggregation :composition :realization}
+                              :location #{:aggregation :composition :realization}
+                              :motivation-outcome #{:aggregation :composition}
+                              :motivation-goal #{:aggregation :composition}
+                              :motivation-requirement #{:aggregation :composition}}}
+    (apply metamodel business-layer)
+    (apply metamodel application-layer)
+    (apply metamodel technology-layer))))
+
+(def implied-relationships
+  (let [connector? (:connector hierarchy)
+        relationship? (:relationship hierarchy)]
+    (slv/merge-into
+     (slv/get-ext-each-self base-relationships
+                            (fn [v]
+                              (or (relationship? v)
+                                  (connector? v)))
+                            :aggregation :composition :specialization)
+     (slv/get-ext-each-other base-relationships
+                             (fn
+                               ([v]
+                                (or (= :association v)
+                                    (connector? v)))
+                               ([v1 v2]
+                                (and (relationship? v1) (relationship? v2))))
+                             :association))))

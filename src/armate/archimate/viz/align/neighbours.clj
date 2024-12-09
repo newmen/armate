@@ -1,5 +1,6 @@
 (ns armate.archimate.viz.align.neighbours
-  (:require [armate.archimate.multi-graph :as mg]
+  (:require [armate.archimate.metamodel.solver :as slv]
+            [armate.archimate.multi-graph :as mg]
             [armate.archimate.viz.align.common :as cmn]
             [armate.archimate.viz.align.grid :as grid]
             [armate.utils :as u]))
@@ -184,9 +185,8 @@
 (defn calc-hiddens
   [context]
   (let [up-down-map (build-weight-map context)]
-    (merge-with (partial merge-with into)
-                (calc-hidden-groups context up-down-map)
-                (calc-hidden-sources context up-down-map))))
+    (slv/merge-into (calc-hidden-groups context up-down-map)
+                    (calc-hidden-sources context up-down-map))))
 
 (defn append-hidden-aligns
   [context]

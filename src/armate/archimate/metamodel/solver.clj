@@ -2,6 +2,10 @@
   (:require [clojure.set :as o]
             [clojure.math.combinatorics :as combo]))
 
+(defn merge-into
+  [& hms]
+  (apply merge-with (partial merge-with into) hms))
+
 (defn assoc-if-not-same
   [flat-hierarchy key value]
   (let [kv #{key}
@@ -80,3 +84,42 @@
                               vs)))
                {}
                general-relationships)))
+
+(defn get-all-vertices
+  [relationships]
+  (set (concat (keys relationships)
+               (mapcat keys (vals relationships)))))
+
+(defn get-ext-each-self
+  [relationships except? & types]
+  (let [tps (set types)]
+    (reduce (fn [acc v]
+              (if (except? v)
+                acc
+                (let [ets (get-in relationships [v v] #{})
+                      diff (o/difference tps ets)]
+                  (if (empty? diff)
+                    acc
+                    (update-in acc [v v] (fnil into #{}) diff)))))
+            {}
+            (get-all-vertices relationships))))
+
+(defn get-ext-each-other
+  [relationships except? & types]
+  (let [tps (set types)
+        vertices (get-all-vertices relationships)]
+    (reduce (fn [acc v1]
+              (if (except? v1)
+                acc
+                (reduce (fn [a v2]
+                          (if (or (except? v2) (except? v1 v2))
+                            a
+                            (let [ets (get-in relationships [v1 v2] #{})
+                                  diff (o/difference tps ets)]
+                              (if (empty? diff)
+                                a
+                                (update-in a [v1 v2] (fnil into #{}) diff)))))
+                        acc
+                        vertices)))
+            {}
+            vertices)))

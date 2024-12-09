@@ -2,6 +2,18 @@
   (:require [clojure.test :refer [deftest is]]
             [armate.archimate.metamodel.solver :as slv]))
 
+(deftest merge-into-test
+  (is (= {} (slv/merge-into {})))
+  (is (= {} (slv/merge-into {} {})))
+  (is (= {} (slv/merge-into {} {} {})))
+  (is (= {:a {:b #{1}}}
+         (slv/merge-into {:a {:b #{1}}})))
+  (is (= {:a {:b #{1}
+              :c #{2}}}
+         (slv/merge-into {:a {:b #{1}}} {:a {:c #{2}}})))
+  (is (= {:a {:b #{1 2}}}
+         (slv/merge-into {:a {:b #{1}}} {:a {:b #{2}}}))))
+
 (deftest build-flat-hierarchy-test
   (is (= {} (slv/build-flat-hierarchy {})))
   (is (= {:a #{:a}}
