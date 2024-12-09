@@ -3,7 +3,7 @@
 (def possible-relation-types
   #{:access
     :access_r
-    ;; :access_rw
+    :access_rw
     :access_w
     :aggregation
     :assignment

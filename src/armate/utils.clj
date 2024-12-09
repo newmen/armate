@@ -81,3 +81,14 @@
   [precision number]
   (let [factor (Math/pow 10 precision)]
     (/ (Math/round (* number factor)) factor)))
+
+(defn persentiles
+  [ps data]
+  {:pre [(every? (comp not neg?) ps)
+         (seq data)]}
+  (let [n (count data)
+        sorted (sort data)]
+    (->> (map (juxt identity #(int (* n %))) ps)
+         (map (juxt first (comp #(nth sorted %)
+                                second)))
+         (into {}))))
