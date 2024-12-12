@@ -1,7 +1,8 @@
 (ns armate.archimate.metamodel.derivation.match-test
   (:require [clojure.test :refer [deftest is]]
             [armate.archimate.metamodel.derivation.rules :as drs]
-            [armate.archimate.metamodel.derivation.match :as mch]))
+            [armate.archimate.metamodel.derivation.match :as mch]
+            [armate.archimate.multi-graph :as mg]))
 
 (def graph0
   {"child_ba" {"client_br" #{{:type :assignment}}}
@@ -15,6 +16,10 @@
    "partner_br" {"configureTurnstile_bpc" #{{:type :assignment}}
                  "controlFood_bpc" #{{:type :assignment}}}
    "registry_bs" {"partner_br" #{{:type :serving}}}})
+
+(defn restricted?
+  [_a _b _c _s]
+  false)
 
 (deftest get-rel-wieght-test
   (is (= 10000 (mch/get-rel-wieght :specialization)))
@@ -32,51 +37,10 @@
                               [[:flow :a :c] [:assignment :b :c] [:flow :a :b]]
                               [[:assignment :a :b] [:composition :b :c] [:assignment :a :c]]]))))
 
-(deftest reverse-graph-test
-  (is (= {"child_ba" {"food_bs" #{{:type :serving}}
-                      "pass_bs" #{{:type :serving}}}
-          "client_br" {"child_ba" #{{:type :assignment}}}
-          "configureTurnstile_bpc" {"partner_br" #{{:type :assignment}}}
-          "controlFood_bpc" {"partner_br" #{{:type :assignment}}}
-          "fillForm_bpc" {"client_br" #{{:type :assignment}}}
-          "food_bs" {"controlFood_bpc" #{{:type :realization}}}
-          "getRegistry_bpc" {"fillForm_bpc" #{{:type :flow}}}
-          "partner_br" {"registry_bs" #{{:type :serving}}}
-          "pass_bs" {"configureTurnstile_bpc" #{{:type :realization}}}
-          "registry_bs" {"getRegistry_bpc" #{{:type :realization}}}}
-         (mch/reverse-graph graph0))))
-
-(deftest get-weights-test
-  (is (= {"partner_br" [-4000 -2000]
-          "child_ba" [-2000 -2000]
-          "client_br" [-2000 -2]
-          "controlFood_bpc" [-1000 -700]
-          "configureTurnstile_bpc" [-1000 -700]
-          "getRegistry_bpc" [-1000 -700]
-          "registry_bs" [-700 -4000]
-          "food_bs" [-700 -2000]
-          "pass_bs" [-700 -2000]
-          "fillForm_bpc" [-2 -1000]}
-         (mch/get-weights graph0))))
-
-(deftest get-prioritized-relationships-test
-  (is (= [["partner_br" "configureTurnstile_bpc" {:type :assignment}]
-          ["partner_br" "controlFood_bpc" {:type :assignment}]
-          ["child_ba" "client_br" {:type :assignment}]
-          ["client_br" "fillForm_bpc" {:type :assignment}]
-          ["configureTurnstile_bpc" "pass_bs" {:type :realization}]
-          ["controlFood_bpc" "food_bs" {:type :realization}]
-          ["getRegistry_bpc" "registry_bs" {:type :realization}]
-          ["registry_bs" "partner_br" {:type :serving}]
-          ["food_bs" "child_ba" {:type :serving}]
-          ["pass_bs" "child_ba" {:type :serving}]
-          ["fillForm_bpc" "getRegistry_bpc" {:type :flow}]]
-         (mch/get-prioritized-relationships graph0))))
-
 (deftest match-rule
   (letfn [(im [fg]
             {:forward-graph fg
-             :reverse-graph (mch/reverse-graph fg)
+             :reverse-graph (mg/reverse-graph fg)
              :derivated-graph {}
              :derivated-relations []})]
     (let [forward-graph {"a" {"b" #{{:type :realization}}}
@@ -88,7 +52,7 @@
                     [[:realization :b :a] [:serving :c :b] [:access :a :c]]
                     [[:realization :b :a] [:serving :c :b] [:access :c :a]]]]
         (is (= (im forward-graph)
-               (mch/match-rule "a" "b" (im forward-graph) rule)))))
+               (mch/match-rule restricted? "a" "b" (im forward-graph) rule)))))
     (let [forward-graph {"a" {"b" #{{:type :realization}}}
                          "b" {"c" #{{:type :serving}}}}]
       (doseq [rule [[[:realization :a :b] [:serving :b :c] [:access :a :c]]
@@ -102,7 +66,7 @@
                                      "b" #{{:type :serving}}}}
                 :derivated-graph {"a" {"c" #{{:type :access}}}}
                 :derivated-relations [["a" "c" :access]]}
-               (mch/match-rule "a" "b" (im forward-graph) rule))))
+               (mch/match-rule restricted? "a" "b" (im forward-graph) rule))))
       (doseq [rule [[[:realization :a :b] [:serving :b :c] [:access :c :a]]
                     [[:realization :b :a] [:serving :a :c] [:access :c :b]]]]
         (is (= {:forward-graph {"a" {"b" #{{:type :realization}}}
@@ -113,7 +77,7 @@
                                 "c" {"b" #{{:type :serving}}}}
                 :derivated-graph {"c" {"a" #{{:type :access}}}}
                 :derivated-relations [["c" "a" :access]]}
-               (mch/match-rule "a" "b" (im forward-graph) rule)))))
+               (mch/match-rule restricted? "a" "b" (im forward-graph) rule)))))
     (let [forward-graph {"a" {"b" #{{:type :realization}}
                               "c" #{{:type :serving}}}}]
       (is (= {:forward-graph {"a" {"b" #{{:type :realization}}
@@ -124,7 +88,8 @@
                                    "b" #{{:type :access}}}}
               :derivated-graph {"b" {"c" #{{:type :access}}}}
               :derivated-relations [["b" "c" :access]]}
-             (mch/match-rule "a" "b" (im forward-graph)
+             (mch/match-rule restricted?
+                             "a" "b" (im forward-graph)
                              [[:realization :a :b] [:serving :a :c] [:access :b :c]])))
       (is (= {:forward-graph {"a" {"b" #{{:type :realization}}
                                    "c" #{{:type :serving}}}
@@ -134,7 +99,8 @@
                               "c" {"a" #{{:type :serving}}}}
               :derivated-graph {"c" {"b" #{{:type :access}}}}
               :derivated-relations [["c" "b" :access]]}
-             (mch/match-rule "a" "b" (im forward-graph)
+             (mch/match-rule restricted?
+                             "a" "b" (im forward-graph)
                              [[:realization :a :b] [:serving :a :c] [:access :c :b]]))))
     (let [forward-graph {"a" {"b" #{{:type :realization}}}
                          "c" {"a" #{{:type :serving}}}}]
@@ -146,7 +112,8 @@
                               "c" {"b" #{{:type :access}}}}
               :derivated-graph {"b" {"c" #{{:type :access}}}}
               :derivated-relations [["b" "c" :access]]}
-             (mch/match-rule "a" "b" (im forward-graph)
+             (mch/match-rule restricted?
+                             "a" "b" (im forward-graph)
                              [[:realization :a :b] [:serving :c :a] [:access :b :c]])))
       (is (= {:forward-graph {"a" {"b" #{{:type :realization}}}
                               "c" {"a" #{{:type :serving}}
@@ -156,7 +123,8 @@
                                    "c" #{{:type :access}}}}
               :derivated-graph {"c" {"b" #{{:type :access}}}}
               :derivated-relations [["c" "b" :access]]}
-             (mch/match-rule "a" "b" (im forward-graph)
+             (mch/match-rule restricted?
+                             "a" "b" (im forward-graph)
                              [[:realization :a :b] [:serving :c :a] [:access :c :b]]))))
     (let [forward-graph {"a" {"b" #{{:type :realization}}}
                          "c" {"b" #{{:type :serving}}}}]
@@ -168,7 +136,8 @@
                               "c" {"a" #{{:type :access}}}}
               :derivated-graph {"a" {"c" #{{:type :access}}}}
               :derivated-relations [["a" "c" :access]]}
-             (mch/match-rule "a" "b" (im forward-graph)
+             (mch/match-rule restricted?
+                             "a" "b" (im forward-graph)
                              [[:realization :a :b] [:serving :c :b] [:access :a :c]])))
       (is (= {:forward-graph {"a" {"b" #{{:type :realization}}}
                               "c" {"a" #{{:type :access}}
@@ -178,10 +147,25 @@
                                    "c" #{{:type :serving}}}}
               :derivated-graph {"c" {"a" #{{:type :access}}}}
               :derivated-relations [["c" "a" :access]]}
-             (mch/match-rule "a" "b" (im forward-graph)
+             (mch/match-rule restricted?
+                             "a" "b" (im forward-graph)
                              [[:realization :a :b] [:serving :c :b] [:access :c :a]]))))))
 
 (deftest derivate-relationships-once-test
+  (is (= {"child_ba" {"fillForm_bpc" #{{:type :assignment}}}
+          "client_br" {"getRegistry_bpc" #{{:type :flow}}}
+          "configureTurnstile_bpc" {"child_ba" #{{:type :serving}}}
+          "controlFood_bpc" {"child_ba" #{{:type :serving}}}
+          "getRegistry_bpc" {"partner_br" #{{:type :serving}}}
+          "partner_br" {"food_bs" #{{:type :realization}}
+                        "pass_bs" #{{:type :realization}}}}
+         (mch/derivate-relationships-once restricted? drs/certain-rules graph0)))
+  (is (= {"fillForm_bpc" {"registry_bs" #{{:type :flow}}}
+          "food_bs" {"client_br" #{{:type :serving}}}
+          "registry_bs" {"configureTurnstile_bpc" #{{:type :serving}}
+                         "controlFood_bpc" #{{:type :serving}}}
+          "pass_bs" {"client_br" #{{:type :serving}}}}
+         (mch/derivate-relationships-once restricted? drs/potential-rules graph0)))
   (is (= {"child_ba" {"fillForm_bpc" #{{:type :assignment}}
                       "getRegistry_bpc" #{{:type :flow}}}
           "client_br" {"getRegistry_bpc" #{{:type :flow}}}
@@ -191,7 +175,7 @@
           "partner_br" {"child_ba" #{{:type :serving}}
                         "food_bs" #{{:type :realization}}
                         "pass_bs" #{{:type :realization}}}}
-         (mch/derivate-relationships-once drs/certain-rules graph0)))
+         (mch/derivate-relationships-once restricted? drs/certain-rules graph0 true)))
   (is (= {"fillForm_bpc" {"registry_bs" #{{:type :flow}}}
           "food_bs" {"client_br" #{{:type :serving}}
                      "fillForm_bpc" #{{:type :serving}}}
@@ -204,7 +188,7 @@
                          "pass_bs" #{{:type :serving}}}
           "pass_bs" {"client_br" #{{:type :serving}}
                      "fillForm_bpc" #{{:type :serving}}}}
-         (mch/derivate-relationships-once drs/potential-rules graph0))))
+         (mch/derivate-relationships-once restricted? drs/potential-rules graph0 true))))
 
 (deftest derivate-relationships-test
   (is (= {"child_ba" {"fillForm_bpc" #{{:type :assignment}}
@@ -216,8 +200,12 @@
           "partner_br" {"child_ba" #{{:type :serving}}
                         "food_bs" #{{:type :realization}}
                         "pass_bs" #{{:type :realization}}}}
-         (mch/derivate-relationships drs/certain-rules graph0)))
-  (is (= (mch/derivate-relationships-once drs/certain-rules graph0)
-         (mch/derivate-relationships drs/certain-rules graph0)))
-  (is (= (mch/derivate-relationships-once drs/potential-rules graph0)
-         (mch/derivate-relationships drs/potential-rules graph0))))
+         (mch/derivate-relationships restricted? drs/certain-rules graph0)))
+  (is (not= (mch/derivate-relationships-once restricted? drs/certain-rules graph0)
+            (mch/derivate-relationships restricted? drs/certain-rules graph0)))
+  (is (not= (mch/derivate-relationships-once restricted? drs/potential-rules graph0)
+            (mch/derivate-relationships restricted? drs/potential-rules graph0)))
+  (is (= (mch/derivate-relationships-once restricted? drs/certain-rules graph0 true)
+         (mch/derivate-relationships restricted? drs/certain-rules graph0)))
+  (is (= (mch/derivate-relationships-once restricted? drs/potential-rules graph0 true)
+         (mch/derivate-relationships restricted? drs/potential-rules graph0))))

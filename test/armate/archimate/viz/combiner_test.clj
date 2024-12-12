@@ -1,7 +1,21 @@
 (ns armate.archimate.viz.combiner-test
   (:require [clojure.test :refer [deftest is]]
+            [armate.archimate.metamodel.derivation.match-test :refer [graph0]]
             [armate.archimate.parser :as prr]
             [armate.archimate.viz.combiner :as viz]))
+
+(deftest get-rels-based-weights-test
+  (is (= {"partner_br" [-4000 -2000]
+          "child_ba" [-2000 -2000]
+          "client_br" [-2000 -2]
+          "controlFood_bpc" [-1000 -700]
+          "configureTurnstile_bpc" [-1000 -700]
+          "getRegistry_bpc" [-1000 -700]
+          "registry_bs" [-700 -4000]
+          "food_bs" [-700 -2000]
+          "pass_bs" [-700 -2000]
+          "fillForm_bpc" [-2 -1000]}
+         (viz/get-rels-based-weights graph0))))
 
 (def puml
   "@startuml \"test puml generation\"

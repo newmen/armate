@@ -1,6 +1,7 @@
 (ns armate.archimate.metamodel.solver 
   (:require [clojure.set :as o]
-            [clojure.math.combinatorics :as combo]))
+            [clojure.math.combinatorics :as combo]
+            [armate.utils :as u]))
 
 (defn merge-into
   [& hms]
@@ -17,16 +18,17 @@
       flat-hierarchy)))
 
 (defn init-flat-hierarchy
-  [hierarchy-tree]
+  [non-abstract-elements hierarchy-tree]
   (reduce-kv (fn [acc k v]
                (cond
                  (empty? v) (assoc acc k #{k})
-                 (map? v) (let [sub-tree (init-flat-hierarchy v)]
+                 (map? v) (let [sub-tree (init-flat-hierarchy non-abstract-elements v)]
                             (-> (merge acc sub-tree)
                                 (assoc k (set (apply concat (vals sub-tree))))))
                  (or (vector? v)
-                     (set? v)) (-> (reduce #(assoc-if-not-same %1 %2 #{%2}) acc v)
-                                   (assoc k (set v)))
+                     (set? v)) (let [v2 (if (non-abstract-elements k) (conj v k) v)]
+                                 (-> (reduce #(assoc-if-not-same %1 %2 #{%2}) acc v)
+                                     (assoc k (set v2))))
                  :else (throw (ex-info "Unknown hierarchy value" {:key k :value v}))))
              {}
              hierarchy-tree))
@@ -45,39 +47,43 @@
 
 (defn build-flat-hierarchy
   ([hierarchy-tree]
-   (let [fh1 (init-flat-hierarchy hierarchy-tree)]
+   (build-flat-hierarchy #{} hierarchy-tree))
+  ([non-abstract-elements hierarchy-tree]
+   (let [fh1 (init-flat-hierarchy non-abstract-elements hierarchy-tree)]
      (reduce (fn [acc k]
                (->> (resolve-leafs fh1 k)
                     (assoc acc k)))
              {}
-             (keys fh1))))
-  ([base-flat-hierarchy hierarchy-tree]
-   (reduce-kv (fn [acc k vs]
-                (->> (mapcat base-flat-hierarchy vs)
-                     (set)
-                     (assoc acc k)))
-              {}
-              (build-flat-hierarchy hierarchy-tree))))
+             (keys fh1)))))
+
+(defn extend-hierarchy
+  [base-flat-hierarchy hierarchy-tree]
+  (reduce-kv (fn [acc k vs]
+               (->> (mapcat base-flat-hierarchy vs)
+                    (set)
+                    (assoc acc k)))
+             {}
+             (build-flat-hierarchy hierarchy-tree)))
 
 (defn resolve-elements
-  [flat-hierarchy flat-layers rv]
+  [flat-hierarchy flat-domains rv]
   (cond
     (keyword? rv) (flat-hierarchy rv)
     (vector? rv) (let [[kind only] rv
                        all-elements (flat-hierarchy kind)
-                       only-mask (set (mapcat flat-layers only))]
+                       only-mask (set (mapcat flat-domains only))]
                    (o/intersection all-elements only-mask))
     :else (throw (ex-info "Unknown relationship vertex" {:vertex rv}))))
 
 (defn multiply-relationships
-  [flat-hierarchy flat-layers general-relationships]
-  (let [ref (partial resolve-elements flat-hierarchy flat-layers)]
+  [flat-hierarchy flat-domains general-relationships]
+  (let [ref (partial resolve-elements flat-hierarchy flat-domains)]
     (reduce-kv (fn [acc k vs]
                  (let [froms (ref k)]
                    (reduce-kv (fn [a v rs]
                                 (let [tos (ref v)]
                                   (reduce (fn [a2 [f t]]
-                                            (update-in a2 [f t] (fnil into #{}) rs))
+                                            (update-in a2 [f t] u/fnil-into-set rs))
                                           a
                                           (combo/cartesian-product froms tos))))
                               acc
@@ -100,7 +106,7 @@
                       diff (o/difference tps ets)]
                   (if (empty? diff)
                     acc
-                    (update-in acc [v v] (fnil into #{}) diff)))))
+                    (update-in acc [v v] u/fnil-into-set diff)))))
             {}
             (get-all-vertices relationships))))
 
@@ -118,8 +124,33 @@
                                   diff (o/difference tps ets)]
                               (if (empty? diff)
                                 a
-                                (update-in a [v1 v2] (fnil into #{}) diff)))))
+                                (update-in a [v1 v2] u/fnil-into-set diff)))))
                         acc
                         vertices)))
             {}
             vertices)))
+
+(defn translate-rmg
+  [f rmg except?]
+  (reduce-kv (fn [acc from tos]
+               (if (except? from)
+                 acc
+                 (reduce-kv (fn [a to rls]
+                              (if (except? to)
+                                a
+                                (reduce (fn [a2 r]
+                                          (update-in a2 [from to] u/fnil-conj-set (f r)))
+                                        a
+                                        rls)))
+                            acc
+                            tos)))
+             {}
+             rmg))
+
+(defn rel-rules-to-mg
+  [relationships except?]
+  (translate-rmg (partial hash-map :type) relationships except?))
+
+(defn mg-to-rel-rules
+  [graph]
+  (translate-rmg :type graph (constantly false)))

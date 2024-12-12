@@ -1,6 +1,6 @@
-(ns armate.archimate.metamodel.core
-  (:require [armate.archimate.metamodel.solver :as slv]
-            [armate.archimate.metamodel.derivation.rules :as drs]))
+(ns armate.archimate.metamodel.meta
+  (:require [armate.archimate.metamodel.derivation.rules :as drs]
+            [armate.archimate.metamodel.solver :as slv]))
 
 (def business-layer
   [:business-interface :business-internal-active
@@ -19,6 +19,7 @@
 
 (def hierarchy
   (slv/build-flat-hierarchy
+   #{:business-object :motivation-requirement}
    {:concept {:element {:behavior {:external-behavior {:service #{:business-service
                                                                   :application-service
                                                                   :technology-service}}
@@ -84,29 +85,43 @@
               :connector #{:and :or}}}))
 
 (def layers
-  (slv/build-flat-hierarchy
-   hierarchy
-   {:motivation #{:motivation}
-    :strategy #{:strategy-course-of-action
-                :strategy-behavior
-                :strategy-resource}
-    :core {:business (set business-layer)
-           :application (set application-layer)
-           :technology (->> (map #(vector % #{}) technology-layer)
-                            (into {})
-                            (merge {:physical #{:physical-material
-                                                :technology-internal-behavior
-                                                :technology-device
-                                                :technology-node
-                                                :physical-equipment
-                                                :physical-facility
-                                                :technology-path
-                                                :physical-distribution-network}}))}
-    :implementation #{:implementation-workpackage
-                      :implementation-event
-                      :implementation-deriverable
-                      :implementation-gap
-                      :implementation-plateau}}))
+  {:motivation #{:motivation}
+   :strategy #{:strategy-course-of-action
+               :strategy-behavior
+               :strategy-resource}
+   :core {:business (set business-layer)
+          :application (set application-layer)
+          :technology (->> (map #(vector % #{}) technology-layer)
+                           (into {})
+                           (merge {:physical #{:physical-material
+                                               :technology-internal-behavior
+                                               :technology-device
+                                               :technology-node
+                                               :physical-equipment
+                                               :physical-facility
+                                               :technology-path
+                                               :physical-distribution-network}}))
+          :grouping #{}
+          :location #{}}
+   :implementation #{:implementation-workpackage
+                     :implementation-event
+                     :implementation-deriverable
+                     :implementation-gap
+                     :implementation-plateau}})
+
+(def domains
+  (slv/extend-hierarchy hierarchy layers))
+
+(def ^:private main-domains
+  (->> (keys layers)
+       (select-keys domains)))
+
+(defn get-domain
+  [element]
+  (some (fn [[domain elements]]
+          (when (contains? elements element)
+            domain))
+        main-domains))
 
 (defn metamodel
   [interface internal-active
@@ -121,19 +136,19 @@
             internal-active #{:serving}
             internal-behavior #{:serving}
             event #{:triggering :flow}
-            passive #{:access_r :access_w :access_rw}}
+            passive #{:access :access_r :access_w :access_rw}}
    internal-behavior {service #{:realization}
                       internal-behavior #{:aggregation :composition :triggering :flow}
                       event #{:triggering :flow}
-                      passive #{:access_r :access_w :access_rw}}
+                      passive #{:access :access_r :access_w :access_rw}}
    event {service #{:triggering :flow}
           internal-behavior #{:triggering :flow}
           event #{:triggering :flow}
-          passive #{:access_r :access_w :access_rw}}})
+          passive #{:access :access_r :access_w :access_rw}}})
 
 (def base-relationships
   (slv/multiply-relationships
-   hierarchy layers
+   hierarchy domains
    (slv/merge-into
     {:grouping {:concept #{:aggregation :composition}}
      :location {:concept #{:aggregation :composition}
@@ -177,8 +192,7 @@
                                      :implementation-gap #{:association}}
      :composite {:motivation-requirement #{:influence :realization}
                  :motivation-meaning #{:association}
-                 :motivation-value #{:association}
-                 :relationship #{:aggregation :composition}}
+                 :motivation-value #{:association}}
      :strategy-course-of-action {:strategy-course-of-action #{:triggering :flow :serving}
                                  :motivation-outcome #{:influence :realization}
                                  :motivation-requirement #{:influence :realization}}
@@ -225,7 +239,7 @@
                            :application-internal-active #{:realization}}
      :physical-material {:physical-equipment #{:realization}
                          :physical-distribution-network #{:association}}
-     :technology-internal-behavior {:physical-material #{:access_r :access_w :access_rw}
+     :technology-internal-behavior {:physical-material #{:access :access_r :access_w :access_rw}
                                     :business-internal-behavior #{:realization}
                                     :application-internal-behavior #{:realization}}
      :physical-equipment {:physical-material #{:assignment}
@@ -270,7 +284,7 @@
                             :application-interface #{:realization}}
      :implementation-workpackage {:implementation-workpackage #{:triggering :flow}
                                   :implementation-event #{:triggering :flow}
-                                  :implementation-deriverable #{:access_r :access_w :access_rw :realization}
+                                  :implementation-deriverable #{:access :access_r :access_w :access_rw :realization}
                                   [:structure #{:strategy :core}] #{:realization}
                                   [:behavior #{:strategy :core}] #{:realization}
                                   :business-product #{:realization}
@@ -278,7 +292,7 @@
                                   :motivation-requirement #{:influence :realization}}
      :implementation-event {:implementation-workpackage #{:triggering :flow}
                             :implementation-event #{:triggering :flow}
-                            :implementation-deriverable #{:access_r :access_w :access_rw}
+                            :implementation-deriverable #{:access :access_r :access_w :access_rw}
                             :implementation-plateau #{:triggering}}
      :implementation-deriverable {:implementation-plateau #{:realization}
                                   [:structure #{:strategy :core}] #{:realization}
@@ -302,25 +316,33 @@
                               :location #{:aggregation :composition :realization}
                               :motivation-outcome #{:aggregation :composition}
                               :motivation-goal #{:aggregation :composition}
-                              :motivation-requirement #{:aggregation :composition}}}
+                              :motivation-requirement #{:aggregation :composition}} 
+     :relationship {:element #{:association}
+                    :connector #{:association}}
+     :element {:relationship #{:association}}}
     (apply metamodel business-layer)
     (apply metamodel application-layer)
     (apply metamodel technology-layer))))
 
+(def element? (:element hierarchy))
+(def relationship? (:relationship hierarchy))
+(def connector? (:connector hierarchy))
+
 (def implied-relationships
-  (let [connector? (:connector hierarchy)
-        relationship? (:relationship hierarchy)]
-    (slv/merge-into
-     (slv/get-ext-each-self base-relationships
-                            (fn [v]
-                              (or (relationship? v)
+  (slv/merge-into
+   (slv/get-ext-each-self base-relationships
+                          (fn [v]
+                            (or (relationship? v)
+                                (connector? v)))
+                          :aggregation :composition :specialization)
+   (slv/get-ext-each-other base-relationships
+                           (fn
+                             ([v]
+                              (or (= :association v)
                                   (connector? v)))
-                            :aggregation :composition :specialization)
-     (slv/get-ext-each-other base-relationships
-                             (fn
-                               ([v]
-                                (or (= :association v)
-                                    (connector? v)))
-                               ([v1 v2]
-                                (and (relationship? v1) (relationship? v2))))
-                             :association))))
+                             ([v1 v2]
+                              (and (relationship? v1) (relationship? v2))))
+                           :association)))
+
+(def general-relationships
+  (slv/merge-into base-relationships implied-relationships))

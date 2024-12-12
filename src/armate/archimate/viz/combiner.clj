@@ -207,9 +207,27 @@
              :application-service
              :application-interface] kind))
 
+(defn get-rels-based-weights
+  [graph]
+  (let [source-weights (->> graph
+                            (map (juxt first
+                                       (fn [[_ nbrs]]
+                                         (->> (vals nbrs)
+                                              (reduce concat)
+                                              (map :type)
+                                              (map mch/get-rel-wieght)
+                                              (reduce +)))))
+                            (into {}))]
+    (->> graph
+         (map (juxt first
+                    (fn [[node nbrs]]
+                      (let [wth #(- (source-weights % 0))]
+                        [(wth node) (reduce + (map (comp wth first) nbrs))]))))
+         (into {}))))
+
 (defn get-out-weights
   [context]
-  (->> (mch/get-weights (:relations context))
+  (->> (get-rels-based-weights (:relations context))
        (map (juxt first (fn [[alias [a b]]]
                           (let [kind (get-in context [:elements alias :kind])]
                             [(kind-index kind) (- a) (- b) alias]))))

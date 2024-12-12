@@ -19,6 +19,15 @@
       (assoc-in [:b :a] #{{:type :serving}})
       (assoc-in [:a :e] #{{:type :serving}})))
 
+(deftest reverse-graph-test
+  (is (= {:a {:d #{{:type :flow}}}
+          :b {:a #{{:type :assignment} {:type :serving}}}
+          :c {:a #{{:type :assignment}}}
+          :d {:b #{{:type :realization}}
+              :c #{{:type :composition}}}
+          :e {:d #{{:type :aggregation}}}}
+         (mg/reverse-graph graph0))))
+
 (deftest get-relationship-sets-test
   (is (= #{[:a :b #{{:type :assignment}
                     {:type :serving}}]

@@ -1,7 +1,7 @@
 (ns armate.archimate.metamodel.derivation.rules
   "Appendix B: Relationships (Normative)
    https://pubs.opengroup.org/architecture/archimate3-doc/ch-relationships-Normative.html
-   There are no any restriction rules here, due to this project uses only a subset of ArchiMate 3.2."
+   The restriction rules declared in a particular file"
   (:require [clojure.math.combinatorics :as combo]))
 
 (def structural-rels
@@ -133,7 +133,7 @@
   "According with PDR12"
   (->> (combo/cartesian-product [:aggregation :composition] [:realization :assignment])
        (map (fn [[crel rrel]]
-              [[crel :group :a] [rrel :group :c] [rrel :a :c]]))))
+              [[crel :g :a] [rrel :g :c] [rrel :a :c]]))))
 
 (defn valid?
   [rule]
@@ -186,5 +186,7 @@
   (count certain-rules)
   (count potential-rules)
   (count potential-group-around-rules)
+
+  (filter (comp #{:realization} first last) certain-rules)
 
   )

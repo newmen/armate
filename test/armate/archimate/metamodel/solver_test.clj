@@ -56,7 +56,21 @@
           :c #{:c}}
          (slv/build-flat-hierarchy {:a #{:b}
                                     :b #{:c}
-                                    :c #{:a}}))))
+                                    :c #{:a}})))
+  (is (= {:a #{:a}
+          :b #{:b :c}
+          :c #{:c}}
+         (slv/build-flat-hierarchy #{:b}
+                                   {:a #{}
+                                    :b #{:c}})))
+  (is (= {:a #{:e}
+          :b #{:c :d :e}
+          :c #{:c :d :e}
+          :d #{:d}
+          :e #{:e}}
+         (slv/build-flat-hierarchy #{:c}
+                                   {:a #{:e}
+                                    :b {:c #{:d :e}}}))))
 
 (deftest multiply-relationships-test
   (is (= {} (slv/multiply-relationships {} {} {})))
@@ -68,12 +82,42 @@
           :g {:e #{1} :b #{4} :g #{5} :i #{5} :j #{5}}}
          (let [flat-hierarchy (slv/build-flat-hierarchy {:a #{:b :c :d :e :f :g}
                                                          :h #{:g :i :j}})
-               flat-layers (slv/build-flat-hierarchy flat-hierarchy {:x #{:b :d :i}
-                                                                     :y #{:f :g :j}})]
-           (slv/multiply-relationships flat-hierarchy flat-layers
+               flat-domains (slv/extend-hierarchy flat-hierarchy {:x #{:b :d :i}
+                                                                  :y #{:f :g :j}})]
+           (slv/multiply-relationships flat-hierarchy flat-domains
                                        {:a {:e #{1}}
                                         [:a #{:x}] {:f #{2}
                                                     [:a #{:y}] #{3}}
                                         [:a #{:x :y}] {:b #{4}
                                                        :h #{5}}
                                         :c {[:h #{:x}] #{6}}})))))
+
+(deftest rel-rules-to-mg-test
+  (is (= {} (slv/rel-rules-to-mg {} (constantly false))))
+  (is (= {:a {:b #{{:type 1}}}
+          :c {:b #{{:type 2}}
+              :d #{{:type 3}}}}
+         (slv/rel-rules-to-mg {:a {:b #{1}}
+                               :c {:b #{2}
+                                   :d #{3}}}
+                              (constantly false))))
+  (is (= {:c {:b #{{:type 2}}
+              :d #{{:type 3}}}}
+         (slv/rel-rules-to-mg {:a {:b #{1}}
+                               :c {:b #{2}
+                                   :d #{3}}}
+                              #{:a})))
+  (is (= {:c {:d #{{:type 3}}}}
+         (slv/rel-rules-to-mg {:a {:b #{1}}
+                               :c {:b #{2}
+                                   :d #{3}}}
+                              #{:b}))))
+
+(deftest mg-to-rel-rules-test
+  (is (= {} (slv/mg-to-rel-rules {})))
+  (is (= {:a {:b #{1}}
+          :c {:b #{2}
+              :d #{3}}}
+         (slv/mg-to-rel-rules {:a {:b #{{:type 1}}}
+                               :c {:b #{{:type 2}}
+                                   :d #{{:type 3}}}}))))

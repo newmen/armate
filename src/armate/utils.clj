@@ -1,5 +1,8 @@
 (ns armate.utils)
 
+(def fnil-into-set
+  (fnil into #{}))
+
 (def fnil-conj-set
   (fnil conj #{}))
 
