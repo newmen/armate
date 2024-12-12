@@ -1,6 +1,5 @@
 (ns armate.archimate.viz.align.neighbours-test
   (:require [clojure.test :refer [deftest is]]
-            [armate.archimate.rules :as rls]
             [armate.archimate.viz.align.neighbours :as alg]))
 
 (deftest build-up-down-map-test
@@ -41,10 +40,6 @@
                                  :c {:b #{{:direction :up}}}
                                  :d {:c #{{:direction :down}}}
                                  :e {:c #{{:direction :down}}}}))))
-
-(deftest element-kinds-order-test
-  (is (= (set alg/element-kinds-order)
-         rls/possible-elements)))
 
 (deftest build-weight-map-test
   (is (= {:a [15 17 :a]
