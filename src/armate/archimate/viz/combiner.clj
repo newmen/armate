@@ -106,7 +106,7 @@
 
 (defn get-element
   [element]
-  (if (= :group (:kind element))
+  (if (= :grouping (:kind element))
     (get-group element)
     (get-shape element)))
 
