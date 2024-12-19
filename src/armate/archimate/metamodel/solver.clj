@@ -26,8 +26,14 @@
                             (-> (merge acc sub-tree)
                                 (assoc k (set (apply concat (vals sub-tree))))))
                  (or (vector? v)
-                     (set? v)) (let [v2 (if (non-abstract-elements k) (conj v k) v)]
-                                 (-> (reduce #(assoc-if-not-same %1 %2 #{%2}) acc v)
+                     (set? v)) (let [non-abstract? (non-abstract-elements k)
+                                     v2 (if non-abstract? (conj v k) v)]
+                                 (-> (reduce (fn [a v2]
+                                               (let [vs #{v2}
+                                                     vs2 (if non-abstract? (conj vs k) vs)]
+                                                 (assoc-if-not-same a v2 vs2)))
+                                             acc
+                                             v)
                                      (assoc k (set v2))))
                  :else (throw (ex-info "Unknown hierarchy value" {:key k :value v}))))
              {}
@@ -97,16 +103,19 @@
                (mapcat keys (vals relationships)))))
 
 (defn get-ext-each-self
-  [relationships except? & types]
+  [hierarcy relationships except? & types]
   (let [tps (set types)]
     (reduce (fn [acc v]
               (if (except? v)
                 acc
-                (let [ets (get-in relationships [v v] #{})
-                      diff (o/difference tps ets)]
-                  (if (empty? diff)
-                    acc
-                    (update-in acc [v v] u/fnil-into-set diff)))))
+                (reduce (fn [a v2]
+                          (let [ets (get-in relationships [v v2] #{})
+                                diff (o/difference tps ets)]
+                            (if (empty? diff)
+                              a
+                              (update-in a [v v2] u/fnil-into-set diff))))
+                        acc
+                        (hierarcy v))))
             {}
             (get-all-vertices relationships))))
 

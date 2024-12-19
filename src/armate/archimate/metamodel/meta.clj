@@ -89,7 +89,7 @@
    :strategy #{:strategy-course-of-action
                :strategy-behavior
                :strategy-resource}
-   :core {:business (set business-layer)
+   :core {:business (conj (set business-layer) :business-product)
           :application (set application-layer)
           :technology (->> (map #(vector % #{}) technology-layer)
                            (into {})
@@ -330,7 +330,8 @@
 
 (def implied-relationships
   (slv/merge-into
-   (slv/get-ext-each-self base-relationships
+   (slv/get-ext-each-self hierarchy
+                          base-relationships
                           (fn [v]
                             (or (relationship? v)
                                 (connector? v)))

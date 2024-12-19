@@ -37,6 +37,7 @@
   [a b c s]
   (or (not= :grouping c)
       (not (s (get-in adx/total-relationships [a b])))
+      ; the last condition may be excessive here
       (rtr/restricted? a b c s)))
 
 (defn filter-possible-relations
@@ -52,13 +53,13 @@
 
 (defn derivate-relations
   [context]
-  (let [restricted? (get-restricted-f rtr/restricted? context)
-        group-restricted? (get-restricted-f grouping-restricted? context)]
+  (let [crd? (get-restricted-f rtr/restricted? context)
+        grd? (get-restricted-f grouping-restricted? context)]
     (reduce (fn [acc [derivate-kind rf? rules]]
               (let [relations (filter-possible-relations acc)
                     derivated-relations (mch/derivate-relationships rf? rules relations)]
                 (append-relations derivate-kind acc derivated-relations)))
             context
-            [[:certain restricted? drs/certain-rules]
-             [:potential restricted? drs/potential-rules]
-             [:potential group-restricted? drs/potential-group-around-rules]])))
+            [[:certain crd? drs/certain-rules]
+             [:potential crd? drs/potential-rules]
+             [:potential grd? drs/potential-group-around-rules]])))

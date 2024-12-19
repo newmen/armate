@@ -14,6 +14,12 @@
   (is (= {:a {:b #{1 2}}}
          (slv/merge-into {:a {:b #{1}}} {:a {:b #{2}}}))))
 
+(deftest assoc-if-not-same-test
+  (is (= {:a #{:b}} (slv/assoc-if-not-same {} :a #{:b})))
+  (is (= {:a #{:b}} (slv/assoc-if-not-same {:a #{:a}} :a #{:b})))
+  (is (= {:a #{:b}} (slv/assoc-if-not-same {:a #{:b}} :a #{:a})))
+  (is (= {:a #{:b}} (slv/assoc-if-not-same {:a #{:b}} :a #{:c}))))
+
 (deftest build-flat-hierarchy-test
   (is (= {} (slv/build-flat-hierarchy {})))
   (is (= {:a #{:a}}
@@ -59,15 +65,15 @@
                                     :c #{:a}})))
   (is (= {:a #{:a}
           :b #{:b :c}
-          :c #{:c}}
+          :c #{:b :c}}
          (slv/build-flat-hierarchy #{:b}
                                    {:a #{}
                                     :b #{:c}})))
-  (is (= {:a #{:e}
+  (is (= {:a #{:c :d :e}
           :b #{:c :d :e}
           :c #{:c :d :e}
-          :d #{:d}
-          :e #{:e}}
+          :d #{:c :d :e}
+          :e #{:c :d :e}}
          (slv/build-flat-hierarchy #{:c}
                                    {:a #{:e}
                                     :b {:c #{:d :e}}}))))

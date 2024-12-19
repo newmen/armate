@@ -188,5 +188,6 @@
   (count potential-group-around-rules)
 
   (filter (comp #{:realization} first last) certain-rules)
+  (filter (comp #{:serving} first last) potential-rules)
 
   )
