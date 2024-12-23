@@ -1,7 +1,8 @@
 (ns armate.archimate.viz.combiner
   (:require [clojure.string :as s]
             [armate.archimate.metamodel.derivation.match :as mch]
-            [armate.archimate.multi-graph :as mg]))
+            [armate.archimate.multi-graph :as mg]
+            [armate.archimate.viz.common :as vcm]))
 
 (def indent "  ")
 
@@ -99,8 +100,19 @@
                             (apply str)
                             (list))
                        (when-not skin
-                         (when layer
+                         (when (and layer (not= layer :location))
                            [(str "#" (s/capitalize (name layer)))]))
+                       (when color
+                         [color]))))))
+
+(def get-fn-element
+  (partial build-element
+           (fn [{:keys [kind alias title color]}]
+             (let [func (vcm/get-fn-name (name kind))
+                   args (cons alias
+                              (when title
+                                [(wrap-str title)]))]
+               (concat [(make-call func args)]
                        (when color
                          [color]))))))
 
@@ -108,7 +120,9 @@
   [element]
   (if (= :grouping (:kind element))
     (get-group element)
-    (get-shape element)))
+    (if (and (:shape element) (:type element))
+      (get-shape element)
+      (get-fn-element element))))
 
 (defn get-relation
   [[from to {:keys [type direction raw reverse? desc]

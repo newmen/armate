@@ -4,7 +4,8 @@
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [org.clojure/math.combinatorics "0.3.0"]
                  [org.clojure/tools.logging "1.3.0"]
-                 [ch.qos.logback/logback-classic "1.5.8"]]
+                 [ch.qos.logback/logback-classic "1.5.8"]
+                 [camel-snake-kebab "0.4.3"]]
   :jvm-opts ["-Xmx8g"
              "-Djdk.attach.allowAttachSelf"
              "-Dcasc.yaml.max.aliases=\"100\""]

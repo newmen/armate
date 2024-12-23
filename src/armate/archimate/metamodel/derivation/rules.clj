@@ -14,6 +14,7 @@
 (def dependency-rels
   "Ordered by strength from weakest to strongest"
   [:association
+   :association_dir
    :influence
    :access
    :access_r

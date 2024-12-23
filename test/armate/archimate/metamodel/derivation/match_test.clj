@@ -24,7 +24,7 @@
 (deftest get-rel-wieght-test
   (is (= 10000 (mch/get-rel-wieght :specialization)))
   (is (= 3000 (mch/get-rel-wieght :aggregation)))
-  (is (= 400 (mch/get-rel-wieght :access_r)))
+  (is (= 500 (mch/get-rel-wieght :access_r)))
   (is (= 2 (mch/get-rel-wieght :flow))))
 
 (deftest make-rules-map-test

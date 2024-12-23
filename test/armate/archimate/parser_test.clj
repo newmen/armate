@@ -254,6 +254,20 @@ c1 -[hidden]> c2
 
 @enduml"))]
 
+    (is (empty? (lint-content (make-content "-|>"))))
+    (is (empty? (lint-content (make-content "<|-"))))
+    (is (empty? (lint-content (make-content "-"))))
+    (is (empty? (lint-content (make-content "->"))))
+    (is (empty? (lint-content (make-content "<-"))))
+    (is (empty? (lint-content (make-content "->>"))))
+    (is (empty? (lint-content (make-content "<<-"))))
+    (is (empty? (lint-content (make-content ".>>"))))
+    (is (empty? (lint-content (make-content "<<."))))
+    (is (empty? (lint-content (make-content "~|>"))))
+    (is (empty? (lint-content (make-content "<|~"))))
+    (is (empty? (lint-content (make-content "-o"))))
+    (is (empty? (lint-content (make-content "o-"))))
+    (is (empty? (lint-content (make-content "-*"))))
     (is (empty? (lint-content (make-content "*-"))))
     (is (empty? (lint-content (make-content "*--"))))
     (is (empty? (lint-content (make-content "*-up-"))))
@@ -270,10 +284,24 @@ c1 -[hidden]> c2
     (is (= [{:level :warn
              :kind :unspecified-relation-type
              :in [:relations "c1" "c2"]
-             :body {:line 17 :type :serving :raw "->" :direction nil
+             :body {:line 17 :type :access :raw "~" :direction nil
                     :from :application-component
                     :to :application-component}}]
-           (lint-content (make-content "->"))))
+           (lint-content (make-content "~"))))
+    (is (= [{:level :warn
+             :kind :unspecified-relation-type
+             :in [:relations "c1" "c2"]
+             :body {:line 17 :type :access_rw :raw "<~>" :direction nil
+                    :from :application-component
+                    :to :application-component}}]
+           (lint-content (make-content "<~>"))))
+    (is (= [{:level :warn
+             :kind :unspecified-relation-type
+             :in [:relations "c1" "c2"]
+             :body {:line 17 :type :assignment :raw "@->>" :direction nil
+                    :from :application-component
+                    :to :application-component}}]
+           (lint-content (make-content "@->>"))))
     (is (= [{:level :error
              :kind :undefined-relation-from
              :in [:relations "c3" "c2"]
