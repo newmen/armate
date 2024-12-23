@@ -66,16 +66,6 @@
 (def outgoing-relationships
   (get-outgoing-relationships total-relationships))
 
-;; (def potential-grouping-derivated-relationships
-;;   (let [rel-or-con? (fn [v] (or (mt/relationship? v) (mt/connector? v)))]
-;;     (slv/mg-to-rel-rules
-;;      (mch/derivate-relationships (fn [a b c s]
-;;                                    (or (not= :grouping c)
-;;                                        (rtr/restricted? a b c s)))
-;;                                  drs/potential-group-around-rules
-;;                                  (slv/rel-rules-to-mg mt/general-relationships
-;;                                                       rel-or-con?)))))
-
 (comment
 
   (:motivation-driver incoming-relationships)

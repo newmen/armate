@@ -100,7 +100,7 @@
                             (apply str)
                             (list))
                        (when-not skin
-                         (when (and layer (not= layer :location))
+                         (when layer
                            [(str "#" (s/capitalize (name layer)))]))
                        (when color
                          [color]))))))

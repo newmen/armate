@@ -343,7 +343,7 @@
                                   (connector? v)))
                              ([v1 v2]
                               (and (relationship? v1) (relationship? v2))))
-                           :association)))
+                           :association :association_dir)))
 
 (def general-relationships
   (slv/merge-into base-relationships implied-relationships))
