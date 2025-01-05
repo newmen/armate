@@ -339,8 +339,8 @@ c1 -[hidden]> c2
            (lint-content (s/replace (make-content "*-")
                                     "c1 *- c2"
                                     "Rel_Composition(c1, c2)\nRel_Composition(c1, c2)"))))
-    (is (= [{:level :warn :kind :missing-start}
-            {:level :warn :kind :missing-end}]
+    (is (= [{:level :warn :kind :missing-end}
+            {:level :warn :kind :missing-start}]
            (lint-content (s/replace (make-content "*-") #"@\w+" ""))))
     (is (= [{:level :warn :kind :missing-archimate-include}]
            (lint-content (s/replace (make-content "*-") #"!include.+?\n" ""))))))

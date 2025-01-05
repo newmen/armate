@@ -67,6 +67,14 @@
   [func args]
   (str func "(" (s/join ", " args) ")"))
 
+(defn get-connector
+  [{:keys [type alias title]}]
+  (let [func (str "Junction_" (s/capitalize (name type)))
+        args (cons alias
+                   (when title
+                     [(wrap-str title)]))]
+    [(make-call func args)]))
+
 (declare get-element)
 (defn build-element
   [parts-f element]
@@ -118,11 +126,12 @@
 
 (defn get-element
   [element]
-  (if (= :grouping (:kind element))
-    (get-group element)
-    (if (and (:shape element) (:type element))
-      (get-shape element)
-      (get-fn-element element))))
+  (let [kind (:kind element)]
+    (cond
+      (= :grouping kind) (get-group element)
+      (and (:shape element)
+           (:type element)) (get-shape element)
+      :else (get-fn-element element))))
 
 (defn get-relation
   [[from to {:keys [type direction raw reverse? desc]
@@ -206,6 +215,7 @@
          (sbl-map get-include (:includes context))
          (sbl-map get-skin (:skins context))
          (sbl-map get-type (:types context))
+         (sbl-map get-connector (:connectors context))
          (elf get-element (nest-inside (:elements context)))
          (relf :relations context)
          (relf :hidden context)
