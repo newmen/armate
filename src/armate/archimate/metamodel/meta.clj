@@ -1,5 +1,6 @@
 (ns armate.archimate.metamodel.meta
-  (:require [armate.archimate.metamodel.derivation.rules :as drs]
+  (:require [clojure.set :as o]
+            [armate.archimate.metamodel.derivation.rules :as drs]
             [armate.archimate.metamodel.solver :as slv]))
 
 (def business-layer
@@ -327,6 +328,10 @@
 (def element? (:element hierarchy))
 (def relationship? (:relationship hierarchy))
 (def connector? (:connector hierarchy))
+(def layer?
+  (set (concat (keys (dissoc layers :core))
+               (keys (dissoc (:core layers) :grouping :location))
+               [:physical])))
 
 (def implied-relationships
   (slv/merge-into

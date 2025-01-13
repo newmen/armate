@@ -40,10 +40,12 @@
 
 (deftest total-relationships-test
   (testing "ArchiMate 3.2. Appendix B.5. Relationship Tables"
+    (is (= "NO" (get-letters :motivation-driver :motivation-requirement)))
     (is (= "scgnO" (get-letters :motivation-goal :grouping)))
     (is (= "SCGNO" (get-letters :motivation-constraint :motivation-constraint)))
     (is (= "SCGNO" (get-letters :motivation-constraint :motivation-requirement)))
     (is (= "SCGNO" (get-letters :motivation-requirement :motivation-constraint)))
+    (is (= "NO" (get-letters :motivation-requirement :motivation-driver)))
     (is (= "SCGNO" (get-letters :motivation-requirement :motivation-requirement)))
     (is (= "O" (get-letters :motivation-requirement :business-process)))
     (is (= "O" (get-letters :motivation-requirement :application-component)))
@@ -119,6 +121,7 @@
     (is (= "vtfO" (get-letters :application-interface :application-function)))
     (is (= "SCGvtfO" (get-letters :application-interface :application-interface)))
     (is (= "IvtfO" (get-letters :application-interface :application-service)))
+    (is (= "RvtfO" (get-letters :application-function :business-function)))
     (is (= "RvtfO" (get-letters :application-function :business-process)))
     (is (= "SCGvTFO" (get-letters :application-function :application-function)))
     (is (= "vtfO" (get-letters :application-function :application-interface)))
@@ -133,6 +136,7 @@
     (is (= "VtfO" (get-letters :application-service :application-component)))
     (is (= "vtfO" (get-letters :application-service :application-interface)))
     (is (= "SCGvTFO" (get-letters :application-service :application-service)))
+    (is (= "aO" (get-letters :application-service :technology-artifact)))
     (is (= "RO" (get-letters :application-data-object :business-object)))
     (is (= "O" (get-letters :application-data-object :technology-artifact)))
     (is (= "RO" (get-letters :technology-artifact :business-object)))
@@ -142,6 +146,7 @@
     (is (= "SCGrO" (get-letters :technology-artifact :technology-artifact)))
     (is (= "O" (get-letters :technology-artifact :physical-material)))
     (is (= "RO" (get-letters :technology-artifact :technology-system-software)))
+    (is (= "iaO" (get-letters :technology-node :technology-artifact)))
     (is (= "O" (get-letters :technology-service :strategy-resource)))
     (is (= "rvtfO" (get-letters :technology-system-software :application-interface)))
     (is (= "rvtfO" (get-letters :technology-system-software :application-component)))
