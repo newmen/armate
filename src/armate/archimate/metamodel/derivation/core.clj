@@ -11,16 +11,14 @@
   (reduce (fn [acc [from to rel]]
             (let [from-kind (get-in context [:elements from :kind])
                   to-kind (get-in context [:elements to :kind])
-                  rel-type (:type rel)]
+                  rel-type (:type rel)
+                  relation (-> (select-keys rel [:type :desc])
+                               (assoc :from from-kind)
+                               (assoc :to to-kind)
+                               (assoc :derivate derivate-kind))]
               (if (contains? (get-in adx/total-relationships [from-kind to-kind]) rel-type)
-                (update-in acc
-                           [:relations from to]
-                           u/fnil-conj-set
-                           {:type rel-type
-                            :from from-kind :to to-kind
-                            :derivate derivate-kind})
-                (throw (ex-info "Unexpected relation has been derived"
-                                {:from from-kind :to to-kind :rel rel-type})))))
+                (update-in acc [:relations from to] u/fnil-conj-set relation)
+                (throw (ex-info "Unexpected relation has been derived" relation)))))
           context
           (mg/get-relationships relations)))
 
