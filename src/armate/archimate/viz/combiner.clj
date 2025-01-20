@@ -2,7 +2,13 @@
   (:require [clojure.string :as s]
             [armate.archimate.metamodel.derivation.match :as mch]
             [armate.archimate.multi-graph :as mg]
-            [armate.archimate.viz.common :as vcm]))
+            [armate.archimate.viz.common :as vcm]
+            [armate.utils :as u]))
+
+(def group-modes
+  {:application-interface true
+   :application-component true
+   :application-collaboration true})
 
 (def indent "  ")
 
@@ -133,7 +139,7 @@
            (:type element)) (get-shape element)
       :else (get-fn-element element))))
 
-(defn get-relation
+(defn- get-relation
   [[from to {:keys [type direction raw reverse? desc]
              :as relation}]]
   [(if raw
@@ -195,7 +201,7 @@
   [weights f hm]
   (sbl-map-with (partial sort-by-lines weights) f hm))
 
-(defn get-relations
+(defn- get-relations
   [grsf key context]
   (let [sf (if (= mg/get-relationships grsf)
              (partial sort-by (comp sort-line-key last))
@@ -267,11 +273,43 @@
                         (into {}))]
     (merge in-weights out-weights)))
 
+(defn- groupable?
+  [element-kind rel]
+  (and (group-modes element-kind)
+       (= element-kind (:from rel))))
+
+(defn make-nesting
+  [triple]
+  (let [[from to rel] triple
+        gpbl? #(groupable? % rel)
+        make-nesting #(assoc rel :derivate :nesting)]
+    (cond
+      (= :nesting (:derivate rel)) [false triple]
+      (or (and (= :aggregation (:type rel))
+               (gpbl? :application-collaboration))
+          (and (= :composition (:type rel))
+               (or (gpbl? :application-interface)
+                   (gpbl? :application-component)))) [true [from to (make-nesting)]]
+      :else [false triple])))
+
+(defn make-grouped
+  [context]
+  (->> (:relations context)
+       (mg/get-relationships)
+       (map make-nesting)
+       (reduce (fn [acc [nesting? [from to rel]]]
+                 (let [ctx2 (update-in acc [:relations from to] u/fnil-conj-set rel)]
+                   (if nesting?
+                     (assoc-in ctx2 [:elements to :in] from)
+                     ctx2)))
+               (assoc context :relations {}))))
+
 (defn on-fly-generate-puml
   [context]
-  (let [weights (get-total-weights context)
-        grsf (partial mg/get-relationships
-                      (partial sort-by (fn [[from & _]] (weights from))))]
+  (let [grouped-ctx (make-grouped context)
+        weights (get-total-weights grouped-ctx)
+        grsf (comp (partial mg/get-relationships
+                            (partial sort-by (fn [[from & _]] (weights from)))))]
     (generate-puml (partial ebl-map weights)
                    (partial get-relations grsf)
-                   context)))
+                   grouped-ctx)))

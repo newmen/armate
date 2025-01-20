@@ -193,7 +193,7 @@
    :relations {}
    :hidden {}})
 
-(defn get-relation
+(defn- get-relation
   [context from to type params]
   (let [key [:relations (:alias from) (:alias to)]
         relation (merge params
