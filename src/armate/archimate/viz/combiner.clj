@@ -308,8 +308,8 @@
   [context]
   (let [grouped-ctx (make-grouped context)
         weights (get-total-weights grouped-ctx)
-        grsf (comp (partial mg/get-relationships
-                            (partial sort-by (fn [[from & _]] (weights from)))))]
+        grsf (partial mg/get-relationships
+                      (partial sort-by (fn [[from & _]] (weights from))))]
     (generate-puml (partial ebl-map weights)
                    (partial get-relations grsf)
                    grouped-ctx)))
