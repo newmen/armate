@@ -8,7 +8,8 @@
 (def group-modes
   {:application-interface true
    :application-component true
-   :application-collaboration true})
+   :application-collaboration true
+   :force? false})
 
 (def indent "  ")
 
@@ -275,7 +276,9 @@
 
 (defn- groupable?
   [element-kind rel]
-  (and (group-modes element-kind)
+  (and (or (:force? group-modes)
+           (not (:line rel)))
+       (group-modes element-kind)
        (= element-kind (:from rel))))
 
 (defn make-nesting

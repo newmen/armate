@@ -28,14 +28,65 @@
                     (sort-by (comp - get-rel-wieght first second) group))))
        (into {})))
 
+(defn count-influence
+  [desc]
+  (let [cf #(count (re-seq % desc))
+        plus (cf #"\+")
+        minus (- (cf #"[\-–—]"))]
+    (+ plus minus)))
+
+(defn num-to-desc
+  [num]
+  (let [char (if (pos? num) \+ \—)]
+    (apply str (repeat (Math/abs num) char))))
+
+(defn calc-influence
+  [descs]
+  (let [groups (->> (map count-influence descs)
+                    (remove zero?)
+                    (group-by pos?))
+        mf #(if-let [xs (seq (groups %2))]
+              (apply %1 xs)
+              0)
+        plus (mf max true)
+        minus (mf min false)
+        result (+ plus minus)]
+    (when-not (zero? result)
+      (num-to-desc result))))
+
+(defn get-passing-desc
+  [[[orig-rel f1 t1] [next-rel f2 t2] [result-rel fr tr]]
+   iter-map f t c]
+  (when (= :influence result-rel)
+    (let [{forward-graph :forward-graph
+           reverse-graph :reverse-graph} iter-map
+          i? (partial = :influence)
+          graph (cond
+                  (or (= f1 fr)
+                      (= t1 tr)) forward-graph
+                  (or (= f1 tr)
+                      (= t1 fr)) reverse-graph)
+          fts (concat
+               (when (i? orig-rel)
+                 [(cond
+                    (#{f2 t2} f1) [c t]
+                    (#{f2 t2} t1) [f c])])
+               (when (i? next-rel)
+                 [(cond
+                    (#{f2 t2} f1) [f c]
+                    (#{f2 t2} t1) [c t])]))]
+      (->> (mapcat (partial get-in graph) fts)
+           (filter (comp (partial = :influence) :type))
+           (filter :desc)
+           (map :desc)
+           (calc-influence)))))
+
 (defn match-rule
-  [restricted?
-   from to
-   iter-map
-   [[_ f1 t1] [next-rel f2 t2] [result-rel fr tr]]]
-  (let [{forward-graph :forward-graph
+  [restricted? from to iter-map rule]
+  (let [[[_ f1 t1] [next-rel f2 t2] [result-rel fr tr]] rule
+        {forward-graph :forward-graph
          reverse-graph :reverse-graph} iter-map
-        relation {:type result-rel}
+        gpdf (partial get-passing-desc rule)
         checking-graph (if (#{f1 t1} fr)
                          forward-graph
                          reverse-graph)
@@ -46,11 +97,16 @@
         add-relation (fn [acc f t c]
                        (if (restricted? f t c result-rel)
                          acc
-                         (-> acc
-                             (update-in [:forward-graph f t] u/fnil-conj-set relation)
-                             (update-in [:reverse-graph t f] u/fnil-conj-set relation)
-                             (update-in [:derivated-graph f t] u/fnil-conj-set relation)
-                             (update :derivated-relations conj [f t result-rel]))))
+                         (let [relation {:type result-rel}
+                               passing-desc (gpdf acc f t c)
+                               relation2 (if passing-desc
+                                           (assoc relation :desc passing-desc)
+                                           relation)]
+                           (-> acc
+                               (update-in [:forward-graph f t] u/fnil-conj-set relation2)
+                               (update-in [:reverse-graph t f] u/fnil-conj-set relation2)
+                               (update-in [:derivated-graph f t] u/fnil-conj-set relation2)
+                               (update :derivated-relations conj [f t result-rel])))))
         exists? (if (#{f2 t2} f1)
                   (partial have-relation? to)
                   (partial have-relation? from))
