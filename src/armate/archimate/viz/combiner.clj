@@ -208,7 +208,7 @@
              (partial sort-by (comp sort-line-key last))
              identity)]
     (->> (grsf (key context))
-         (remove (comp (partial = :nesting) :derivate last))
+         (remove (comp #{:nesting :connecting} :derivate last))
          (sf)
          (mapcat get-relation))))
 
