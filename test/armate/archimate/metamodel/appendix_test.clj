@@ -157,6 +157,7 @@
     (is (= "rvtfO" (get-letters :technology-device :business-process)))
     (is (= "vtfO" (get-letters :technology-device :technology-node)))
     (is (= "CGIrvtfO" (get-letters :technology-device :technology-system-software)))
+    (is (= "VtfO" (get-letters :technology-interface :application-component)))
     (is (= "CGirvtfO" (get-letters :technology-node :technology-system-software)))
     (is (= "iaO" (get-letters :technology-node :technology-artifact)))
     (is (= "vtfO" (get-letters :technology-node :technology-path)))
