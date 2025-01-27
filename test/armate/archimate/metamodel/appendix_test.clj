@@ -122,6 +122,7 @@
     (is (= "CgrvtfO" (get-letters :application-component :application-interface)))
     (is (= "irvtfO" (get-letters :application-component :application-service)))
     (is (= "aO" (get-letters :application-component :application-data-object)))
+    (is (= "scgirvantfO" (get-letters :application-component :grouping)))
     (is (= "aO" (get-letters :application-interface :business-object)))
     (is (= "VtfO" (get-letters :application-interface :application-component)))
     (is (= "vtfO" (get-letters :application-interface :application-function)))
