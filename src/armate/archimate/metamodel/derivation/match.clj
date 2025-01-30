@@ -95,8 +95,7 @@
                               (map :type)
                               (some (partial = result-rel))))
         add-relation (fn [acc f t c]
-                       (if (or (= f t)
-                               (restricted? f t c result-rel))
+                       (if (restricted? f t c result-rel)
                          acc
                          (let [relation {:type result-rel}
                                passing-desc (gpdf acc f t c)

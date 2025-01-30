@@ -137,7 +137,10 @@
     (cond
       (= :grouping kind) (get-group element)
       (and (:shape element)
-           (:type element)) (get-shape element)
+           (:type element)
+           (or (:line element)
+               (:inside element)
+               (:skin element))) (get-shape element)
       :else (get-fn-element element))))
 
 (defn- get-relation

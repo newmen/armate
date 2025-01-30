@@ -31,12 +31,17 @@
           ck (kf c)]
       (rf? ak bk ck s))))
 
+(defn- real-restricted?
+  [a b c s]
+  (or (= a b)
+      (rtr/restricted? a b c s)))
+
 (defn- grouping-restricted?
   [a b c s]
   (or (not= :grouping c)
       (not (s (get-in adx/total-relationships [a b])))
       ; the last condition may be excessive here
-      (rtr/restricted? a b c s)))
+      (real-restricted? a b c s)))
 
 (defn filter-possible-relations
   [context]
@@ -51,7 +56,7 @@
 
 (defn derivate-relations
   [context]
-  (let [crd? (get-restricted-f rtr/restricted? context)
+  (let [crd? (get-restricted-f real-restricted? context)
         grd? (get-restricted-f grouping-restricted? context)]
     (reduce (fn [acc [derivate-kind rf? rules]]
               (let [relations (filter-possible-relations acc)

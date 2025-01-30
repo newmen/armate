@@ -4,6 +4,24 @@
             [armate.utils :as u])
   (:import [java.time Instant]))
 
+(def max-alias-length 28)
+
+(def kind-aliases
+  {:business-actor "ba"
+   :business-role "brl"
+   :business-service "bsv"
+   :business-product "bpd"
+   :application-interface "aif"
+   :application-component "acp"
+   :application-collaboration "acb"
+   :application-service "asv"
+   :technology-system-software "tss"})
+
+(defn get-sprite-name
+  [kind]
+  (when-let [alias (kind-aliases kind)]
+    (str "$" alias)))
+
 (defn cc
   [id name]
   (if id
@@ -13,13 +31,21 @@
 (defn patch-raw-name
   [raw-name]
   (-> raw-name
+      (s/replace #"[\"']" "")
       (s/replace #"=|-|~|:|#|&|\+|\*|\s|\(|\)|\[|\]|\{|\}|\?" "_")
       (s/replace #"\.|," "__")
       (s/replace #"/" "___")))
 
+(defn cut-too-long
+  [raw-name]
+  (if (> (count raw-name) max-alias-length)
+    (subs raw-name 0 max-alias-length)
+    raw-name))
+
 (defn alias-title
   [raw-name]
   (-> (s/lower-case raw-name)
+      (cut-too-long)
       (tl/transliterate)
       (patch-raw-name)))
 
@@ -47,25 +73,29 @@
   [context misc-key alias]
   (get-in context [:misc misc-key alias]))
 
-(defn get-rectangle
+(defn get-element-alias
+  [patch-f id title kind]
+  (let [abrv (kind-aliases kind)]
+    (if id
+      (str abrv id)
+      (str (patch-f title) "_" abrv))))
+
+(defn add-rectangle
   ([context patch-f title type-hm]
-   (get-rectangle context patch-f nil title type-hm))
-  ([context patch-f id title type-hm]
-   (let [type-name (:type type-hm)
-         abrv (s/join (rest type-name))
-         alias (if id
-                 (str abrv id)
-                 (str (patch-f title) "_" abrv))
-         kind (get-in context [:types type-name :kind])
+   (add-rectangle context patch-f nil title type-hm))
+  ([context patch-f id title kind-hm]
+   (let [kind (:kind kind-hm)
+         alias (get-element-alias patch-f id title kind)
          kind-parts (s/split (name kind) #"-")
          specie (keyword (s/join (rest kind-parts)))
-         layer (keyword (first kind-parts))]
+         layer (keyword (first kind-parts))
+         default-params (assoc kind-hm :type (get-sprite-name kind))]
      (if-let [element (check-cache context kind alias)]
-       [context element]
-       (let [element (-> (with-id type-hm id)
+       [(update-in context [:elements alias] merge default-params)
+        (merge element default-params)]
+       (let [element (-> (with-id default-params id)
                          (merge {:shape "rectangle"
                                  :specie specie
-                                 :kind kind
                                  :layer layer
                                  :title (if (only-int? id)
                                           (cc id (subsplit title))
@@ -77,118 +107,145 @@
               (assoc-in [:elements alias] element))
           element])))))
 
-(defn get-actor
+(defn add-actor
   [context actor-name]
-  (get-rectangle context
+  (add-rectangle context
                  alias-title actor-name
-                 {:type "$ba"}))
+                 {:kind :business-actor}))
 
-(defn get-role
+(defn add-role
   [context role-name]
-  (get-rectangle context
+  (add-rectangle context
                  alias-title role-name
-                 {:type "$br"}))
+                 {:kind :business-role}))
 
-(defn get-product
+(defn add-product
   ([context product-name]
-   (get-product context nil product-name))
+   (add-product context nil product-name))
   ([context product-id product-name]
-   (get-rectangle context
+   (add-rectangle context
                   alias-title
                   product-id product-name
-                  {:type "$bpd"})))
+                  {:kind :business-product})))
 
-(defn get-bus-service
+(defn add-bus-service
   ([context service-name]
-   (get-bus-service context nil service-name))
+   (add-bus-service context nil service-name))
   ([context service-id service-name]
-   (get-rectangle context
+   (add-rectangle context
                   alias-title
                   service-id service-name
-                  {:type "$bsv"})))
+                  {:kind :business-service})))
 
-(defn get-app-service
+(defn add-app-service
   ([context service-name]
-   (get-app-service context nil service-name))
+   (add-app-service context nil service-name))
   ([context service-id service-name]
-   (get-rectangle context
+   (add-rectangle context
                   alias-title
                   service-id service-name
-                  {:type "$asv"})))
+                  {:kind :application-service})))
 
-(defn get-interface
+(defn add-interface
   ([context interface-name]
-   (get-interface context nil interface-name {}))
+   (add-interface context nil interface-name {}))
   ([context interface-name add-params]
-   (get-interface context nil interface-name add-params))
+   (add-interface context nil interface-name add-params))
   ([context alias interface-name add-params]
-   (get-rectangle context
+   (add-rectangle context
                   patch-raw-name
                   alias interface-name
                   (merge add-params
-                         {:type "$ai"}))))
+                         {:kind :application-interface}))))
 
-(defn get-component
+(defn get-interface
+  [context interface-name]
+  (let [alias (get-element-alias patch-raw-name nil
+                                 interface-name :application-interface)]
+    (get-in context [:elements alias])))
+
+(defn add-component
   ([context component-name]
-   (get-component context nil component-name {}))
+   (add-component context nil component-name {}))
   ([context alias component-name add-params]
-   (get-rectangle context
-                  patch-raw-name
+   (add-rectangle context
+                  alias-title
                   alias component-name
                   (merge add-params
-                         {:type "$acp"}))))
+                         {:kind :application-component}))))
 
-(defn get-app-collaboration
+(defn add-app-collaboration
   ([context collaboration-name]
-   (get-app-collaboration context collaboration-name {}))
+   (add-app-collaboration context collaboration-name {}))
   ([context collaboration-name add-params]
-   (get-rectangle context
-                  patch-raw-name
+   (add-rectangle context
+                  alias-title
                   collaboration-name
                   (merge {:skin "platform"}
                          add-params
-                         {:type "$acb"}))))
+                         {:kind :application-collaboration}))))
 
-(defn get-software
+(defn add-software
   [context software-name]
-  (get-rectangle context
+  (add-rectangle context
                  patch-raw-name
                  software-name
-                 {:type "$tss"}))
+                 {:kind :technology-system-software}))
+
+(defn add-grouping
+  [context group-name]
+  (let [kind :grouping
+        title (s/replace group-name #"[\"']" "")
+        alias (str (alias-title title) "_g")]
+    (if-let [element (check-cache context kind alias)]
+      [context element]
+      (let [element (-> (merge {:kind kind
+                                :type kind
+                                :title title
+                                :name title
+                                :alias alias}))]
+        [(-> context
+             (assoc-in [:misc kind alias] element)
+             (assoc-in [:elements alias] element))
+         element]))))
 
 (def init-context
   {:start {:title (str "Generated at " (Instant/now))}
-   :misc {:products {}
-          :bus-services {}
-          :app-services {}
-          :interfaces {}
-          :components {}
-          :app-collaborations {}
-          :software {}} ; a cache of already created elements
+   :misc {} ; a cache of already created elements
    :includes {"archimate/Archimate" {:package "archimate/Archimate"}}
-   :types {"$ba" {:alias "$ba" :kind :business-actor}
-           "$br" {:alias "$br" :kind :business-role}
-           "$bpd" {:alias "$bpd" :kind :business-product}
-           "$bsv" {:alias "$bsv" :kind :business-service}
-           "$asv" {:alias "$asv" :kind :application-service}
-           "$ai" {:alias "$ai" :kind :application-interface}
-           "$acp" {:alias "$acp" :kind :application-component}
-           "$acb" {:alias "$acb" :kind :application-collaboration}
-           "$tss" {:alias "$tss" :kind :technology-system-software}}
+   :types (into {} (map (fn [[kind _]]
+                          (let [type-name (get-sprite-name kind)]
+                            [type-name {:alias type-name :kind kind}]))
+                        kind-aliases))
    :skins {[:default] {:props [{:parts ["RoundCorner" "8"]}
                                {:parts ["Shadowing" "false"]}]}
            ["rectangle"] {:shape "rectangle"
                           :props [{:parts ["BorderThickness" "1"]}]}
            ["rectangle" "sub"] {:shape "rectangle"
                                 :alias "sub"
-                                :props [{:parts ["backgroundColor" "#99d6ff"]}]}
+                                :props [{:parts ["BackgroundColor" "#99d6ff"]}]}
            ["rectangle" "db"] {:shape "rectangle"
                                :alias "db"
-                               :props [{:parts ["backgroundColor" "#85c2ff"]}]}
+                               :props [{:parts ["BackgroundColor" "#85c2ff"]}]}
            ["rectangle" "platform"] {:shape "rectangle"
                                      :alias "platform"
-                                     :props [{:parts ["backgroundColor" "#a6b2b5"]}
-                                             {:parts ["fontColor" "#f1f3f1"]}]}}
+                                     :props [{:parts ["BackgroundColor" "#a6b2b5"]}
+                                             {:parts ["FontColor" "#f1f3f1"]}]}
+           ["rectangle" "deleting"] {:shape "rectangle"
+                                     :alias "deleting"
+                                     :props [{:parts ["BorderColor" "red"]}
+                                             {:parts ["BorderThickness" "3"]}]}
+           ["rectangle" "deprecated"] {:shape "rectangle"
+                                       :alias "deprecated"
+                                       :props [{:parts ["BorderColor" "orange"]}
+                                               {:parts ["BorderThickness" "3"]}]}
+           ["rectangle" "hold"] {:shape "rectangle"
+                                 :alias "hold"
+                                 :props [{:parts ["BorderColor" "green"]}
+                                         {:parts ["BorderThickness" "2"]}]}
+           ["folder" "grouping"] {:shape "folder"
+                                  :alias "grouping"
+                                  :props [{:parts ["Shadowing" "false"]}]}}
    :elements {}
    :relations {}
    :hidden {}})
@@ -228,7 +285,7 @@
   [context source-element in-keys names-map]
   (when-let [type (get-in source-element in-keys)]
     (when-let [software-name (names-map type)]
-      (let [[ctx2 software] (get-software context software-name)
+      (let [[ctx2 software] (add-software context software-name)
             rel-type (case (:kind source-element)
                        :application-component :realization
                        :application-interface :serving)]

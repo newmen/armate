@@ -162,6 +162,7 @@
     (is (= "CGirvtfO" (get-letters :technology-node :technology-system-software)))
     (is (= "iaO" (get-letters :technology-node :technology-artifact)))
     (is (= "vtfO" (get-letters :technology-node :technology-path)))
+    (is (= "rvtfO" (get-letters :technology-path :application-interface)))
     (is (= "GirvtfO" (get-letters :technology-path :technology-device)))
     (is (= "GivtfO" (get-letters :technology-path :technology-node)))
     (is (= "irvtfO" (get-letters :technology-path :technology-process)))

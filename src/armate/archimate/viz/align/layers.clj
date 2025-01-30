@@ -62,15 +62,17 @@
                    (let [intersect (o/intersection group attractors)]
                      (if (empty? intersect)
                        (list group)
-                       (let [cut (o/difference group intersect)
-                             sum-uds (->> (mapv udf cut)
-                                          (u/transpose)
-                                          (mapv (partial apply +)))]
-                         (->> (map (juxt hash-set udf) intersect)
-                              (cons [cut sum-uds])
-                              (sort-by (fn [[sg uds]]
-                                         (conj uds (- (count sg)))))
-                              (map first)))))))
+                       (let [cut (o/difference group intersect)]
+                         (if (empty? cut)
+                           (list group)
+                           (let [sum-uds (->> (mapv udf cut)
+                                              (u/transpose)
+                                              (mapv (partial apply +)))]
+                             (->> (map (juxt hash-set udf) intersect)
+                                  (cons [cut sum-uds])
+                                  (sort-by (fn [[sg uds]]
+                                             (conj uds (- (count sg)))))
+                                  (map first)))))))))
          (mapcat (fn [group]
                    (if (< max-in-row (count group))
                      (split-group udf group)
