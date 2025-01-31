@@ -224,8 +224,7 @@
                           (let [type-name (get-sprite-name kind)]
                             [type-name {:alias type-name :kind kind}]))
                         kind-aliases))
-   :skins {[:default] {:props [{:parts ["RoundCorner" "8"]}
-                               {:parts ["Shadowing" "false"]}]}
+   :skins {[:default] {:props [{:parts ["Shadowing" "false"]}]}
            ["rectangle"] {:shape "rectangle"
                           :props [{:parts ["BorderThickness" "1"]}]}
            ["rectangle" "sub"] {:shape "rectangle"

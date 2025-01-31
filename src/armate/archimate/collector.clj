@@ -117,12 +117,8 @@
 
 (defn erase-unbinded-elements
   [context]
-  (let [forward-graph (:relations context)
-        reverse-graph (mg/reverse-graph forward-graph)]
-    (-> context
-        (dissoc :connectors)
-        (update :elements
-                #(->> (filter (fn [[alias _]]
-                                (or (forward-graph alias)
-                                    (reverse-graph alias))) %)
-                      (into {}))))))
+  (let [aliases (->> (:relations context)
+                     (mg/get-relationship-sets)
+                     (mapcat (juxt first second))
+                     (set))]
+    (select-just-elements context aliases)))
