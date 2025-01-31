@@ -1,16 +1,25 @@
 (ns armate.archimate.collector
   (:require [clojure.string :as s]
-            [armate.archimate.metamodel.derivation.rules :as drs]
-            [armate.archimate.multi-graph :as mg]))
+            [armate.archimate.metamodel.meta :as mt]
+            [armate.archimate.multi-graph :as mg]
+            [armate.utils :as u]))
+
+(defn get-nbrs
+  [rels-graph rel-type-f rel-to-f alias]
+  (->> (get rels-graph alias)
+       (filter (fn [[_ rels]]
+                 (some (fn [rel]
+                         (and (rel-type-f (:type rel))
+                              (rel-to-f (:to rel))))
+                       rels)))
+       (map first)))
 
 (defn get-composed-aliases
   [context component-alias]
-  (->> (get-in context [:relations component-alias])
-       (filter (comp (partial some
-                              (comp (partial = :composition)
-                                    :type))
-                     second))
-       (map first)))
+  (get-nbrs (:relations context)
+            #{:aggregation :composition}
+            constantly
+            component-alias))
 
 (defn collect-interfaces
   [context component-alias]
@@ -37,9 +46,6 @@
        (map :alias)
        (set)))
 
-(def structural-rels
-  (set drs/structural-rels))
-
 (defn- collect-aliases
   [graph depth aliases]
   (loop [depth depth
@@ -53,7 +59,7 @@
                                   (or (aliases to) (aliases from))
                                   (and (aliases to)
                                        (or (aliases from)
-                                           (structural-rels (:type rel)))))))
+                                           (mt/structural? (:type rel)))))))
                       (mapcat (juxt first second))
                       (set))]
         (recur (if (= aliases nals) 0 (dec depth))
@@ -95,3 +101,28 @@
                                 :business-service
                                 :application-service}
                               :kind)))
+
+(defn ungroup
+  [context]
+  (->> (:relations context)
+       (mg/get-relationships)
+       (reduce (fn [acc [from to rel]]
+                 (if (and (= :nesting (:derivate rel))
+                          (not= :grouping (get-in context [:elements from :kind])))
+                   (-> (assoc-in acc [:elements to :in] nil)
+                       (update-in [:relations from to] u/fnil-conj-set
+                                  (dissoc rel :derivate)))
+                   (update-in acc [:relations from to] u/fnil-conj-set rel)))
+               (assoc context :relations {}))))
+
+(defn erase-unbinded-elements
+  [context]
+  (let [forward-graph (:relations context)
+        reverse-graph (mg/reverse-graph forward-graph)]
+    (-> context
+        (dissoc :connectors)
+        (update :elements
+                #(->> (filter (fn [[alias _]]
+                                (or (forward-graph alias)
+                                    (reverse-graph alias))) %)
+                      (into {}))))))

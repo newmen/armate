@@ -32,15 +32,19 @@
   [raw-name]
   (-> raw-name
       (s/replace #"[\"']" "")
-      (s/replace #"=|-|~|:|#|&|\+|\*|\s|\(|\)|\[|\]|\{|\}|\?" "_")
+      (s/replace #"=|-|~|:|#|&|%|\$|\+|\*|\s|\(|\)|\[|\]|\{|\}|\?" "_")
       (s/replace #"\.|," "__")
       (s/replace #"/" "___")))
 
 (defn cut-too-long
-  [raw-name]
-  (if (> (count raw-name) max-alias-length)
-    (subs raw-name 0 max-alias-length)
-    raw-name))
+  ([raw-name]
+   (if (> (count raw-name) max-alias-length)
+     (subs raw-name 0 max-alias-length)
+     raw-name))
+  ([max-alias-length raw-name]
+   (if (> (count raw-name) max-alias-length)
+     (subs raw-name 0 max-alias-length)
+     raw-name)))
 
 (defn alias-title
   [raw-name]
@@ -77,7 +81,9 @@
   [patch-f id title kind]
   (let [abrv (kind-aliases kind)]
     (if id
-      (str abrv id)
+      (str abrv (if (only-int? id)
+                  id
+                  (cut-too-long (* 2 max-alias-length) (patch-f id))))
       (str (patch-f title) "_" abrv))))
 
 (defn add-rectangle
@@ -89,7 +95,10 @@
          kind-parts (s/split (name kind) #"-")
          specie (keyword (s/join (rest kind-parts)))
          layer (keyword (first kind-parts))
-         default-params (assoc kind-hm :type (get-sprite-name kind))]
+         default-params (assoc kind-hm :type (get-sprite-name kind))
+         split-title (if (only-int? id)
+                       (cc id (subsplit title))
+                       (subsplit title))]
      (if-let [element (check-cache context kind alias)]
        [(update-in context [:elements alias] merge default-params)
         (merge element default-params)]
@@ -97,9 +106,7 @@
                          (merge {:shape "rectangle"
                                  :specie specie
                                  :layer layer
-                                 :title (if (only-int? id)
-                                          (cc id (subsplit title))
-                                          (subsplit title))
+                                 :title (if (= "" split-title) " " split-title)
                                  :name title
                                  :alias alias}))]
          [(-> context

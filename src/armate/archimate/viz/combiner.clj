@@ -103,9 +103,12 @@
 
 (def get-shape
   (partial build-element
-           (fn [{:keys [shape title alias type skin layer color]}]
-             (let [cut? (= alias title)
-                   title2 (if cut? title (wrap-str title))]
+           (fn [{:keys [shape title alias type skin layer color] :as element}]
+             (let [nm (:name element)
+                   cut? (= alias title)
+                   title2 (if cut?
+                            title
+                            (wrap-str (if (:inside element) nm title)))]
                (concat [shape title2]
                        (when-not cut?
                          [(str "as " alias)])
