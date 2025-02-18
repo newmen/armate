@@ -6,10 +6,10 @@
             [armate.utils :as u]))
 
 (def allow-align-twice?
-  true)
+  false)
 
 (def groups-as-columns?
-  true)
+  false)
 
 (defn build-up-down-map
   [graph]
