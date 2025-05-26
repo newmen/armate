@@ -9,16 +9,18 @@
 (defn- append-relations
   [derivate-kind context relations]
   (reduce (fn [acc [from to rel]]
-            (let [from-kind (get-in context [:elements from :kind])
-                  to-kind (get-in context [:elements to :kind])
-                  rel-type (:type rel)
-                  relation (-> (select-keys rel [:type :desc])
-                               (assoc :from from-kind)
-                               (assoc :to to-kind)
-                               (assoc :derivate derivate-kind))]
-              (if (contains? (get-in adx/total-relationships [from-kind to-kind]) rel-type)
-                (update-in acc [:relations from to] u/fnil-conj-set relation)
-                (throw (ex-info "Unexpected relation has been derived" relation)))))
+            (if (= from to)
+              acc
+              (let [from-kind (get-in context [:elements from :kind])
+                    to-kind (get-in context [:elements to :kind])
+                    rel-type (:type rel)
+                    relation (-> (select-keys rel [:type :desc])
+                                 (assoc :from from-kind)
+                                 (assoc :to to-kind)
+                                 (assoc :derivate derivate-kind))]
+                (if (contains? (get-in adx/total-relationships [from-kind to-kind]) rel-type)
+                  (update-in acc [:relations from to] u/fnil-conj-set relation)
+                  (throw (ex-info "Unexpected relation has been derived" relation))))))
           context
           (mg/get-relationships relations)))
 
@@ -31,17 +33,12 @@
           ck (kf c)]
       (rf? ak bk ck s))))
 
-(defn- real-restricted?
-  [a b c s]
-  (or (= a b)
-      (rtr/restricted? a b c s)))
-
 (defn- grouping-restricted?
   [a b c s]
   (or (not= :grouping c)
       (not (s (get-in adx/total-relationships [a b])))
       ; the last condition may be excessive here
-      (real-restricted? a b c s)))
+      (rtr/restricted? a b c s)))
 
 (defn filter-possible-relations
   [context]
@@ -56,7 +53,7 @@
 
 (defn derivate-relations
   [context]
-  (let [crd? (get-restricted-f real-restricted? context)
+  (let [crd? (get-restricted-f rtr/restricted? context)
         grd? (get-restricted-f grouping-restricted? context)]
     (reduce (fn [acc [derivate-kind rf? rules]]
               (let [relations (filter-possible-relations acc)
