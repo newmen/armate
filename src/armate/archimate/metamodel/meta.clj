@@ -215,6 +215,7 @@
                         :application-data-object #{:aggregation :composition}
                         :technology-service #{:aggregation :composition}
                         :technology-passive #{:aggregation :composition}
+                        :strategy-resource #{:realization}
                         :implementation-gap #{:association}}
      :application-component {:application-component #{:realization}}
      :application-collaboration {:application-internal-active #{:aggregation}}
@@ -284,7 +285,7 @@
                             :application-interface #{:realization}}
      :implementation-workpackage {:implementation-workpackage #{:triggering :flow}
                                   :implementation-event #{:triggering :flow}
-                                  :implementation-deriverable #{:access :access_r :access_w :access_rw :realization}
+                                  :implementation-deriverable #{:access :access_r :access_w :access_rw :realization} ; realization here is depricated
                                   [:structure #{:strategy :core}] #{:realization}
                                   [:behavior #{:strategy :core}] #{:realization}
                                   :business-product #{:realization}
