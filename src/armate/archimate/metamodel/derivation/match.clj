@@ -96,22 +96,24 @@
         gpdf (partial get-passing-desc rule)
         has-relation? (fn [graph f t] (get-relation graph f t result-rel))
         add-relation (fn [acc f t c]
-                       (if (restricted? f t c result-rel)
-                         acc
-                         (let [relation {:type result-rel}
-                               passing-desc (gpdf acc f t c)
-                               relation2 (if passing-desc
-                                           (assoc relation :desc passing-desc)
-                                           relation)
-                               acc2 (if (has-relation? forward-graph f t)
-                                      acc
-                                      (-> acc
-                                          (update-in [:forward-graph f t] u/fnil-conj-set relation2)
-                                          (update-in [:reverse-graph t f] u/fnil-conj-set relation2)
-                                          (update :derivated-relations conj [f t result-rel])))]
+                       (let [grf (fn []
+                                   (let [relation {:type result-rel}
+                                         passing-desc (gpdf acc f t c)]
+                                     (if passing-desc
+                                       (assoc relation :desc passing-desc)
+                                       relation)))]
+                         (if (has-relation? forward-graph f t)
                            (if (has-relation? derivated-graph f t)
-                             acc2
-                             (update-in acc2 [:derivated-graph f t] u/fnil-conj-set relation2)))))
+                             acc
+                             (update-in acc [:derivated-graph f t] u/fnil-conj-set (grf)))
+                           (if (restricted? f t c result-rel)
+                             acc
+                             (let [relation (grf)]
+                               (-> acc
+                                   (update-in [:forward-graph f t] u/fnil-conj-set relation)
+                                   (update-in [:reverse-graph t f] u/fnil-conj-set relation)
+                                   (update-in [:derivated-graph f t] u/fnil-conj-set relation)
+                                   (update :derivated-relations conj [f t result-rel])))))))
         append (cond
                  (= f1 fr) #(add-relation %1 from %2 to)
                  (= f1 tr) #(add-relation %1 %2 from to)
