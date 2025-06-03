@@ -7,6 +7,17 @@
             [armate.archimate.multi-graph :as mg]
             [armate.utils :as u]))
 
+(defn- append-relation
+  [context from to relation]
+  (if-let [r (mch/get-relation (:relations context) from to (:type relation))]
+    (let [rs (get-in context [:relations from to])
+          rs2 (disj rs r)
+          rs3 (conj rs2 (-> r
+                            (assoc :derivate (:derivate relation))
+                            (assoc :original? true)))]
+      (assoc-in context [:relations from to] rs3))
+    (update-in context [:relations from to] u/fnil-conj-set relation)))
+
 (defn- append-relations
   [derivate-kind context relations]
   (reduce (fn [acc [from to rel]]
@@ -20,7 +31,7 @@
                                  (assoc :to to-kind)
                                  (assoc :derivate derivate-kind))]
                 (if (contains? (get-in adx/total-relationships [from-kind to-kind]) rel-type)
-                  (update-in acc [:relations from to] u/fnil-conj-set relation)
+                  (append-relation acc from to relation)
                   (let [skf #(-> (get-in context [:elements %])
                                  (select-keys [:name :alias :kind]))]
                     ;; (throw (ex-info "Unexpected relation has been derived"

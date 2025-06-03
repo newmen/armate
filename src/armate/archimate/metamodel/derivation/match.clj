@@ -81,19 +81,20 @@
            (map :desc)
            (calc-influence)))))
 
+(defn get-relation
+  [graph from to relation-type]
+  (->> (get-in graph [from to])
+       (some #(when (= relation-type (:type %))
+                %))))
+
 (defn match-rule
   [restricted? from to iter-map rule]
   (let [[[_ f1 t1] [next-rel f2 t2] [result-rel fr tr]] rule
         {forward-graph :forward-graph
-         reverse-graph :reverse-graph} iter-map
+         reverse-graph :reverse-graph
+         derivated-graph :derivated-graph} iter-map
         gpdf (partial get-passing-desc rule)
-        checking-graph (if (#{f1 t1} fr)
-                         forward-graph
-                         reverse-graph)
-        have-relation? (fn [f t]
-                         (->> (get-in checking-graph [f t])
-                              (map :type)
-                              (some (partial = result-rel))))
+        has-relation? (fn [graph f t] (get-relation graph f t result-rel))
         add-relation (fn [acc f t c]
                        (if (restricted? f t c result-rel)
                          acc
@@ -101,15 +102,16 @@
                                passing-desc (gpdf acc f t c)
                                relation2 (if passing-desc
                                            (assoc relation :desc passing-desc)
-                                           relation)]
-                           (-> acc
-                               (update-in [:forward-graph f t] u/fnil-conj-set relation2)
-                               (update-in [:reverse-graph t f] u/fnil-conj-set relation2)
-                               (update-in [:derivated-graph f t] u/fnil-conj-set relation2)
-                               (update :derivated-relations conj [f t result-rel])))))
-        exists? (if (#{f2 t2} f1)
-                  (partial have-relation? to)
-                  (partial have-relation? from))
+                                           relation)
+                               acc2 (if (has-relation? forward-graph f t)
+                                      acc
+                                      (-> acc
+                                          (update-in [:forward-graph f t] u/fnil-conj-set relation2)
+                                          (update-in [:reverse-graph t f] u/fnil-conj-set relation2)
+                                          (update :derivated-relations conj [f t result-rel])))]
+                           (if (has-relation? derivated-graph f t)
+                             acc2
+                             (update-in acc2 [:derivated-graph f t] u/fnil-conj-set relation2)))))
         append (cond
                  (= f1 fr) #(add-relation %1 from %2 to)
                  (= f1 tr) #(add-relation %1 %2 from to)
@@ -122,7 +124,6 @@
            (= t1 t2) (reverse-graph to))
          (filter (comp (partial some (comp (partial = next-rel) :type)) second))
          (map first)
-         (remove exists?)
          (reduce append iter-map))))
 
 (defn derivate-relationships-by-map
