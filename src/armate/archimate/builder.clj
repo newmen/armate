@@ -4,6 +4,8 @@
             [armate.utils :as u])
   (:import [java.time Instant]))
 
+(def split-title? false)
+
 (def max-alias-length 28)
 
 (def kind-aliases
@@ -40,7 +42,7 @@
 
 (defn cc
   [id name]
-  (if id
+  (if (and split-title? id)
     (str id "\\n" name)
     name))
 

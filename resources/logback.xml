@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-  <property name="DEV_HOME" value="/Users/g.averchuk/projects/schema/linter/log" />
+  <property name="DEV_HOME" value="REMOVEDprojects/linter/log" />
 
   <appender name="FILE" class="ch.qos.logback.core.FileAppender">
     <file>${DEV_HOME}/armate.log</file>

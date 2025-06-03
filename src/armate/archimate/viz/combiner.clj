@@ -1,15 +1,19 @@
 (ns armate.archimate.viz.combiner
   (:require [clojure.string :as s]
+            [clojure.set :as o]
             [armate.archimate.metamodel.derivation.match :as mch]
             [armate.archimate.multi-graph :as mg]
             [armate.archimate.viz.common :as vcm]
             [armate.utils :as u]))
 
 (def group-modes
-  {:application-interface true
-   :application-component true
-   :application-collaboration true
+  {:application-interface false
+   :application-component false
+   :application-collaboration false
    :force? false})
+
+(def escape-derivated
+  #{:certain :potential})
 
 (def indent "  ")
 
@@ -214,7 +218,7 @@
              (partial sort-by (comp sort-line-key last))
              identity)]
     (->> (grsf (key context))
-         (remove (comp #{:nesting :connecting} :derivate last))
+         (remove (comp (o/union #{:nesting :connecting} escape-derivated) :derivate last))
          (sf)
          (mapcat get-relation))))
 

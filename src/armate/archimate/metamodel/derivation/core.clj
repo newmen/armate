@@ -1,5 +1,6 @@
 (ns armate.archimate.metamodel.derivation.core
-  (:require [armate.archimate.metamodel.appendix :as adx]
+  (:require [clojure.tools.logging :as log]
+            [armate.archimate.metamodel.appendix :as adx]
             [armate.archimate.metamodel.derivation.match :as mch]
             [armate.archimate.metamodel.derivation.restrictions :as rtr]
             [armate.archimate.metamodel.derivation.rules :as drs]
@@ -20,7 +21,17 @@
                                  (assoc :derivate derivate-kind))]
                 (if (contains? (get-in adx/total-relationships [from-kind to-kind]) rel-type)
                   (update-in acc [:relations from to] u/fnil-conj-set relation)
-                  (throw (ex-info "Unexpected relation has been derived" relation))))))
+                  (let [skf #(-> (get-in context [:elements %])
+                                 (select-keys [:name :alias :kind]))]
+                    ;; (throw (ex-info "Unexpected relation has been derived"
+                    ;;                 {:from (skf from)
+                    ;;                  :to (skf to)
+                    ;;                  :relation (select-keys relation [:type :derivate])}))
+                    (log/warn "Unexpected relation has been derived"
+                              {:from (skf from)
+                               :to (skf to)
+                               :relation (select-keys relation [:type :derivate])})
+                    acc)))))
           context
           (mg/get-relationships relations)))
 

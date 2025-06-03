@@ -5,6 +5,12 @@
             [armate.archimate.metamodel.meta :as mt])
   (:import [java.io ByteArrayInputStream]))
 
+(def idx-value (atom 0))
+
+(defn get-idx
+  []
+  (str (swap! idx-value inc)))
+
 (def elemenet-folder-types
   #{"strategy"
     "business"
@@ -194,15 +200,15 @@
 
 (defn add-element
   [context item]
-  (let [id (cut-id item)
+  (let [id (get-id item)
         type (get-type item)
         name (get-in item [:attrs :name])]
-    (cons (get-id item)
+    (cons id
           (case type
             "Grouping" (abd/add-grouping context name)
             "Junction" (let [jt (keyword (get-in item [:attrs :type] "and"))]
                          (abd/add-connector context jt name))
-            (abd/add-element context (element-kinds-map type) id name)))))
+            (abd/add-element context (element-kinds-map type) (get-idx) name)))))
 
 (defn add-elements
   [context elements]
