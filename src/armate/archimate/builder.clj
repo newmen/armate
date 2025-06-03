@@ -9,13 +9,29 @@
 (def kind-aliases
   {:business-actor "ba"
    :business-role "brl"
+   :business-collaboration "bcb"
+   :business-object "bo"
+   :business-interface "bif"
+   :business-function "bfn"
+   :business-process "bpc"
+   :business-interaction "bin"
    :business-service "bsv"
    :business-product "bpd"
-   :application-interface "aif"
    :application-component "acp"
    :application-collaboration "acb"
+   :application-data-object "ado"
+   :application-interface "aif"
+   :application-event "ae"
+   :application-function "afn"
+   :application-process "apc"
+   :application-interaction "ain"
    :application-service "asv"
-   :technology-system-software "tss"})
+   :technology-artifact "ta"
+   :technology-node "tn"
+   :technology-system-software "tss"
+   :technology-function "tfn"
+   :technology-process "tpc"
+   :technology-service "tsv"})
 
 (defn get-sprite-name
   [kind]
@@ -93,7 +109,7 @@
    (let [kind (:kind kind-hm)
          alias (get-element-alias patch-f id title kind)
          kind-parts (s/split (name kind) #"-")
-         specie (keyword (s/join (rest kind-parts)))
+         specie (keyword (s/join "-" (rest kind-parts)))
          layer (keyword (first kind-parts))
          default-params (assoc kind-hm :type (get-sprite-name kind))
          split-title (if (only-int? id)
@@ -114,44 +130,39 @@
               (assoc-in [:elements alias] element))
           element])))))
 
+(defn add-element
+  [context kind id name]
+  (add-rectangle context
+                 alias-title
+                 id
+                 name
+                 {:kind kind}))
+
 (defn add-actor
   [context actor-name]
-  (add-rectangle context
-                 alias-title actor-name
-                 {:kind :business-actor}))
+  (add-element context :business-actor nil actor-name))
 
 (defn add-role
   [context role-name]
-  (add-rectangle context
-                 alias-title role-name
-                 {:kind :business-role}))
+  (add-element context :business-role nil role-name))
 
 (defn add-product
   ([context product-name]
    (add-product context nil product-name))
   ([context product-id product-name]
-   (add-rectangle context
-                  alias-title
-                  product-id product-name
-                  {:kind :business-product})))
+   (add-element context :business-product product-id product-name)))
 
 (defn add-bus-service
   ([context service-name]
    (add-bus-service context nil service-name))
   ([context service-id service-name]
-   (add-rectangle context
-                  alias-title
-                  service-id service-name
-                  {:kind :business-service})))
+   (add-element context :business-service service-id service-name)))
 
 (defn add-app-service
   ([context service-name]
    (add-app-service context nil service-name))
   ([context service-id service-name]
-   (add-rectangle context
-                  alias-title
-                  service-id service-name
-                  {:kind :application-service})))
+   (add-element context :application-service service-id service-name)))
 
 (defn add-interface
   ([context interface-name]
@@ -216,6 +227,23 @@
              (assoc-in [:elements alias] element))
          element]))))
 
+(defn add-connector
+  [context type junction-name]
+  (let [kind :connector
+        title (s/replace junction-name #"[\"']" "")
+        alias (str (alias-title title) "_jc")]
+    (if-let [connector (check-cache context kind alias)]
+      [context connector]
+      (let [connector (-> (merge {:kind kind
+                                  :type type
+                                  :title (subsplit title)
+                                  :name title
+                                  :alias alias}))]
+        [(-> context
+             (assoc-in [:misc kind alias] connector)
+             (assoc-in [:connectors alias] connector))
+         connector]))))
+
 (def init-context
   {:start {:title (str "Generated at " (Instant/now))}
    :misc {} ; a cache of already created elements
@@ -253,6 +281,7 @@
                                   :alias "grouping"
                                   :props [{:parts ["Shadowing" "false"]}]}}
    :elements {}
+   :connectors {}
    :relations {}
    :hidden {}})
 

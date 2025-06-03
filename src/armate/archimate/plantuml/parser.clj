@@ -1,4 +1,4 @@
-(ns armate.archimate.parser (:require [clojure.string :as s] [clojure.math.combinatorics :as combo] [camel-snake-kebab.core :as csk] [armate.archimate.metamodel.meta :as mt] [armate.archimate.metamodel.appendix :as adx] [armate.archimate.multi-graph :as mg] [armate.archimate.viz.common :as vcm] [armate.utils :as u]))
+(ns armate.archimate.plantuml.parser (:require [clojure.string :as s] [clojure.math.combinatorics :as combo] [camel-snake-kebab.core :as csk] [armate.archimate.metamodel.meta :as mt] [armate.archimate.metamodel.appendix :as adx] [armate.archimate.multi-graph :as mg] [armate.archimate.viz.common :as vcm] [armate.utils :as u]))
 (def call-re #"^([A-Za-z_]+)\s*\(([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)(?:\s*,\s*(.+?))?\)$")
 (def full-line-re #"^([A-Za-z_]+)\s*\(([A-Za-z0-9_]+)\s*,\s*(\"[^\"]+\"|[^\"\s]+)(?:\s*,\s*(.+?))?\)\s*([^\s]+)?\s*(\{)?$")
 (def quoted-split-re #"(?:\"[^\"]+\"|[^\"\s]+)")
