@@ -15,6 +15,7 @@
           rs3 (conj rs2 (-> r
                             (assoc :derivate (:derivate relation))
                             (assoc :original? true)))]
+      (log/info (str "Derivated relation between [" from " " to "] detected"))
       (assoc-in context [:relations from to] rs3))
     (update-in context [:relations from to] u/fnil-conj-set relation)))
 

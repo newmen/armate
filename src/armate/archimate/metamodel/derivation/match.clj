@@ -134,7 +134,8 @@
          reverse-graph (mg/reverse-graph graph)
          derivated-graph {}
          follow-relations (->> (mg/get-relationships graph)
-                               (map (juxt first second (comp :type last))))]
+                               (map (juxt first second (comp :type last)))
+                               (into clojure.lang.PersistentQueue/EMPTY))]
     (if (empty? follow-relations)
       derivated-graph
       (let [relation (first follow-relations)
@@ -148,13 +149,13 @@
         (recur (:forward-graph iter-map)
                (:reverse-graph iter-map)
                (:derivated-graph iter-map)
-               (vec (concat (rest follow-relations)
-                            (when include-new-derivated?
-                              (:derivated-relations iter-map)))))))))
+               (into (pop follow-relations)
+                     (when include-new-derivated?
+                       (:derivated-relations iter-map))))))))
 
 (defn derivate-relationships-once
   ([restricted? rules graph]
-    (derivate-relationships-once restricted? rules graph false))
+   (derivate-relationships-once restricted? rules graph false))
   ([restricted? rules graph include-new-derivated?]
    (let [rules-map (make-rules-map rules)]
      (derivate-relationships-by-map restricted? rules-map graph include-new-derivated?))))
@@ -169,7 +170,7 @@
                                                                 rules-map
                                                                 graph
                                                                 true)]
-        (if (empty? next-derivated-graph)
+        (if (= derivated-graph next-derivated-graph)
           derivated-graph
           (recur (slv/merge-into graph next-derivated-graph)
                  (slv/merge-into derivated-graph next-derivated-graph)))))))
