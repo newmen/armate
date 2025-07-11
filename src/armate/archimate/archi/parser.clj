@@ -25,20 +25,26 @@
     "implementation_migration"
     "other"})
 
+(defn get-type
+  ([item]
+   (get-type item nil))
+  ([item default]
+   (get-in item [:attrs :type] default)))
+
 (defn element-folder?
   [item]
   (and (= :folder (:tag item))
-       (elemenet-folder-types (get-in item [:attrs :type]))))
+       (elemenet-folder-types (get-type item))))
 
 (defn relation-folder?
   [item]
   (and (= :folder (:tag item))
-       (= "relations" (get-in item [:attrs :type]))))
+       (= "relations" (get-type item))))
 
 (defn view-folder?
   [item]
   (and (= :folder (:tag item))
-       (= "diagrams" (get-in item [:attrs :type]))))
+       (= "diagrams" (get-type item))))
 
 (defn element?
   [item]
@@ -61,7 +67,7 @@
   (-> (get-id item)
       (s/replace-first #"^id-" "")))
 
-(defn get-type
+(defn get-xtype
   [item]
   (-> (get-in item [:attrs :xsi:type])
       (s/replace-first #"archimate:" "")))
@@ -170,10 +176,24 @@
 ;;          (map #(get-in % [:attrs :name]))
 ;;          (into #{}))))
 
+(defn build-map
+  [model key f]
+  (->> (model key)
+       (map (juxt f identity))
+       (into {})))
+
+(defn enrich-model
+  [model]
+  {:source model
+   :maps {:elements (build-map model :elements get-id)
+          :relations (build-map model :relations get-id)
+          :views (build-map model :views #(get-in % [:attrs :name]))}})
+
 (defn get-model
   [model-path]
   (->> (read-archi-file model-path)
-       (parse-model)))
+       (parse-model)
+       (enrich-model)))
 
 (def element-kinds-map
   {"ApplicationCollaboration" :application-collaboration
@@ -207,15 +227,15 @@
 (defn add-element
   [context item]
   (let [id (get-id item)
-        type (get-type item)
+        xtype (get-xtype item)
         name (get-in item [:attrs :name])
         [ctx idx] (get-idx context id)]
     (cons id
-          (case type
+          (case xtype
             "Grouping" (abd/add-grouping ctx idx name)
-            "Junction" (let [jt (keyword (get-in item [:attrs :type] "and"))]
+            "Junction" (let [jt (keyword (get-type item "and"))]
                          (abd/add-connector ctx jt idx name))
-            (abd/add-element ctx (element-kinds-map type) idx name)))))
+            (abd/add-element ctx (element-kinds-map xtype) idx name)))))
 
 (defn add-elements
   [context elements]
@@ -231,7 +251,7 @@
             (let [gef #(get-in acc [:misc :archi (get-in item [:attrs %])])
                   source (gef :source)
                   target (gef :target)
-                  type (rel-types-map (get-type item))
+                  type (rel-types-map (get-xtype item))
                   type2 (if (= :access type)
                           (case (get-in item [:attrs :accessType])
                             nil :access_w
@@ -239,9 +259,8 @@
                             "2" :access
                             "3" :access_rw)
                           type)
-                  desc (get-in item [:attrs :name])
-                  dir (if (mt/structural? type) :down :up)]
-              (abd/add-relation acc source target type2 dir desc)))
+                  desc (get-in item [:attrs :name])]
+              (abd/add-relation acc source target type2 nil desc)))
           context
           relations))
 
@@ -250,3 +269,37 @@
   (-> abd/init-context
       (add-elements (:elements model))
       (add-relations (:relations model))))
+
+(declare add-inner)
+(defn add-child-element
+  [model submodel item]
+  (let [ref (get-in item [:attrs :archimateElement])
+        element (get-in model [:maps :elements ref])]
+    (reduce (partial add-inner model)
+            (update submodel :elements conj element)
+            (:content item))))
+
+(defn add-child-relation
+  [model submodel item]
+  (let [ref (get-in item [:attrs :archimateRelationship])
+        relation (get-in model [:maps :relations ref])]
+    (update submodel :relations conj relation)))
+
+(defn add-inner
+  [model submodel item]
+  (case (:tag item)
+    :child (add-child-element model submodel item)
+    :sourceConnection (add-child-relation model submodel item)
+    :bounds submodel))
+
+(defn get-views-graph
+  [model & view-names]
+  (let [submodel (reduce (fn [acc view-name]
+                           (let [view (get-in model [:maps :views view-name])]
+                             (reduce (partial add-child-element model)
+                                     acc
+                                     (:content view))))
+                         {:elements []
+                          :relations []}
+                         view-names)]
+    (get-full-graph submodel)))

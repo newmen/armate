@@ -6,11 +6,15 @@
             [armate.archimate.viz.common :as vcm]
             [armate.utils :as u]))
 
+(def do-grouping? false)
 (def group-modes
-  {:application-interface false
-   :application-component false
-   :application-collaboration false
-   :force? false})
+  {:application-collaboration #{:composition :aggregation}
+   :application-component #{:composition}
+   :application-interface #{:composition}
+   :application-function #{:aggregation :composition}
+   :application-process #{:aggregation :composition}
+   :application-service #{:composition}
+   :grouping #{:aggregation :composition}})
 
 (def escape-derivated
   #{:certain :potential})
@@ -284,32 +288,20 @@
                         (into {}))]
     (merge in-weights out-weights)))
 
-(defn- groupable?
-  [element-kind rel]
-  (and (or (:force? group-modes)
-           (not (:line rel)))
-       (group-modes element-kind)
-       (= element-kind (:from rel))))
-
 (defn make-nesting
-  [triple]
-  (let [[from to rel] triple
-        gpbl? #(groupable? % rel)
-        make-nesting #(assoc rel :derivate :nesting)]
-    (cond
-      (= :nesting (:derivate rel)) [false triple]
-      (or (and (= :aggregation (:type rel))
-               (gpbl? :application-collaboration))
-          (and (= :composition (:type rel))
-               (or (gpbl? :application-interface)
-                   (gpbl? :application-component)))) [true [from to (make-nesting)]]
-      :else [false triple])))
+  [context triple]
+  (let [[from to rel] triple]
+    (if (and do-grouping?
+             (when-let [element (get-in context [:elements from])]
+               (contains? (group-modes (:kind element)) (:type rel))))
+      [true [from to (assoc rel :derivate :nesting)]]
+      [false triple])))
 
 (defn make-grouped
   [context]
   (->> (:relations context)
        (mg/get-relationships)
-       (map make-nesting)
+       (map (partial make-nesting context))
        (reduce (fn [acc [nesting? [from to rel]]]
                  (let [ctx2 (update-in acc [:relations from to] u/fnil-conj-set rel)]
                    (if nesting?

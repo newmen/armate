@@ -318,9 +318,9 @@
   ([context from to type direction]
    (add-relation context from to type direction nil))
   ([context from to type direction desc]
-   (let [params (u/assoc-if-not-nil {:direction direction}
-                                    :desc desc)]
-     (get-relation context from to type params))))
+   (let [params (if direction {:direction direction} {})
+         params2 (u/assoc-if-not-nil params :desc desc)]
+     (get-relation context from to type params2))))
 
 (defn add-nesting-relation
   [context from to type]
