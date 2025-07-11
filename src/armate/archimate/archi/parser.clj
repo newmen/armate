@@ -5,11 +5,17 @@
             [armate.archimate.metamodel.meta :as mt])
   (:import [java.io ByteArrayInputStream]))
 
-(def idx-value (atom 0))
+(defonce idx-value (atom 0))
+(defonce idx-map (atom {}))
 
 (defn get-idx
-  []
-  (str (swap! idx-value inc)))
+  ([]
+   (str (swap! idx-value inc)))
+  ([id]
+   (or (get @idx-map id)
+       (let [idx (get-idx)]
+         (swap! idx-map assoc id idx)
+         idx))))
 
 (def elemenet-folder-types
   #{"strategy"
@@ -189,6 +195,7 @@
    "Node" :technology-node
    "SystemSoftware" :technology-system-software
    "TechnologyFunction" :technology-function
+   "TechnologyInterface" :technology-interface
    "TechnologyProcess" :technology-process
    "TechnologyService" :technology-service})
 
@@ -202,13 +209,14 @@
   [context item]
   (let [id (get-id item)
         type (get-type item)
-        name (get-in item [:attrs :name])]
+        name (get-in item [:attrs :name])
+        idx (get-idx id)]
     (cons id
           (case type
-            "Grouping" (abd/add-grouping context name)
+            "Grouping" (abd/add-grouping context idx name)
             "Junction" (let [jt (keyword (get-in item [:attrs :type] "and"))]
-                         (abd/add-connector context jt name))
-            (abd/add-element context (element-kinds-map type) (get-idx) name)))))
+                         (abd/add-connector context jt idx name))
+            (abd/add-element context (element-kinds-map type) idx name)))))
 
 (defn add-elements
   [context elements]

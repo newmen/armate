@@ -46,10 +46,14 @@
     (str id "\\n" name)
     name))
 
+(defn escape-special-chars
+  [raw-name]
+  (s/replace raw-name #"[\"']" ""))
+
 (defn patch-raw-name
   [raw-name]
   (-> raw-name
-      (s/replace #"[\"']" "")
+      (escape-special-chars)
       (s/replace #"=|-|~|:|#|&|%|\$|\+|\*|\s|\(|\)|\[|\]|\{|\}|\?" "_")
       (s/replace #"\.|," "__")
       (s/replace #"/" "___")))
@@ -213,38 +217,50 @@
                  {:kind :technology-system-software}))
 
 (defn add-grouping
-  [context group-name]
-  (let [kind :grouping
-        title (s/replace group-name #"[\"']" "")
-        alias (str (alias-title title) "_g")]
-    (if-let [element (check-cache context kind alias)]
-      [context element]
-      (let [element (-> (merge {:kind kind
-                                :type kind
-                                :title title
-                                :name title
-                                :alias alias}))]
-        [(-> context
-             (assoc-in [:misc kind alias] element)
-             (assoc-in [:elements alias] element))
-         element]))))
+  ([context group-name]
+   (let [title (escape-special-chars group-name)
+         alias (str (alias-title title) "_g")]
+     (add-grouping context alias group-name)))
+  ([context alias-or-id group-name]
+   (let [kind :grouping
+         title (escape-special-chars group-name)
+         alias (if (only-int? alias-or-id)
+                 (str "g" alias-or-id)
+                 alias-or-id)]
+     (if-let [element (check-cache context kind alias)]
+       [context element]
+       (let [element (-> (merge {:kind kind
+                                 :type kind
+                                 :title title
+                                 :name title
+                                 :alias alias}))]
+         [(-> context
+              (assoc-in [:misc kind alias] element)
+              (assoc-in [:elements alias] element))
+          element])))))
 
 (defn add-connector
-  [context type junction-name]
-  (let [kind :connector
-        title (s/replace junction-name #"[\"']" "")
-        alias (str (alias-title title) "_jc")]
-    (if-let [connector (check-cache context kind alias)]
-      [context connector]
-      (let [connector (-> (merge {:kind kind
-                                  :type type
-                                  :title (subsplit title)
-                                  :name title
-                                  :alias alias}))]
-        [(-> context
-             (assoc-in [:misc kind alias] connector)
-             (assoc-in [:connectors alias] connector))
-         connector]))))
+  ([context type junction-name]
+   (let [title (escape-special-chars junction-name)
+         alias (str (alias-title title) "_jc")]
+     (add-connector context type alias junction-name)))
+  ([context type alias-or-id junction-name]
+   (let [kind :connector
+         title (escape-special-chars junction-name)
+         alias (if (only-int? alias-or-id)
+                 (str "jc" alias-or-id)
+                 alias-or-id)]
+     (if-let [connector (check-cache context kind alias)]
+       [context connector]
+       (let [connector (-> (merge {:kind kind
+                                   :type type
+                                   :title (subsplit title)
+                                   :name title
+                                   :alias alias}))]
+         [(-> context
+              (assoc-in [:misc kind alias] connector)
+              (assoc-in [:connectors alias] connector))
+          connector])))))
 
 (def init-context
   {:start {:title (str "Generated at " (Instant/now))}
