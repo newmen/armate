@@ -6,16 +6,15 @@
   (:import [java.io ByteArrayInputStream]))
 
 (defonce idx-value (atom 0))
-(defonce idx-map (atom {}))
 
 (defn get-idx
   ([]
    (str (swap! idx-value inc)))
-  ([id]
-   (or (get @idx-map id)
-       (let [idx (get-idx)]
-         (swap! idx-map assoc id idx)
-         idx))))
+  ([context id]
+   (if-let [idx (get-in context [:misc :idx id])]
+     [context idx]
+     (let [idx (get-idx)]
+       [(assoc-in context [:misc :idx id] idx) idx]))))
 
 (def elemenet-folder-types
   #{"strategy"
@@ -210,13 +209,13 @@
   (let [id (get-id item)
         type (get-type item)
         name (get-in item [:attrs :name])
-        idx (get-idx id)]
+        [ctx idx] (get-idx context id)]
     (cons id
           (case type
-            "Grouping" (abd/add-grouping context idx name)
+            "Grouping" (abd/add-grouping ctx idx name)
             "Junction" (let [jt (keyword (get-in item [:attrs :type] "and"))]
-                         (abd/add-connector context jt idx name))
-            (abd/add-element context (element-kinds-map type) idx name)))))
+                         (abd/add-connector ctx jt idx name))
+            (abd/add-element ctx (element-kinds-map type) idx name)))))
 
 (defn add-elements
   [context elements]
