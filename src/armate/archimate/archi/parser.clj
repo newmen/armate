@@ -6,15 +6,17 @@
   (:import [java.io ByteArrayInputStream]))
 
 (defonce idx-value (atom 0))
+(defonce idx-map (atom {}))
 
 (defn get-idx
   ([]
    (str (swap! idx-value inc)))
-  ([context id]
-   (if-let [idx (get-in context [:misc :idx id])]
-     [context idx]
+  ([id]
+   (if-let [idx (get @idx-map id)]
+     idx
      (let [idx (get-idx)]
-       [(assoc-in context [:misc :idx id] idx) idx]))))
+       (swap! idx-map assoc id idx)
+       idx))))
 
 (def elemenet-folder-types
   #{"strategy"
@@ -206,6 +208,7 @@
    "ApplicationService" :application-service
    "Artifact" :technology-artifact
    "BusinessActor" :business-actor
+   "Contract" :business-contract
    "BusinessCollaboration" :business-collaboration
    "BusinessObject" :business-object
    "BusinessRole" :business-role
@@ -229,13 +232,13 @@
   (let [id (get-id item)
         xtype (get-xtype item)
         name (get-in item [:attrs :name])
-        [ctx idx] (get-idx context id)]
+        idx (get-idx id)]
     (cons id
           (case xtype
-            "Grouping" (abd/add-grouping ctx idx name)
+            "Grouping" (abd/add-grouping context idx name)
             "Junction" (let [jt (keyword (get-type item "and"))]
-                         (abd/add-connector ctx jt idx name))
-            (abd/add-element ctx (element-kinds-map xtype) idx name)))))
+                         (abd/add-connector context jt idx name))
+            (abd/add-element context (element-kinds-map xtype) idx name)))))
 
 (defn add-elements
   [context elements]

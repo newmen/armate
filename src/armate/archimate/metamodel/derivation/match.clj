@@ -1,5 +1,6 @@
 (ns armate.archimate.metamodel.derivation.match
-  (:require [armate.archimate.metamodel.derivation.rules :as drs]
+  (:require [clojure.tools.logging :as log]
+            [armate.archimate.metamodel.derivation.rules :as drs]
             [armate.archimate.metamodel.solver :as slv]
             [armate.archimate.multi-graph :as mg]
             [armate.utils :as u]))
@@ -135,11 +136,13 @@
          derivated-graph {}
          follow-relations (->> (mg/get-relationships graph)
                                (map (juxt first second (comp :type last)))
-                               (into clojure.lang.PersistentQueue/EMPTY))]
+                               (into clojure.lang.PersistentQueue/EMPTY))
+         n 1]
+    (when (zero? (mod n 1000))
+      (log/info (str "Derivation sub-step " n)))
     (if (empty? follow-relations)
       derivated-graph
-      (let [relation (first follow-relations)
-            [from to rel] relation
+      (let [[from to rel] (first follow-relations)
             iter-map (reduce (partial match-rule restricted? from to)
                              {:forward-graph forward-graph
                               :reverse-graph reverse-graph
@@ -151,7 +154,8 @@
                (:derivated-graph iter-map)
                (into (pop follow-relations)
                      (when include-new-derivated?
-                       (:derivated-relations iter-map))))))))
+                       (:derivated-relations iter-map)))
+               (inc n))))))
 
 (defn derivate-relationships-once
   ([restricted? rules graph]
@@ -165,7 +169,9 @@
   ;; {:pre (every? drs/valid? rules)} ; already checked by rules_test/check-invariants-test
   (let [rules-map (make-rules-map rules)]
     (loop [graph source-graph
-           derivated-graph {}]
+           derivated-graph {}
+           n 1]
+      (log/info (str "Derivation step " n))
       (let [next-derivated-graph (derivate-relationships-by-map restricted?
                                                                 rules-map
                                                                 graph
@@ -173,4 +179,5 @@
         (if (= derivated-graph next-derivated-graph)
           derivated-graph
           (recur (slv/merge-into graph next-derivated-graph)
-                 (slv/merge-into derivated-graph next-derivated-graph)))))))
+                 (slv/merge-into derivated-graph next-derivated-graph)
+                 (inc n)))))))

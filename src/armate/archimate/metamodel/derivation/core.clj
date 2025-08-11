@@ -79,6 +79,7 @@
   (let [crd? (get-restricted-f rtr/restricted? context)
         grd? (get-restricted-f grouping-restricted? context)]
     (reduce (fn [acc [derivate-kind rf? rules]]
+              (log/info (str "Derivating " (name derivate-kind) " rules"))
               (let [relations (filter-possible-relations acc)
                     derivated-relations (mch/derivate-relationships rf? rules relations)]
                 (append-relations derivate-kind acc derivated-relations)))
