@@ -139,7 +139,7 @@
                                (into clojure.lang.PersistentQueue/EMPTY))
          n 1]
     (when (zero? (mod n 1000))
-      (log/info (str "Derivation sub-step " n)))
+      (log/info (str "Derivation sub-step " n ", follow " (count follow-relations) " relations")))
     (if (empty? follow-relations)
       derivated-graph
       (let [[from to rel] (first follow-relations)

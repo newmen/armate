@@ -168,3 +168,73 @@
                  {:forward forward-graph
                   :reversed reversed-graph}
                  cyclic-rels))))))
+
+(defn bfs-shortest-path
+  [graph start goal rel-pred?]
+  (when (and start goal)
+    (let [get-neighbors (fn [node]
+                          (->> (for [[to rels] (get graph node)
+                                     rel rels]
+                                 {:node to :rel rel})
+                               (filter (comp rel-pred? :rel))))
+          queue (into clojure.lang.PersistentQueue/EMPTY [])]
+      (loop [queue (conj queue [start []])
+             visited #{start}]
+        (when-let [[current path] (peek queue)]
+          (cond
+            (= current goal) (conj path current)
+            :else (let [neighbors (remove #(visited (:node %)) (get-neighbors current))
+                        new-visited (into visited (map :node neighbors))
+                        new-queue (into (pop queue)
+                                        (map (fn [{:keys [node rel]}]
+                                               [node (conj path [current rel])])
+                                             neighbors))]
+                    (recur new-queue new-visited))))))))
+
+(defn all-paths-under-len
+  "Возвращает вектор всех простых направленных путей из start в goal,
+     где число рёбер в пути строго меньше max-len.
+     Формат пути: [[n0 rel0] [n1 rel1] ... goal]"
+  ([graph start goal rel-pred?]
+   [(bfs-shortest-path graph start goal rel-pred?)])
+  ([graph start goal max-len rel-pred?]
+   (when (and start goal)
+     (letfn [(neighbors [node]
+               (->> (for [[to rels] (get graph node)
+                          rel rels]
+                      {:node to :rel rel})
+                    (filter (comp rel-pred? :rel))))
+             (dfs [current depth visited path acc]
+               ;; Если дошли до goal и глубина (число рёбер) < max-len — фиксируем путь.
+               (let [acc1 (if (and (= current goal) (< depth max-len))
+                            (conj acc (conj path current))
+                            acc)]
+                 ;; Если следующий шаг дал бы длину >= max-len — останавливаем углубление.
+                 (if (> depth max-len)
+                   acc1
+                   (reduce (fn [ain {:keys [node rel]}]
+                             (if (visited node)
+                               ain
+                               (dfs node
+                                    (inc depth)
+                                    (conj visited node)
+                                    (conj path [current rel])
+                                    ain)))
+                           acc1
+                           (neighbors current)))))]
+       (if (pos? max-len)
+         (sort-by count (dfs start 0 #{start} [] []))
+         [])))))
+
+(defn adsorb-graph
+  [base graph rel-kind]
+  (->> (get-relationships graph)
+       (reduce (fn [acc [from to rel]]
+                 (update-in acc [from to] u/fnil-conj-set (assoc rel :kind rel-kind)))
+               base)))
+
+(defn get-undirected-graph
+  [graph]
+  (-> {}
+      (adsorb-graph graph :forward)
+      (adsorb-graph (reverse-graph graph) :reverse)))

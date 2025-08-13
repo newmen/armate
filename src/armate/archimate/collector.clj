@@ -121,4 +121,4 @@
                      (mg/get-relationship-sets)
                      (mapcat (juxt first second))
                      (set))]
-    (select-just-elements context aliases)))
+    (select-just-elements context (comp aliases :alias))))

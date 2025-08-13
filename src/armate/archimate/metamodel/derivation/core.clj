@@ -15,7 +15,7 @@
           rs3 (conj rs2 (-> r
                             (assoc :derivate (:derivate relation))
                             (assoc :original? true)))]
-      (log/info (str "Derivated relation between [" from " " to "] detected"))
+      (log/info (str "Derivated relation " (:type relation) " between [" from " " to "] detected"))
       (assoc-in context [:relations from to] rs3))
     (update-in context [:relations from to] u/fnil-conj-set relation)))
 
@@ -56,12 +56,15 @@
           ck (kf c)]
       (rf? ak bk ck s))))
 
+(def mem-restricted?
+  (memoize rtr/restricted?))
+
 (defn- grouping-restricted?
   [a b c s]
   (or (not= :grouping c)
       (not (s (get-in adx/total-relationships [a b])))
       ; the last condition may be excessive here
-      (rtr/restricted? a b c s)))
+      (mem-restricted? a b c s)))
 
 (defn filter-possible-relations
   [context]
@@ -76,8 +79,8 @@
 
 (defn derivate-relations
   [context]
-  (let [crd? (get-restricted-f rtr/restricted? context)
-        grd? (get-restricted-f grouping-restricted? context)]
+  (let [crd? (get-restricted-f mem-restricted? context)
+        grd? (get-restricted-f (memoize grouping-restricted?) context)]
     (reduce (fn [acc [derivate-kind rf? rules]]
               (log/info (str "Derivating " (name derivate-kind) " rules"))
               (let [relations (filter-possible-relations acc)

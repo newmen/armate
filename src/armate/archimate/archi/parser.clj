@@ -1,5 +1,6 @@
 (ns armate.archimate.archi.parser
-  (:require [clojure.string :as s]
+  (:require [clojure.tools.logging :as log]
+            [clojure.string :as s]
             [clojure.xml :as xml]
             [armate.archimate.builder :as abd]
             [armate.archimate.metamodel.meta :as mt])
@@ -293,7 +294,10 @@
   (case (:tag item)
     :child (add-child-element model submodel item)
     :sourceConnection (add-child-relation model submodel item)
-    :bounds submodel))
+    :bounds submodel
+    (do
+      (log/warn "Incorrect item tag" item)
+      submodel)))
 
 (defn get-views-graph
   [model & view-names]
