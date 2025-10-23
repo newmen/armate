@@ -1,5 +1,6 @@
 (ns armate.archimate.metamodel.meta
-  (:require [armate.archimate.metamodel.derivation.rules :as drs]
+  (:require [clojure.set :as o]
+            [armate.archimate.metamodel.derivation.rules :as drs]
             [armate.archimate.metamodel.solver :as slv]))
 
 (def business-layer
@@ -332,6 +333,15 @@
   (set (concat (keys (dissoc layers :core))
                (keys (dissoc (:core layers) :grouping :location))
                [:physical])))
+
+(def subject? (o/union (:external-active hierarchy)
+                       (:internal-active hierarchy)))
+
+(def behavior? (o/union (:external-behavior hierarchy)
+                        (:internal-behavior hierarchy)
+                        (:event hierarchy)))
+
+(def object? (:passive hierarchy))
 
 (def structural? (:structural hierarchy))
 (def dependency? (:dependency hierarchy))

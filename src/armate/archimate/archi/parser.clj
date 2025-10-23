@@ -209,11 +209,13 @@
    "ApplicationService" :application-service
    "Artifact" :technology-artifact
    "BusinessActor" :business-actor
-   "Contract" :business-contract
    "BusinessCollaboration" :business-collaboration
+   "BusinessEvent" :business-event
+   "BusinessProcess" :business-process
    "BusinessObject" :business-object
    "BusinessRole" :business-role
    "BusinessService" :business-service
+   "Contract" :business-contract
    "DataObject" :application-data-object
    "Node" :technology-node
    "SystemSoftware" :technology-system-software
@@ -263,8 +265,9 @@
                             "2" :access
                             "3" :access_rw)
                           type)
+                  dir (when (= :specialization type2) :up)
                   desc (get-in item [:attrs :name])]
-              (abd/add-relation acc source target type2 nil desc)))
+              (abd/add-relation acc source target type2 dir desc)))
           context
           relations))
 

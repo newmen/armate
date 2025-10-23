@@ -14,6 +14,7 @@
    :business-collaboration "bcb"
    :business-object "bo"
    :business-interface "bif"
+   :business-event "be"
    :business-function "bfn"
    :business-process "bpc"
    :business-interaction "bin"
