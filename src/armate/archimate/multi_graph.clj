@@ -77,14 +77,14 @@
        (set)))
 
 (defn get-type-nbrs
-  [rel-type graph from]
-  (get-nbrs (comp (partial = rel-type) :type)
+  [rel-types graph from]
+  (get-nbrs (comp rel-types :type)
             graph
             from))
 
 (defn detect-transitive-relationships
-  [rel-type graph]
-  (let [gnf (partial get-type-nbrs rel-type graph)]
+  [rel-types graph]
+  (let [gnf (partial get-type-nbrs rel-types graph)]
     (->> (keys graph)
          (mapcat (fn [from]
                    (let [nbrs (gnf from)]
@@ -95,7 +95,7 @@
 
 (defn mark-transitive-relationships
   [rel-type graph]
-  (->> (detect-transitive-relationships rel-type graph)
+  (->> (detect-transitive-relationships #{rel-type} graph)
        (reduce (fn [acc [from to]]
                  (update acc from
                          (fn [to-rels]
@@ -110,21 +110,26 @@
                graph)))
 
 (defn erase-transitive-relationships
-  [rel-type graph]
-  (->> (detect-transitive-relationships rel-type graph)
-       (reduce (fn [acc [from to]]
-                 (update acc from
-                         (fn [to-rels]
-                           (let [rels (to-rels to)
-                                 rels2 (remove (comp (partial = rel-type) :type) rels)]
-                             (if (seq rels2)
-                               (assoc to-rels to (set rels2))
-                               (dissoc to-rels to))))))
-               graph)))
+  ([rel-types graph]
+   (erase-transitive-relationships (constantly false) rel-types graph))
+  ([skip-pred rel-types graph]
+   (->> (detect-transitive-relationships rel-types graph)
+        (reduce (fn [acc [from to]]
+                  (update acc from
+                          (fn [to-rels]
+                            (let [rels (to-rels to)
+                                  rels2 (remove (fn [rel]
+                                                  (and (not (skip-pred rel))
+                                                       (rel-types (:type rel))))
+                                                rels)]
+                              (if (seq rels2)
+                                (assoc to-rels to (set rels2))
+                                (dissoc to-rels to))))))
+                graph))))
 
 (defn detect-cyclic1-relationships
   [rel-type graph]
-  (let [gnf (partial get-type-nbrs rel-type graph)]
+  (let [gnf (partial get-type-nbrs #{rel-type} graph)]
     (->> (keys graph)
          (mapcat (fn [from]
                    (let [nbrs (gnf from)]
@@ -135,8 +140,9 @@
 
 (defn get-vertex-weight
   [rel-type forward-graph reversed-graph vertex]
-  (let [forward-nbrs (get-type-nbrs rel-type forward-graph vertex)
-        reversed-nbrs (get-type-nbrs rel-type reversed-graph vertex)]
+  (let [rel-types #{rel-type}
+        forward-nbrs (get-type-nbrs rel-types forward-graph vertex)
+        reversed-nbrs (get-type-nbrs rel-types reversed-graph vertex)]
     [(count reversed-nbrs)
      (count forward-nbrs)
      vertex]))
@@ -193,8 +199,8 @@
 
 (defn all-paths-under-len
   "Возвращает вектор всех простых направленных путей из start в goal,
-     где число рёбер в пути строго меньше max-len.
-     Формат пути: [[n0 rel0] [n1 rel1] ... goal]"
+   где число рёбер в пути строго меньше max-len.
+   Формат пути: [[n0 rel0] [n1 rel1] ... goal]"
   ([graph start goal rel-pred?]
    [(bfs-shortest-path graph start goal rel-pred?)])
   ([graph start goal max-len rel-pred?]
