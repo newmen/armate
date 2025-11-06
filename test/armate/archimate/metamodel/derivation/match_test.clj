@@ -17,6 +17,10 @@
                  "controlFood_bpc" #{{:type :assignment}}}
    "registry_bs" {"partner_br" #{{:type :serving}}}})
 
+(def graph-g
+  {"service1" {"group" #{{:type :serving}}}
+   "group" {"service2" #{{:type :composition}}}})
+
 (defn get-im
   [forward-graph]
   {:forward-graph forward-graph
@@ -269,4 +273,7 @@
   (is (= (mch/derivate-relationships-once restricted? drs/certain-rules graph0 true)
          (mch/derivate-relationships restricted? drs/certain-rules graph0)))
   (is (= (mch/derivate-relationships-once restricted? drs/potential-rules graph0 true)
-         (mch/derivate-relationships restricted? drs/potential-rules graph0))))
+         (mch/derivate-relationships restricted? drs/potential-rules graph0)))
+  (is (empty? (mch/derivate-relationships restricted? drs/certain-rules graph-g)))
+  (is (= {"service1" {"service2" #{{:type :serving}}}}
+         (mch/derivate-relationships restricted? drs/potential-rules graph-g))))

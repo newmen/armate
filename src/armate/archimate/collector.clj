@@ -1,5 +1,6 @@
 (ns armate.archimate.collector
   (:require [clojure.string :as s]
+            [clojure.set :as o]
             [armate.archimate.metamodel.meta :as mt]
             [armate.archimate.multi-graph :as mg]
             [armate.utils :as u]))
@@ -44,7 +45,7 @@
   (->> (vals (:elements context))
        (filter predicate)
        (map :alias)
-       (set)))
+       (into #{})))
 
 (defn- collect-aliases
   [graph depth aliases]
@@ -61,7 +62,7 @@
                                        (or (aliases from)
                                            (mt/structural? (:type rel)))))))
                       (mapcat (juxt first second))
-                      (set))]
+                      (into #{}))]
         (recur (if (= aliases nals) 0 (dec depth))
                nals
                false)))))
@@ -116,9 +117,31 @@
                (assoc context :relations {}))))
 
 (defn erase-unbinded-elements
-  [context]
-  (let [aliases (->> (:relations context)
-                     (mg/get-relationship-sets)
-                     (mapcat (juxt first second))
-                     (set))]
+  ([context]
+   (erase-unbinded-elements context (constantly true)))
+  ([context predicate]
+   (let [all-aliases (into #{} (keys (:elements context)))
+         related-aliases (->> (:relations context)
+                              (mg/get-relationship-sets)
+                              (mapcat (juxt first second))
+                              (into #{}))
+         unbinded-aliases (o/difference all-aliases related-aliases)]
+     (select-just-elements context
+                           (fn [element]
+                             (not (and (predicate element)
+                                       (unbinded-aliases (:alias element)))))))))
+
+(defn erase-groups-wihtout-elements
+  [context element-predicate]
+  (let [gf (fn [[from to rel]]
+             (and (= :grouping (get-in context [:elements from :kind]))
+                  (#{:aggregation :composition} (:type rel))
+                  (element-predicate (get-in context [:elements to]))))
+        group-aliases (->> (:relations context)
+                           (mg/filter-relationships gf)
+                           (keys))
+        element-aliases (->> (:elements context)
+                             (filter (comp (partial not= :grouping) :kind second))
+                             (map first))
+        aliases (into #{} (concat group-aliases element-aliases))]
     (select-just-elements context (comp aliases :alias))))
