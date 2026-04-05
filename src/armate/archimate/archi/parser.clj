@@ -3,7 +3,7 @@
             [clojure.string :as s]
             [clojure.xml :as xml]
             [armate.archimate.builder :as abd]
-            [armate.archimate.metamodel.meta :as mt])
+            [armate.archimate.multi-graph :as mg])
   (:import [java.io ByteArrayInputStream]))
 
 (defonce idx-value (atom 0))
@@ -208,21 +208,33 @@
    "ApplicationProcess" :application-process
    "ApplicationService" :application-service
    "Artifact" :technology-artifact
+   "Assessment" :motivation-assessment
    "BusinessActor" :business-actor
    "BusinessCollaboration" :business-collaboration
    "BusinessEvent" :business-event
-   "BusinessProcess" :business-process
+   "BusinessFunction" :business-function
+   "BusinessInteraction" :business-interaction
    "BusinessObject" :business-object
+   "BusinessProcess" :business-process
    "BusinessRole" :business-role
    "BusinessService" :business-service
    "Contract" :business-contract
+   "Constraint" :motivation-constraint
    "DataObject" :application-data-object
+   "Deliverable" :implementation-deliverable
+   "Driver" :motivation-driver
+   "Goal" :motivation-goal
    "Node" :technology-node
+   "Outcome" :motivation-outcome
+   "Principle" :motivation-principle
+   "Product" :business-product
+   "Requirement" :motivation-requirement
    "SystemSoftware" :technology-system-software
    "TechnologyFunction" :technology-function
    "TechnologyInterface" :technology-interface
    "TechnologyProcess" :technology-process
-   "TechnologyService" :technology-service})
+   "TechnologyService" :technology-service
+   "WorkPackage" :implementation-workpackage})
 
 (defn rel-types-map
   [type]
@@ -231,25 +243,36 @@
       (keyword)))
 
 (defn add-element
-  [context item]
-  (let [id (get-id item)
-        xtype (get-xtype item)
-        name (get-in item [:attrs :name])
-        idx (get-idx id)]
-    (cons id
-          (case xtype
-            "Grouping" (abd/add-grouping context idx name)
-            "Junction" (let [jt (keyword (get-type item "and"))]
-                         (abd/add-connector context jt idx name))
-            (abd/add-element context (element-kinds-map xtype) idx name)))))
+  ([context item]
+   (add-element context item nil))
+  ([context item names-replacer]
+   (let [id (get-id item)
+         xtype (get-xtype item)
+         name (get-in item [:attrs :name])
+         name (if names-replacer
+                 (names-replacer name)
+                 name)
+         idx (get-idx id)]
+     (cons id
+           (case xtype
+             "Grouping" (abd/add-grouping context idx name)
+             "Junction" (let [jt (keyword (get-type item "and"))]
+                          (abd/add-connector context jt idx name))
+             (let [kind (element-kinds-map xtype)]
+               (if kind
+                 (abd/add-element context kind idx name)
+                 (throw (ex-info (str "Undefined " xtype)
+                                 {:type xtype :id id :name name})))))))))
 
 (defn add-elements
-  [context elements]
-  (reduce (fn [acc item]
-            (let [[id ctx element] (add-element acc item)]
-              (assoc-in ctx [:misc :archi id] element)))
-          context
-          elements))
+  ([context elements]
+   (add-elements context elements nil))
+  ([context elements names-replacer]
+   (reduce (fn [acc item]
+             (let [[id ctx element] (add-element acc item names-replacer)]
+               (assoc-in ctx [:misc :archi id] element)))
+           context
+           elements)))
 
 (defn add-relations
   [context relations]
@@ -257,6 +280,7 @@
             (let [gef #(get-in acc [:misc :archi (get-in item [:attrs %])])
                   source (gef :source)
                   target (gef :target)
+                  strength (get-in item [:attrs :strength])
                   type (rel-types-map (get-xtype item))
                   type2 (if (= :access type)
                           (case (get-in item [:attrs :accessType])
@@ -266,16 +290,20 @@
                             "3" :access_rw)
                           type)
                   dir (when (= :specialization type2) :up)
-                  desc (get-in item [:attrs :name])]
-              (abd/add-relation acc source target type2 dir desc)))
+                  desc (or strength (get-in item [:attrs :name]))]
+              #_(abd/add-relation acc source target type2 nil desc)
+              (abd/add-relation acc source target type2 dir desc)
+              ))
           context
           relations))
 
 (defn get-full-graph
-  [model]
-  (-> abd/init-context
-      (add-elements (:elements model))
-      (add-relations (:relations model))))
+  ([model]
+   (get-full-graph model nil))
+  ([model names-replacer]
+   (-> abd/init-context
+       (add-elements (:elements model) names-replacer)
+       (add-relations (:relations model)))))
 
 (declare add-inner)
 (defn add-child-element
@@ -304,12 +332,24 @@
 
 (defn get-views-graph
   [model & view-names]
-  (let [submodel (reduce (fn [acc view-name]
+  (let [names-replacer (last view-names)
+        names-replacer2 (when-not (string? names-replacer)
+                          names-replacer)
+        view-names (if names-replacer2
+                     (drop-last view-names)
+                     view-names)
+        view-names2 (if (empty? view-names)
+                      (keys (get-in model [:maps :views]))
+                      view-names)
+        submodel (reduce (fn [acc view-name]
                            (let [view (get-in model [:maps :views view-name])]
                              (reduce (partial add-child-element model)
                                      acc
                                      (:content view))))
                          {:elements []
                           :relations []}
-                         view-names)]
-    (get-full-graph submodel)))
+                         view-names2)]
+    (-> (get-full-graph submodel names-replacer2)
+        (update :relations (partial mg/erase-transitive-relationships
+                                    #{:aggregation :composition}))
+        (assoc-in [:start :title] (s/join ", " view-names)))))

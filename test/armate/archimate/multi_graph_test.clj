@@ -124,7 +124,7 @@
          (mg/erase-transitive-relationships #{:assignment :realization} transitive-graph-diff-rels)))
   (is (= (update small-trans-graph :a dissoc :c)
          (mg/erase-transitive-relationships #{:assignment :realization} small-trans-graph)))
-  (is (= (update small-trans-graph "acp35" dissoc "asv30")
+  (is (= (update real-trans-graph "acp35" dissoc "asv30")
          (mg/erase-transitive-relationships #{:assignment :realization} real-trans-graph))))
 
 (deftest detect-cyclic1-relationships-test

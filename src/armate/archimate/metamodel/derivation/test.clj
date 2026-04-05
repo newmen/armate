@@ -15,14 +15,3 @@
     (->> (viz/vizualize {:certain (select-rules rs/certain-rules target)
                          :potential (select-rules rs/potential-rules target)})
          (spit "deriviation.wsd"))))
-
-(comment
-
-  (select-rules rs/certain-rules #{:serving :assignment :realization :flow})
-
-  (viz-between :access_w :assignment)
-
-  (->> (viz/vizualize rs/certain-rules)
-       (spit "deriviation.wsd"))
-
-  )

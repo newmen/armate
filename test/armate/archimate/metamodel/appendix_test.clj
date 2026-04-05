@@ -193,7 +193,7 @@
     (is (= "rO" (get-letters :physical-material :technology-artifact)))
     (is (= "rO" (get-letters :physical-material :technology-device)))
     (is (= "SCGrO" (get-letters :physical-material :physical-material)))
-    (is (= "AO" (get-letters :implementation-event :implementation-deriverable)))
+    (is (= "AO" (get-letters :implementation-event :implementation-deliverable)))
     (is (= "TfO" (get-letters :implementation-event :implementation-plateau)))
     (is (= "CGnO" (get-letters :location :motivation-driver)))
     (is (= "CGaO" (get-letters :location :business-representation)))

@@ -1,9 +1,13 @@
 (ns armate.archimate.metamodel.derivation.match
   (:require [clojure.tools.logging :as log]
+            [clojure.set :as o]
             [armate.archimate.metamodel.derivation.rules :as drs]
             [armate.archimate.metamodel.solver :as slv]
             [armate.archimate.multi-graph :as mg]
             [armate.utils :as u]))
+
+(def log-each-step 100)
+(def log-sub-step? false)
 
 (defn get-rel-wieght
   [rel]
@@ -38,7 +42,7 @@
 
 (defn num-to-desc
   [num]
-  (let [char (if (pos? num) \+ \—)]
+  (let [char (if (pos? num) \+ \-)]
     (apply str (repeat (Math/abs num) char))))
 
 (defn calc-influence
@@ -55,10 +59,10 @@
     (when-not (zero? result)
       (num-to-desc result))))
 
-(defn get-passing-desc
+(defn get-passing-rels
   [[[orig-rel f1 t1] [next-rel f2 t2] [result-rel fr tr]]
    iter-map f t c]
-  (when (= :influence result-rel)
+  (if (= :influence result-rel)
     (let [{forward-graph :forward-graph
            reverse-graph :reverse-graph} iter-map
           i? (partial = :influence)
@@ -78,15 +82,8 @@
                     (#{f2 t2} t1) [c t])]))]
       (->> (mapcat (partial get-in graph) fts)
            (filter (comp (partial = :influence) :type))
-           (filter :desc)
-           (map :desc)
-           (calc-influence)))))
-
-(defn get-relation
-  [graph from to relation-type]
-  (->> (get-in graph [from to])
-       (some #(when (= relation-type (:type %))
-                %))))
+           (set)))
+    #{{:type result-rel}}))
 
 (defn match-rule
   [restricted? from to iter-map rule]
@@ -94,32 +91,30 @@
         {forward-graph :forward-graph
          reverse-graph :reverse-graph
          derivated-graph :derivated-graph} iter-map
-        gpdf (partial get-passing-desc rule)
-        has-relation? (fn [graph f t] (get-relation graph f t result-rel))
-        add-relation (fn [acc f t c]
-                       (let [grf (fn []
-                                   (let [relation {:type result-rel}
-                                         passing-desc (gpdf acc f t c)]
-                                     (if passing-desc
-                                       (assoc relation :desc passing-desc)
-                                       relation)))]
-                         (if (has-relation? forward-graph f t)
-                           (if (has-relation? derivated-graph f t)
-                             acc
-                             (update-in acc [:derivated-graph f t] u/fnil-conj-set (grf)))
-                           (if (restricted? f t c result-rel)
-                             acc
-                             (let [relation (grf)]
-                               (-> acc
-                                   (update-in [:forward-graph f t] u/fnil-conj-set relation)
-                                   (update-in [:reverse-graph t f] u/fnil-conj-set relation)
-                                   (update-in [:derivated-graph f t] u/fnil-conj-set relation)
-                                   (update :derivated-relations conj [f t result-rel])))))))
+        add-relations (fn [acc f t c]
+                        (let [relations (get-passing-rels rule acc f t c)
+                              fwd-set (get-in forward-graph [f t] #{})
+                              der-set (get-in derivated-graph [f t] #{})
+                              in-fwd? (o/subset? relations fwd-set)
+                              in-der? (o/subset? relations der-set)]
+                          (cond
+                            ;; Relations already exist in both graphs - skip
+                            (and in-fwd? in-der?) acc
+                            ;; Relations exist in forward-graph but not in derivated-graph
+                            in-fwd? (update-in acc [:derivated-graph f t] u/fnil-union-set relations)
+                            ;; Relations don't exist - check restrictions and add
+                            :else (if (restricted? f t c result-rel)
+                                    acc
+                                    (-> acc
+                                        (update-in [:forward-graph f t] u/fnil-union-set relations)
+                                        (update-in [:reverse-graph t f] u/fnil-union-set relations)
+                                        (update-in [:derivated-graph f t] u/fnil-union-set relations)
+                                        (update :derivated-relations conj [f t result-rel]))))))
         append (cond
-                 (= f1 fr) #(add-relation %1 from %2 to)
-                 (= f1 tr) #(add-relation %1 %2 from to)
-                 (= t1 fr) #(add-relation %1 to %2 from)
-                 (= t1 tr) #(add-relation %1 %2 to from))]
+                 (= f1 fr) #(add-relations %1 from %2 to)
+                 (= f1 tr) #(add-relations %1 %2 from to)
+                 (= t1 fr) #(add-relations %1 to %2 from)
+                 (= t1 tr) #(add-relations %1 %2 to from))]
     (->> (cond
            (= f1 f2) (forward-graph from)
            (= f1 t2) (reverse-graph from)
@@ -138,10 +133,10 @@
                                (map (juxt first second (comp :type last)))
                                (into clojure.lang.PersistentQueue/EMPTY))
          n 1]
-    (when (zero? (mod n 1000))
-      (log/info (str "Derivation sub-step " n ", follow " (count follow-relations) " relations")))
     (if (empty? follow-relations)
-      derivated-graph
+      (do (when log-sub-step?
+            (log/info (str "Derivation sub-step " n ", follow " (count follow-relations) " relations")))
+          derivated-graph)
       (let [[from to rel] (first follow-relations)
             iter-map (reduce (partial match-rule restricted? from to)
                              {:forward-graph forward-graph
@@ -164,6 +159,36 @@
    (let [rules-map (make-rules-map rules)]
      (derivate-relationships-by-map restricted? rules-map graph include-new-derivated?))))
 
+(defn merge-influence-relations
+  "Merges multiple :influence relations with different :desc into a single one.
+   For each pair of vertices, all :influence relations are combined using calc-influence.
+   Returns a set of relations."
+  [rels]
+  (let [rels-set (if (set? rels) rels (set rels))
+        influence-rels (filter #(= :influence (:type %)) rels-set)
+        other-rels (filter #(not= :influence (:type %)) rels-set)
+        influence-descs (map :desc influence-rels)
+        merged-influence (when (seq influence-rels)
+                           (let [merged-desc (calc-influence (filter identity influence-descs))]
+                             (if merged-desc
+                               {:type :influence :desc merged-desc}
+                               {:type :influence})))]
+    (if merged-influence
+      (set (conj other-rels merged-influence))
+      (set other-rels))))
+
+(defn merge-graph-influence
+  "Merges all :influence relations in the graph.
+   Returns a graph with sets as leaf values."
+  [graph]
+  (->> graph
+       (map (fn [[from tos]]
+              [from (->> tos
+                         (map (fn [[to rels]]
+                                [to (merge-influence-relations rels)]))
+                         (into {}))]))
+       (into {})))
+
 (defn derivate-relationships
   [restricted? rules source-graph]
   ;; {:pre (every? drs/valid? rules)} ; already checked by rules_test/check-invariants-test
@@ -171,13 +196,15 @@
     (loop [graph source-graph
            derivated-graph {}
            n 1]
-      (log/info (str "Derivation step " n))
+      (when (zero? (mod n log-each-step))
+        (log/info (str "Derivation step " n)))
       (let [next-derivated-graph (derivate-relationships-by-map restricted?
                                                                 rules-map
                                                                 graph
                                                                 true)]
-        (if (= derivated-graph next-derivated-graph)
-          derivated-graph
+        (if (= next-derivated-graph derivated-graph)
+          ;; Merge all :influence relations with different :desc before returning
+          (merge-graph-influence derivated-graph)
           (recur (slv/merge-into graph next-derivated-graph)
                  (slv/merge-into derivated-graph next-derivated-graph)
                  (inc n)))))))

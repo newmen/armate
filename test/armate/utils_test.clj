@@ -7,6 +7,10 @@
   (is (= {:a #{2}} (update {} :a u/fnil-conj-set 2)))
   (is (= {:a #{1 2}} (update {:a #{1}} :a u/fnil-conj-set 2))))
 
+(deftest fnil-union-set-test
+  (is (= {:a #{:x :y}} (update {:a #{:x}} :a u/fnil-union-set #{:y})))
+  (is (= {:a #{:x} :b #{:y}} (update {:a #{:x}} :b u/fnil-union-set #{:y}))))
+
 (deftest dissoc-if-nil-test
   (is (= {:a 1}
          (u/dissoc-if-nil {:a 1 :b nil} :b)))

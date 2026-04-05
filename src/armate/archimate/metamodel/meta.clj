@@ -64,7 +64,7 @@
                                               :technology-passive #{:technology-artifact
                                                                     :physical-material}
                                               :implementation-gap #{}
-                                              :implementation-deriverable #{}}
+                                              :implementation-deliverable #{}}
                                     :strategy-resource #{}}
                         :motivation {:motivation-stakeholder #{}
                                      :motivation-meaning #{}
@@ -106,7 +106,7 @@
           :location #{}}
    :implementation #{:implementation-workpackage
                      :implementation-event
-                     :implementation-deriverable
+                     :implementation-deliverable
                      :implementation-gap
                      :implementation-plateau}})
 
@@ -286,7 +286,7 @@
                             :application-interface #{:realization}}
      :implementation-workpackage {:implementation-workpackage #{:triggering :flow}
                                   :implementation-event #{:triggering :flow}
-                                  :implementation-deriverable #{:access :access_r :access_w :access_rw :realization} ; realization here is depricated
+                                  :implementation-deliverable #{:access :access_r :access_w :access_rw :realization} ; realization here is depricated
                                   [:structure #{:strategy :core}] #{:realization}
                                   [:behavior #{:strategy :core}] #{:realization}
                                   :business-product #{:realization}
@@ -294,9 +294,9 @@
                                   :motivation-requirement #{:influence :realization}}
      :implementation-event {:implementation-workpackage #{:triggering :flow}
                             :implementation-event #{:triggering :flow}
-                            :implementation-deriverable #{:access :access_r :access_w :access_rw}
+                            :implementation-deliverable #{:access :access_r :access_w :access_rw}
                             :implementation-plateau #{:triggering}}
-     :implementation-deriverable {:implementation-plateau #{:realization}
+     :implementation-deliverable {:implementation-plateau #{:realization}
                                   [:structure #{:strategy :core}] #{:realization}
                                   [:behavior #{:strategy :core}] #{:realization}
                                   :business-product #{:realization}

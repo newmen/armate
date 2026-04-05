@@ -59,51 +59,51 @@
 
 (deftest num-to-desc-test
   (is (= "++" (mch/num-to-desc 2)))
-  (is (= "——" (mch/num-to-desc -2))))
+  (is (= "--" (mch/num-to-desc -2))))
 
 (deftest calc-influence-test
   (is (= "+" (mch/calc-influence ["+"])))
   (is (= "++" (mch/calc-influence ["+" "++"])))
   (is (= "+" (mch/calc-influence ["+" "++" "—"])))
-  (is (= "—" (mch/calc-influence ["—"])))
-  (is (= "——" (mch/calc-influence ["—" "——"])))
+  (is (= "-" (mch/calc-influence ["—"])))
+  (is (= "--" (mch/calc-influence ["—" "——"])))
   (is (nil? (mch/calc-influence ["+" "—"]))))
 
-(deftest get-passing-desc-test
+(deftest get-passing-rels-test
   (let [forward-graph {"a" {"b" #{{:type :realization}}}
                        "b" {"c" #{{:type :influence :desc "++"}}}}]
-    (is (= "++"
-           (mch/get-passing-desc [[:realization :a :b] [:influence :b :c] [:influence :a :c]]
+    (is (= #{{:type :influence :desc "++"}}
+           (mch/get-passing-rels [[:realization :a :b] [:influence :b :c] [:influence :a :c]]
                                  (get-im forward-graph)
                                  "a" "c" "b"))))
   (let [forward-graph {"a" {"b" #{{:type :realization}}}
                        "c" {"b" #{{:type :influence :desc "++"}}}}]
-    (is (= "++"
-           (mch/get-passing-desc [[:influence :c :b] [:realization :a :b] [:influence :c :a]]
+    (is (= #{{:type :influence :desc "++"}}
+           (mch/get-passing-rels [[:influence :c :b] [:realization :a :b] [:influence :c :a]]
                                  (get-im forward-graph)
                                  "c" "a" "b"))))
   (let [forward-graph {"a" {"b" #{{:type :realization}}}
                        "c" {"a" #{{:type :influence :desc "++"}}}}]
-    (is (= "++"
-           (mch/get-passing-desc [[:influence :c :a] [:realization :a :b] [:influence :c :b]]
+    (is (= #{{:type :influence :desc "++"}}
+           (mch/get-passing-rels [[:influence :c :a] [:realization :a :b] [:influence :c :b]]
                                  (get-im forward-graph)
                                  "c" "b" "a"))))
   (let [forward-graph {"a" {"b" #{{:type :realization}}
                             "c" #{{:type :influence :desc "++"}}}}]
-    (is (= "++"
-           (mch/get-passing-desc [[:influence :a :c] [:realization :a :b] [:influence :b :c]]
+    (is (= #{{:type :influence :desc "++"}}
+           (mch/get-passing-rels [[:influence :a :c] [:realization :a :b] [:influence :b :c]]
                                  (get-im forward-graph)
                                  "b" "c" "a"))))
   (let [forward-graph {"a" {"b" #{{:type :influence :desc "+"}}}
                        "b" {"c" #{{:type :influence :desc "++"}}}}]
-    (is (= "++"
-           (mch/get-passing-desc [[:influence :a :b] [:influence :b :c] [:influence :a :c]]
+    (is (= #{{:type :influence :desc "+"} {:type :influence :desc "++"}}
+           (mch/get-passing-rels [[:influence :a :b] [:influence :b :c] [:influence :a :c]]
                                  (get-im forward-graph)
                                  "a" "c" "b"))))
   (let [forward-graph {"a" {"b" #{{:type :influence :desc "++"}}}
                        "b" {"c" #{{:type :influence :desc "+"}}}}]
-    (is (= "++"
-           (mch/get-passing-desc [[:influence :a :b] [:influence :b :c] [:influence :a :c]]
+    (is (= #{{:type :influence :desc "+"} {:type :influence :desc "++"}}
+           (mch/get-passing-rels [[:influence :a :b] [:influence :b :c] [:influence :a :c]]
                                  (get-im forward-graph)
                                  "a" "c" "b")))))
 
@@ -277,3 +277,30 @@
   (is (empty? (mch/derivate-relationships restricted? drs/certain-rules graph-g)))
   (is (= {"service1" {"service2" #{{:type :serving}}}}
          (mch/derivate-relationships restricted? drs/potential-rules graph-g))))
+
+(deftest derivate-relationships-influence-desc-test
+  (is (= {"a" {"d" #{{:type :influence :desc "++"}}}}
+         (mch/derivate-relationships restricted? drs/certain-rules
+                                     {"a" {"b" #{{:type :realization}}
+                                           "c" #{{:type :realization}}}
+                                      "b" {"d" #{{:type :influence :desc "++"}}}
+                                      "c" {"d" #{{:type :influence :desc "+"}}}})))
+  (is (= {"a" {"d" #{{:type :realization}}
+               "c" #{{:type :influence}}}
+          "b" {"c" #{{:type :influence :desc "-"}}}}
+         (mch/derivate-relationships restricted? drs/certain-rules
+                                     {"a" {"b" #{{:type :realization}}}
+                                      "b" {"c" #{{:type :influence :desc "+"}}
+                                           "d" #{{:type :realization}}}
+                                      "d" {"c" #{{:type :influence :desc "-"}}}}))))
+
+(deftest derivate-struct-infl-chains-test
+  (let [graph {"3nf" {"easy" #{{:type :influence :desc "-"}}
+                      "strong" #{{:type :influence :desc "++"}}}
+               "main" {"easy" #{{:type :aggregation}}
+                       "fix" #{{:type :aggregation}}}
+               "strong" {"fix" #{{:type :realization}}}}]
+    (is (= {"3nf" {"main" #{{:type :influence :desc "-"}}}}
+           (mch/derivate-relationships restricted? drs/certain-rules graph)))
+    (is (= {"3nf" {"fix" #{{:type :influence :desc "++"}}}}
+           (mch/derivate-relationships restricted? drs/potential-rules graph)))))

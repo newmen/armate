@@ -1,10 +1,14 @@
-(ns armate.utils)
+(ns armate.utils
+  (:require [clojure.set :as o]))
 
 (def fnil-into-set
   (fnil into #{}))
 
 (def fnil-conj-set
   (fnil conj #{}))
+
+(def fnil-union-set
+  (fnil o/union #{}))
 
 (defn dissoc-if-nil
   [hm & ks]

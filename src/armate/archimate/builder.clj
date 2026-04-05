@@ -8,10 +8,20 @@
 
 (def max-alias-length 28)
 
+(def title-generated-at-prefix
+  "Generated at ")
+
 (def kind-aliases
-  {:business-actor "ba"
+  {:motivation-assessment "ma"
+   :motivation-constraint "mc"
+   :motivation-driver "md"
+   :motivation-goal "mg"
+   :motivation-principle "mp"
+   :motivation-requirement "mr"
+   :business-actor "ba"
    :business-role "brl"
    :business-collaboration "bcb"
+   :business-contract "bc"
    :business-object "bo"
    :business-interface "bif"
    :business-event "be"
@@ -34,7 +44,9 @@
    :technology-system-software "tss"
    :technology-function "tfn"
    :technology-process "tpc"
-   :technology-service "tsv"})
+   :technology-service "tsv"
+   :implementation-deliverable "idv"
+   :implementation-workpackage "iwp"})
 
 (defn get-sprite-name
   [kind]
@@ -264,7 +276,7 @@
           connector])))))
 
 (def init-context
-  {:start {:title (str "Generated at " (Instant/now))}
+  {:start {:title (str title-generated-at-prefix (Instant/now))}
    :misc {} ; a cache of already created elements
    :includes {"archimate/Archimate" {:package "archimate/Archimate"}}
    :types (into {} (map (fn [[kind _]]

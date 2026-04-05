@@ -7,9 +7,15 @@
             [armate.archimate.multi-graph :as mg]
             [armate.utils :as u]))
 
+(defn- get-relation
+  [graph from to relation-type]
+  (->> (get-in graph [from to])
+       (some #(when (= relation-type (:type %))
+                %))))
+
 (defn- append-relation
   [context from to relation]
-  (if-let [r (mch/get-relation (:relations context) from to (:type relation))]
+  (if-let [r (get-relation (:relations context) from to (:type relation))]
     (let [rs (get-in context [:relations from to])
           rs2 (disj rs r)
           rs3 (conj rs2 (-> r

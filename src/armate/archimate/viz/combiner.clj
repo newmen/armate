@@ -21,6 +21,8 @@
 
 (def indent "  ")
 
+(def add-default-skins? false)
+
 (def sort-line-key
   #(:line % 999999))
 
@@ -226,24 +228,53 @@
          (sf)
          (mapcat get-relation))))
 
+(defn filter-skins
+  [skins add-group-skin?]
+  (if add-default-skins?
+    (if add-group-skin?
+      skins
+      (dissoc skins ["folder" "grouping"]))
+    (if add-group-skin?
+      (dissoc skins [:default] ["rectangle"])
+      {})))
+
+(defn get-holder-types
+  [context]
+  (let [elements (:elements context)]
+    (->> (vals elements)
+         (map :in)
+         (set)
+         (map elements)
+         (map :type)
+         (set))))
+
+(defn has-group-element?
+  [context]
+  (->> (:elements context)
+       (vals)
+       (map :kind)
+       (some #{:grouping :group})))
+
 (defn generate-puml
   ([context]
    (generate-puml sbl-map
                   (partial get-relations mg/get-relationships)
                   context))
   ([elf relf context]
-   (->> [(get-start (:start context))
-         (sbl-map get-include (:includes context))
-         (sbl-map get-skin (:skins context))
-         (sbl-map get-type (:types context))
-         (sbl-map get-connector (:connectors context))
-         (elf get-element (nest-inside (:elements context)))
-         (relf :relations context)
-         (relf :hidden context)
-         end]
-        (remove empty?)
-        (map (partial s/join "\n"))
-        (s/join "\n\n"))))
+   (let [holder-types (get-holder-types context)
+         group? (has-group-element? context)]
+     (->> [(get-start (:start context))
+           (sbl-map get-include (:includes context))
+           (sbl-map get-skin (filter-skins (:skins context) group?))
+           (sbl-map get-type (select-keys (:types context) holder-types))
+           (sbl-map get-connector (:connectors context))
+           (elf get-element (nest-inside (:elements context)))
+           (relf :relations context)
+           (relf :hidden context)
+           end]
+          (remove empty?)
+          (map (partial s/join "\n"))
+          (s/join "\n\n")))))
 
 (defn kind-index
   [kind]

@@ -1,7 +1,7 @@
 (ns armate.archimate.viz.combiner-test
   (:require [clojure.test :refer [deftest is]]
             [armate.archimate.metamodel.derivation.match-test :refer [graph0]]
-            [armate.archimate.parser :as prr]
+            [armate.archimate.plantuml.parser :as prr]
             [armate.archimate.viz.combiner :as viz]))
 
 (deftest get-rels-based-weights-test
@@ -22,19 +22,9 @@
 
 !include <archimate/Archimate>
 
-skinparam {
-  RoundCorner 8
-  Shadowing false
-}
-skinparam rectangle {
-  BorderThickness 1
-}
 skinparam rectangle<<sub>> {
   backgroundColor #99d6ff
 }
-
-sprite $acp jar:archimate/application-component
-sprite $ai jar:archimate/application-interface
 
 Group(a1, \"Application\") #ffaa00 {
   Grouping(b1, \"Grouping\") {
