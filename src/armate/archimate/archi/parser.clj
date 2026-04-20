@@ -223,6 +223,7 @@
    "DataObject" :application-data-object
    "Deliverable" :implementation-deliverable
    "Driver" :motivation-driver
+   "ImplementationEvent" :implementation-event
    "Goal" :motivation-goal
    "Node" :technology-node
    "Outcome" :motivation-outcome
@@ -230,6 +231,7 @@
    "Product" :business-product
    "Requirement" :motivation-requirement
    "SystemSoftware" :technology-system-software
+   "TechnologyEvent" :technology-event
    "TechnologyFunction" :technology-function
    "TechnologyInterface" :technology-interface
    "TechnologyProcess" :technology-process
@@ -250,8 +252,8 @@
          xtype (get-xtype item)
          name (get-in item [:attrs :name])
          name (if names-replacer
-                 (names-replacer name)
-                 name)
+                (names-replacer name)
+                name)
          idx (get-idx id)]
      (cons id
            (case xtype
@@ -269,31 +271,34 @@
    (add-elements context elements nil))
   ([context elements names-replacer]
    (reduce (fn [acc item]
-             (let [[id ctx element] (add-element acc item names-replacer)]
-               (assoc-in ctx [:misc :archi id] element)))
+             (if item
+               (let [[id ctx element] (add-element acc item names-replacer)]
+                 (assoc-in ctx [:misc :archi id] element))
+               acc))
            context
            elements)))
 
 (defn add-relations
   [context relations]
   (reduce (fn [acc item]
-            (let [gef #(get-in acc [:misc :archi (get-in item [:attrs %])])
-                  source (gef :source)
-                  target (gef :target)
-                  strength (get-in item [:attrs :strength])
-                  type (rel-types-map (get-xtype item))
-                  type2 (if (= :access type)
-                          (case (get-in item [:attrs :accessType])
-                            nil :access_w
-                            "1" :access_r
-                            "2" :access
-                            "3" :access_rw)
-                          type)
-                  dir (when (= :specialization type2) :up)
-                  desc (or strength (get-in item [:attrs :name]))]
-              #_(abd/add-relation acc source target type2 nil desc)
-              (abd/add-relation acc source target type2 dir desc)
-              ))
+            (if item
+              (let [gef #(get-in acc [:misc :archi (get-in item [:attrs %])])
+                    source (gef :source)
+                    target (gef :target)
+                    strength (get-in item [:attrs :strength])
+                    type (rel-types-map (get-xtype item))
+                    type2 (if (= :access type)
+                            (case (get-in item [:attrs :accessType])
+                              nil :access_w
+                              "1" :access_r
+                              "2" :access
+                              "3" :access_rw)
+                            type)
+                    dir (when (= :specialization type2) :up)
+                    desc (or strength (get-in item [:attrs :name]))]
+                #_(abd/add-relation acc source target type2 nil desc)
+                (abd/add-relation acc source target type2 dir desc))
+              acc))
           context
           relations))
 
