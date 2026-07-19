@@ -129,6 +129,24 @@
                                           (remove :derivate rels)
                                           rels)))))
 
+(defn generate-filtered-context
+  ([context predicate out-path]
+   (generate-filtered-context context identity predicate out-path))
+  ([context element-predicate relation-predicate out-path]
+   (try
+     (-> context
+         (acl/ungroup)
+         (dissoc :connectors)
+         (dissoc :misc)
+         (filter-elements element-predicate)
+         (filter-relationships :relations relation-predicate)
+         (acl/erase-groups-wihtout-elements element-predicate)
+         (acl/erase-unbinded-elements)
+         (svr/save-puml out-path))
+     (catch clojure.lang.ExceptionInfo e
+       {:msg (ex-message e)
+        :data (ex-data e)}))))
+
 (defn generate-derivate-context
   ([context predicate out-path]
    (generate-derivate-context context identity predicate out-path))

@@ -230,6 +230,7 @@
    "Principle" :motivation-principle
    "Product" :business-product
    "Requirement" :motivation-requirement
+   "Stakeholder" :motivation-stakeholder
    "SystemSoftware" :technology-system-software
    "TechnologyEvent" :technology-event
    "TechnologyFunction" :technology-function
@@ -358,3 +359,16 @@
         (update :relations (partial mg/erase-transitive-relationships
                                     #{:aggregation :composition}))
         (assoc-in [:start :title] (s/join ", " view-names)))))
+
+(defn get-component-names
+  ([context]
+   (get-component-names context []))
+  ([context excess-regexps]
+   (let [component-names (->> (:elements context)
+                              (vals)
+                              (filter (comp (partial = :application-component) :kind))
+                              (map :name))]
+     (reduce (fn [acc excess-regexp]
+               (remove (partial re-find excess-regexp) acc))
+             component-names
+             excess-regexps))))
