@@ -53,6 +53,13 @@
   [item]
   (= :element (:tag item)))
 
+(defn get-file-name
+  [file-path]
+  (-> (s/split file-path #"/")
+      (last)
+      (s/split #"\.")
+      (first)))
+
 (defn read-archi-file
   [file-path]
   (-> (slurp file-path)
@@ -194,9 +201,12 @@
 
 (defn get-model
   [model-path]
-  (->> (read-archi-file model-path)
-       (parse-model)
-       (enrich-model)))
+  (let [model (->> (read-archi-file model-path)
+                   (parse-model)
+                   (enrich-model))]
+    (-> model
+        (assoc :path model-path)
+        (assoc :name (get-file-name model-path)))))
 
 (def element-kinds-map
   {"ApplicationCollaboration" :application-collaboration
