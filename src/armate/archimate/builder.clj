@@ -42,6 +42,7 @@
    :application-interaction "ain"
    :application-service "asv"
    :technology-artifact "ta"
+   :technology-communication-network "tcn"
    :technology-event "te"
    :technology-node "tn"
    :technology-system-software "tss"

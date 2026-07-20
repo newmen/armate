@@ -230,6 +230,7 @@
    "BusinessService" :business-service
    "Contract" :business-contract
    "Constraint" :motivation-constraint
+   "CommunicationNetwork" :technology-communication-network
    "DataObject" :application-data-object
    "Deliverable" :implementation-deliverable
    "Driver" :motivation-driver
