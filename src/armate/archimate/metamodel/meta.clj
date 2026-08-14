@@ -335,13 +335,18 @@
                [:physical])))
 
 (def subject? (o/union (:external-active hierarchy)
-                       (:internal-active hierarchy)))
+                       (:internal-active hierarchy)
+                       (:technology-active hierarchy)))
 
 (def behavior? (o/union (:external-behavior hierarchy)
                         (:internal-behavior hierarchy)
                         (:event hierarchy)))
 
 (def object? (:passive hierarchy))
+
+(def motivation? (:motivation hierarchy))
+
+(def composite? (:composite hierarchy))
 
 (def structural? (:structural hierarchy))
 (def dependency? (:dependency hierarchy))
