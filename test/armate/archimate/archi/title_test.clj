@@ -48,6 +48,11 @@
     (is (= "a/b" (t/normalize-title "a/ b")))
     (is (= "a/b" (t/normalize-title "a /b")))
     (is (= "a/b/c" (t/normalize-title "a/ b/ c"))))
+  (testing "slash with spaces collapsed (exceptional case)"
+    (is (= "POST /api/v1/hello" (t/normalize-title "POST /api/v1/hello")))
+    (is (= "GET /api/v1/hello/{id}" (t/normalize-title "GET /api/v1 /hello/{id}")))
+    (is (= "PATCH /api/v1/hello/{id}" (t/normalize-title "PATCH /api/ v1 /hello /{id}")))
+    (is (= "DELETE /api/v1/hello-world/{id}" (t/normalize-title "DELETE /api/ v1 /hello-world /{id}"))))
   (testing "combined"
     (is (= "Идентификаци/модуль_заказа" (t/normalize-title "Идентифи-каци/ модуль_ заказа"))))
   (testing "no changes"
