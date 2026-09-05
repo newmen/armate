@@ -243,6 +243,7 @@
    "Requirement" :motivation-requirement
    "Stakeholder" :motivation-stakeholder
    "SystemSoftware" :technology-system-software
+   "TechnologyCollaboration" :technology-collaboration
    "TechnologyEvent" :technology-event
    "TechnologyFunction" :technology-function
    "TechnologyInterface" :technology-interface

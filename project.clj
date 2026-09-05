@@ -1,5 +1,5 @@
-(defproject armate "0.1.1-SNAPSHOT"
-  :description "The linter for PlantUML (ArchiMate) diagrams"
+(defproject armate "1.0.0-SNAPSHOT"
+  :description "Analysis ArchiMate diagrams"
   :license {:name "Private"}
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [org.clojure/math.combinatorics "0.3.0"]
@@ -9,4 +9,6 @@
   :jvm-opts ["-Xmx8g"
              "-Djdk.attach.allowAttachSelf"
              "-Dcasc.yaml.max.aliases=\"100\""]
-  :repl-options {:init-ns armate.core})
+  :repl-options {:init-ns armate.core}
+  :profiles {:dev {:source-paths ["dev"]
+                   :resource-paths ["resources"]}})

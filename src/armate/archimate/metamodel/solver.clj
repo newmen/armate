@@ -1,4 +1,4 @@
-(ns armate.archimate.metamodel.solver 
+(ns armate.archimate.metamodel.solver
   (:require [clojure.set :as o]
             [clojure.math.combinatorics :as combo]
             [armate.utils :as u]))

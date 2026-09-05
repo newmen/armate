@@ -5,8 +5,72 @@
   (:import [java.time Instant]))
 
 (def split-title? false)
-
 (def max-alias-length 28)
+(def title-max-length 12)
+
+(defn title-separate
+  ([string]
+   (title-separate title-max-length string))
+  ([max-length string]
+   (->> (s/trim string)
+        (re-seq #"\\n|[\/\#\[\(]?[A-Za-z0-9А-Яа-яЁё_\-]+[,:\]\)]?|\/?\{\w+\}|\s*[\=\+\*]\s*|\s*[\s\.~\?]")
+        (mapcat (fn [part]
+                  (if (< max-length (count part))
+                    (re-seq #"[\/\#\[\(]?[A-Za-z0-9А-Яа-яЁё,]+[\]\)]?|[:_-]" part)
+                    [part]))))))
+
+(defn title-split-long-camel-part
+  [string]
+  (let [first-re #"^[\/#]?[a-zа-я0-9ё]*"
+        first-word (re-find first-re string)
+        tail-words (re-seq #"[A-ZА-ЯЁ][a-zа-я0-9ё]+"
+                           (s/replace-first string first-re ""))]
+    (if (empty? first-word)
+      tail-words
+      (cons first-word tail-words))))
+
+(defn title-split-long-part
+  [string]
+  (let [camel-parts (title-split-long-camel-part string)]
+    (if (seq camel-parts)
+      camel-parts
+      [string])))
+
+(defn title-sqrt-length
+  [string]
+  (int (Math/ceil (* 2 (Math/sqrt (count string))))))
+
+(defn subsplit
+  [string]
+  (let [mlh (max (title-sqrt-length string) title-max-length)]
+    (loop [acc []
+           parts (title-separate mlh string)]
+      (if (empty? parts)
+        (->> (map s/trim acc)
+             (remove empty?)
+             (map (fn [part]
+                    (if (s/starts-with? part "#")
+                      (str " " part)
+                      part)))
+             (s/join "\\n"))
+        (let [part (first parts)
+              tail (rest parts)
+              prev (last acc)
+              curr-length (count prev)
+              part-length (count part)
+              dsub-parts (delay (title-split-long-part part))]
+          (if (= "\\n" part)
+            (recur (conj acc "") tail)
+            (if (> (+ curr-length part-length) mlh)
+              (if (and (> part-length mlh)
+                       (< 1 (count @dsub-parts)))
+                (if (>= 2 curr-length)
+                  (recur (u/replace-last acc (str prev (first @dsub-parts)))
+                         (concat (rest @dsub-parts) tail))
+                  (recur acc (concat @dsub-parts tail)))
+                (recur (conj acc part) tail))
+              (recur (u/replace-last acc (str prev part))
+                     tail))))))))
 
 (def title-generated-at-prefix
   "Generated at ")
@@ -42,6 +106,7 @@
    :application-interaction "ain"
    :application-service "asv"
    :technology-artifact "ta"
+   :technology-collaboration "tcb"
    :technology-communication-network "tcn"
    :technology-event "te"
    :technology-node "tn"
@@ -56,12 +121,6 @@
   [kind]
   (when-let [alias (kind-aliases kind)]
     (str "$" alias)))
-
-(defn cc
-  [id name]
-  (if (and split-title? id)
-    (str id "\\n" name)
-    name))
 
 (defn escape-special-chars
   [raw-name]
@@ -97,21 +156,6 @@
   (when string
     (re-matches #"^\d+$" string)))
 
-(defn- convert-id
-  [id]
-  (try
-    (Integer/parseInt id)
-    (catch Exception _
-      nil)))
-
-(defn- with-id
-  [type-hm id]
-  (if (empty? id)
-    type-hm
-    (u/assoc-if-not-nil type-hm
-                        :id
-                        (convert-id id))))
-
 (defn check-cache
   [context misc-key alias]
   (get-in context [:misc misc-key alias]))
@@ -119,15 +163,13 @@
 (defn get-element-alias
   [patch-f id title kind]
   (let [abrv (kind-aliases kind)]
-    (if id
-      (str abrv (if (only-int? id)
-                  id
-                  (cut-too-long (* 2 max-alias-length) (patch-f id))))
+    (if (only-int? id)
+      (str abrv id)
       (str (patch-f title) "_" abrv))))
 
 (defn add-rectangle
-  ([context patch-f title type-hm]
-   (add-rectangle context patch-f nil title type-hm))
+  ([context patch-f title kind-hm]
+   (add-rectangle context patch-f nil title kind-hm))
   ([context patch-f id title kind-hm]
    (let [kind (:kind kind-hm)
          alias (get-element-alias patch-f id title kind)
@@ -135,19 +177,17 @@
          specie (keyword (s/join "-" (rest kind-parts)))
          layer (keyword (first kind-parts))
          default-params (assoc kind-hm :type (get-sprite-name kind))
-         split-title (if (only-int? id)
-                       (cc id (subsplit title))
-                       (subsplit title))]
+         split-title (if split-title? (subsplit title) title)]
      (if-let [element (check-cache context kind alias)]
        [(update-in context [:elements alias] merge default-params)
         (merge element default-params)]
-       (let [element (-> (with-id default-params id)
-                         (merge {:shape "rectangle"
-                                 :specie specie
-                                 :layer layer
-                                 :title (if (= "" split-title) " " split-title)
-                                 :name title
-                                 :alias alias}))]
+       (let [element (merge default-params
+                            {:shape "rectangle"
+                             :specie specie
+                             :layer layer
+                             :title (if (= "" split-title) " " split-title)
+                             :name title
+                             :alias alias})]
          [(-> context
               (assoc-in [:misc kind alias] element)
               (assoc-in [:elements alias] element))
@@ -290,28 +330,6 @@
    :skins {[:default] {:props [{:parts ["Shadowing" "false"]}]}
            ["rectangle"] {:shape "rectangle"
                           :props [{:parts ["BorderThickness" "1"]}]}
-           ["rectangle" "sub"] {:shape "rectangle"
-                                :alias "sub"
-                                :props [{:parts ["BackgroundColor" "#99d6ff"]}]}
-           ["rectangle" "db"] {:shape "rectangle"
-                               :alias "db"
-                               :props [{:parts ["BackgroundColor" "#85c2ff"]}]}
-           ["rectangle" "platform"] {:shape "rectangle"
-                                     :alias "platform"
-                                     :props [{:parts ["BackgroundColor" "#a6b2b5"]}
-                                             {:parts ["FontColor" "#f1f3f1"]}]}
-           ["rectangle" "deleting"] {:shape "rectangle"
-                                     :alias "deleting"
-                                     :props [{:parts ["BorderColor" "red"]}
-                                             {:parts ["BorderThickness" "3"]}]}
-           ["rectangle" "deprecated"] {:shape "rectangle"
-                                       :alias "deprecated"
-                                       :props [{:parts ["BorderColor" "orange"]}
-                                               {:parts ["BorderThickness" "3"]}]}
-           ["rectangle" "hold"] {:shape "rectangle"
-                                 :alias "hold"
-                                 :props [{:parts ["BorderColor" "green"]}
-                                         {:parts ["BorderThickness" "2"]}]}
            ["folder" "grouping"] {:shape "folder"
                                   :alias "grouping"
                                   :props [{:parts ["Shadowing" "false"]}]}}

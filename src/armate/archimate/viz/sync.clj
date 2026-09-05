@@ -23,14 +23,15 @@
   [model-path out-dir]
   (if (create-dir out-dir)
     (let [model (arr/get-model model-path)
-          model-name (:name model)
-          path-prefix (-> (str out-dir "/" model-name "-")
-                          (s/replace #"//" "/"))]
-      (doseq [[view-key _] (get-in model [:maps :views])]
+          path-prefix (-> (str out-dir "/")
+                          (s/replace #"//" "/"))
+          views (get-in model [:maps :views])]
+      (doseq [[view-key _] views]
         (let [graph (arr/get-views-graph model view-key)
               view-name (s/replace view-key #"\s" "_")
               out-file-path (str path-prefix view-name ".puml")]
           (log/info (str "Creating " out-file-path " ..."))
-          (svr/save-puml graph out-file-path))))
+          (svr/save-puml graph out-file-path)))
+      (println (str (count views) " have been synchronized")))
     (throw (ex-info "Can't craete directory"
                     {:out-dir out-dir}))))

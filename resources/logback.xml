@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-  <property name="DEV_HOME" value="REMOVEDprojects/linter/log" />
-
-  <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-    <file>${DEV_HOME}/armate.log</file>
+<configuration scan="true" scanPeriod="30 seconds">
+  <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>logs/armate.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>logs/armate.%d{yyyy-MM-dd}.log</fileNamePattern>
+      <maxHistory>7</maxHistory>
+    </rollingPolicy>
     <encoder>
-      <pattern>%date{ISO8601} [%thread] %-5level %logger{36} - %msg %n</pattern>
+      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%logger{0}] %msg%n</pattern>
     </encoder>
   </appender>
-  <root level="debug">
+
+  <root level="INFO">
     <appender-ref ref="FILE" />
   </root>
-
 </configuration>
