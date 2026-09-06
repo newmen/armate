@@ -24,7 +24,9 @@
     (cond
       (mt/subject? k) :subject
       (mt/behavior? k) :behavior
-      (mt/object? k) :object)))
+      (mt/object? k) :object
+      (mt/motivation? k) :motivation
+      (mt/composite? k) :composite)))
 
 (get-element-group {:kind :application-event})
 
