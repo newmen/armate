@@ -57,9 +57,23 @@
           (recur rest (+ acc-start i 1) (conj out (str before "-")))))
       (s/join (conj out s)))))
 
+(defn uppercase-latin-word?
+  [word]
+  (re-matches #"[A-Z]+" word))
+
+(defn- collapse-slash-spaces
+  [string]
+  (-> string
+      (s/replace #"/ +" "/")
+      (s/replace #"([A-Za-z0-9-]+) +/"
+                 (fn [[_ word]]
+                   (if (uppercase-latin-word? word)
+                     (str word " /")
+                     (str word "/"))))))
+
 (defn normalize-title
   [string]
   (-> string
       (remove-wrap-hyphens)
       (s/replace #"_ | _" "_")
-      (s/replace #"/ | /" "/")))
+      (collapse-slash-spaces)))
