@@ -19,21 +19,35 @@
 (def escape-derivated
   #{:certain :potential})
 
+(def layer-order
+  {:motivation 0
+   :strategy 1
+   :business 2
+   :application 3
+   :technology 4
+   :implementation 5})
+
+(def default-layer-rank 6)
+
+(defn element-layer-rank
+  [element]
+  (layer-order (:layer element) default-layer-rank))
+
+(defn sort-elements
+  "Elements with :line keep the original file order.
+   Others are ordered by layer (Motivation..Implementation, composite last)
+   and then lexicographically by alias."
+  [items]
+  (let [groups (group-by #(contains? % :line) items)]
+    (concat (sort-by :line (groups true []))
+            (sort-by (juxt element-layer-rank :alias) (groups false [])))))
+
 (def indent "  ")
 
 (def add-default-skins? false)
 
 (def sort-line-key
   #(:line % 999999))
-
-(defn sort-by-lines
-  ([items]
-   (sort-by sort-line-key items))
-  ([weights items]
-   (let [groups (group-by #(contains? % :line) items)]
-     (concat (sort-by-lines (groups true []))
-             (sort-by (comp weights :alias)
-                      (groups false []))))))
 
 (defn wrap-str
   [text]
@@ -61,7 +75,7 @@
   (if (empty? items)
     [title]
     (concat [(str title " {")]
-            (->> (sort-by-lines items)
+            (->> (sort-elements items)
                  (mapcat (comp (partial map (partial str indent)) item-f)))
             ["}"])))
 
@@ -205,28 +219,38 @@
           elements
           (reverse (reorder elements))))
 
-(defn sbl-map-with
+(defn global-map-with
   [sf mf hm]
   (->> (vals hm)
-       (sf)
+       (sort-by sf)
        (mapcat mf)))
 
-(def sbl-map
-  (partial sbl-map-with sort-by-lines))
+(def global-map
+  (partial global-map-with sort-line-key))
 
-(defn ebl-map
-  [weights f hm]
-  (sbl-map-with (partial sort-by-lines weights) f hm))
+(defn element-map
+  [f hm]
+  (->> (vals hm)
+       (sort-elements)
+       (mapcat f)))
+
+(defn relation-sort-key
+  [[from to rel]]
+  [(get rel :line 999999)
+   (if-let [t (:type rel)]
+     (- (mch/get-rel-wieght t))
+     0)
+   (or from "")
+   (or to "")])
 
 (defn- get-relations
   [grsf key context]
-  (let [sf (if (= mg/get-relationships grsf)
-             (partial sort-by (comp sort-line-key last))
-             identity)]
-    (->> (grsf (key context))
-         (remove (comp (o/union #{:nesting :connecting} escape-derivated) :derivate last))
-         (sf)
-         (mapcat get-relation))))
+  (->> (grsf (key context))
+       (remove (comp (o/union #{:nesting :connecting} escape-derivated)
+                     :derivate
+                     last))
+       (sort-by relation-sort-key)
+       (mapcat get-relation)))
 
 (defn filter-skins
   [skins add-group-skin?]
@@ -257,67 +281,23 @@
 
 (defn generate-puml
   ([context]
-   (generate-puml sbl-map
-                  (partial get-relations mg/get-relationships)
+   (generate-puml (partial get-relations mg/get-relationships)
                   context))
-  ([elf relf context]
+  ([relf context]
    (let [holder-types (get-holder-types context)
          group? (has-group-element? context)]
      (->> [(get-start (:start context))
-           (sbl-map get-include (:includes context))
-           (sbl-map get-skin (filter-skins (:skins context) group?))
-           (sbl-map get-type (select-keys (:types context) holder-types))
-           (sbl-map get-connector (:connectors context))
-           (elf get-element (nest-inside (:elements context)))
+           (global-map get-include (:includes context))
+           (global-map get-skin (filter-skins (:skins context) group?))
+           (global-map get-type (select-keys (:types context) holder-types))
+           (global-map get-connector (:connectors context))
+           (element-map get-element (nest-inside (:elements context)))
            (relf :relations context)
            (relf :hidden context)
            end]
           (remove empty?)
           (map (partial s/join "\n"))
           (s/join "\n\n")))))
-
-(defn kind-index
-  [kind]
-  (.indexOf [:business-product
-             :business-service
-             :application-service
-             :application-interface] kind))
-
-(defn get-rels-based-weights
-  [graph]
-  (let [source-weights (->> graph
-                            (map (juxt first
-                                       (fn [[_ nbrs]]
-                                         (->> (vals nbrs)
-                                              (reduce concat)
-                                              (map :type)
-                                              (map mch/get-rel-wieght)
-                                              (reduce +)))))
-                            (into {}))]
-    (->> graph
-         (map (juxt first
-                    (fn [[node nbrs]]
-                      (let [wth #(- (source-weights % 0))]
-                        [(wth node) (reduce + (map (comp wth first) nbrs))]))))
-         (into {}))))
-
-(defn get-out-weights
-  [context]
-  (->> (get-rels-based-weights (:relations context))
-       (map (juxt first (fn [[alias [a b]]]
-                          (let [kind (get-in context [:elements alias :kind])]
-                            [(kind-index kind) (- a) (- b) alias]))))
-       (into {})))
-
-(defn get-total-weights
-  [context]
-  (let [out-weights (get-out-weights context)
-        in-weights (->> (:elements context)
-                        (remove (comp out-weights :alias second))
-                        (map (fn [[alias element]]
-                               [alias [(kind-index (:kind element)) 0 0 alias]]))
-                        (into {}))]
-    (merge in-weights out-weights)))
 
 (defn make-nesting
   [context triple]
@@ -342,10 +322,5 @@
 
 (defn on-fly-generate-puml
   [context]
-  (let [grouped-ctx (make-grouped context)
-        weights (get-total-weights grouped-ctx)
-        grsf (partial mg/get-relationships
-                      (partial sort-by (fn [[from & _]] (weights from))))]
-    (generate-puml (partial ebl-map weights)
-                   (partial get-relations grsf)
-                   grouped-ctx)))
+  (generate-puml (partial get-relations mg/get-relationships)
+                 (make-grouped context)))
