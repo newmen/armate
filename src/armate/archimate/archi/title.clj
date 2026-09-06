@@ -64,12 +64,18 @@
 (defn- collapse-slash-spaces
   [string]
   (-> string
+      ;; "/" with spaces on both sides is left untouched
+      (s/replace #" +/ +" (fn [_] "\u0001"))
+      ;; collapse spaces after "/"
       (s/replace #"/ +" "/")
-      (s/replace #"([A-Za-z0-9-]+) +/"
+      ;; collapse spaces before "/", except when preceded by an uppercase latin word
+      (s/replace #"([A-Za-z0-9]+) +/"
                  (fn [[_ word]]
                    (if (uppercase-latin-word? word)
                      (str word " /")
-                     (str word "/"))))))
+                     (str word "/"))))
+      ;; restore untouched both-sides slashes
+      (s/replace "\u0001" " / ")))
 
 (defn normalize-title
   [string]
