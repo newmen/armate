@@ -5,6 +5,7 @@
             [armate.archimate.metamodel.meta :as mt]
             [armate.archimate.metamodel.appendix :as adx]
             [armate.archimate.model :as model]
+            [armate.archimate.name :as name]
             [armate.archimate.multi-graph :as mg]
             [armate.archimate.viz.common :as vcm]
             [armate.utils :as u]))
@@ -338,10 +339,6 @@
   {:alias (second parts)
    :kind (get-type-kind parts)})
 
-(defn strait-string
-  [title]
-  (s/replace title #"(?s)(\s|\\n)+" " "))
-
 (defn get-rectangle-block
   [parts]
   (let [shape (first parts)
@@ -361,7 +358,7 @@
         layer3 (if color nil layer2)]
     {:shape shape
      :title title
-     :name (strait-string title)
+     :name (name/strait-name title)
      :alias alias
      :type type3
      :skin skin3
@@ -382,7 +379,7 @@
         title2 (cut-quotes title)]
     (merge (get-layer-kind fn-name)
            {:title title2
-            :name (strait-string title2)
+            :name (name/strait-name title2)
             :alias alias
             :type nil
             :color color})))
@@ -392,7 +389,7 @@
   (let [[cap-type alias title color] parts
         title2 (cut-quotes title)]
     {:title title2
-     :name (strait-string title2)
+     :name (name/strait-name title2)
      :alias alias
      :type (keyword (s/lower-case cap-type))
      :kind :grouping
@@ -408,7 +405,7 @@
                  (s/lower-case)
                  (keyword))]
     {:title title2
-     :name (strait-string title2)
+     :name (name/strait-name title2)
      :alias alias
      :type type
      :kind :connector}))

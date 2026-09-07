@@ -1,77 +1,11 @@
 (ns armate.archimate.builder
   (:require [clojure.string :as s]
             [armate.archimate.model :as model]
-            [armate.transliteration :as tl]
+            [armate.archimate.name :as name]
             [armate.utils :as u])
   (:import [java.time Instant]))
 
 (def split-title? false)
-(def max-alias-length 28)
-(def title-max-length 12)
-
-(defn title-separate
-  ([string]
-   (title-separate title-max-length string))
-  ([max-length string]
-   (->> (s/trim string)
-        (re-seq #"\\n|[\/\#\[\(]?[A-Za-z0-9А-Яа-яЁё_\-]+[,:\]\)]?|\/?\{\w+\}|\s*[\=\+\*]\s*|\s*[\s\.~\?]")
-        (mapcat (fn [part]
-                  (if (< max-length (count part))
-                    (re-seq #"[\/\#\[\(]?[A-Za-z0-9А-Яа-яЁё,]+[\]\)]?|[:_-]" part)
-                    [part]))))))
-
-(defn title-split-long-camel-part
-  [string]
-  (let [first-re #"^[\/#]?[a-zа-я0-9ё]*"
-        first-word (re-find first-re string)
-        tail-words (re-seq #"[A-ZА-ЯЁ][a-zа-я0-9ё]+"
-                           (s/replace-first string first-re ""))]
-    (if (empty? first-word)
-      tail-words
-      (cons first-word tail-words))))
-
-(defn title-split-long-part
-  [string]
-  (let [camel-parts (title-split-long-camel-part string)]
-    (if (seq camel-parts)
-      camel-parts
-      [string])))
-
-(defn title-sqrt-length
-  [string]
-  (int (Math/ceil (* 2 (Math/sqrt (count string))))))
-
-(defn subsplit
-  [string]
-  (let [mlh (max (title-sqrt-length string) title-max-length)]
-    (loop [acc []
-           parts (title-separate mlh string)]
-      (if (empty? parts)
-        (->> (map s/trim acc)
-             (remove empty?)
-             (map (fn [part]
-                    (if (s/starts-with? part "#")
-                      (str " " part)
-                      part)))
-             (s/join "\\n"))
-        (let [part (first parts)
-              tail (rest parts)
-              prev (last acc)
-              curr-length (count prev)
-              part-length (count part)
-              dsub-parts (delay (title-split-long-part part))]
-          (if (= "\\n" part)
-            (recur (conj acc "") tail)
-            (if (> (+ curr-length part-length) mlh)
-              (if (and (> part-length mlh)
-                       (< 1 (count @dsub-parts)))
-                (if (>= 2 curr-length)
-                  (recur (u/replace-last acc (str prev (first @dsub-parts)))
-                         (concat (rest @dsub-parts) tail))
-                  (recur acc (concat @dsub-parts tail)))
-                (recur (conj acc part) tail))
-              (recur (u/replace-last acc (str prev part))
-                     tail))))))))
 
 (def title-generated-at-prefix
   "Generated at ")
@@ -123,35 +57,6 @@
   (when-let [alias (kind-aliases kind)]
     (str "$" alias)))
 
-(defn escape-special-chars
-  [raw-name]
-  (s/replace raw-name #"[\"']" ""))
-
-(defn patch-raw-name
-  [raw-name]
-  (-> raw-name
-      (escape-special-chars)
-      (s/replace #"=|-|~|:|#|&|%|\$|\+|\*|\s|\(|\)|\[|\]|\{|\}|\?" "_")
-      (s/replace #"\.|," "__")
-      (s/replace #"/" "___")))
-
-(defn cut-too-long
-  ([raw-name]
-   (if (> (count raw-name) max-alias-length)
-     (subs raw-name 0 max-alias-length)
-     raw-name))
-  ([max-alias-length raw-name]
-   (if (> (count raw-name) max-alias-length)
-     (subs raw-name 0 max-alias-length)
-     raw-name)))
-
-(defn alias-title
-  [raw-name]
-  (-> (s/lower-case raw-name)
-      (cut-too-long)
-      (tl/transliterate)
-      (patch-raw-name)))
-
 (defn only-int?
   [string]
   (when string
@@ -178,7 +83,7 @@
          specie (keyword (s/join "-" (rest kind-parts)))
          layer (keyword (first kind-parts))
          default-params (assoc kind-hm :type (get-sprite-name kind))
-         split-title (if split-title? (subsplit title) title)]
+         split-title (if split-title? (name/lex-name title) title)]
      (if-let [element (check-cache context kind alias)]
        [(model/merge-element context alias default-params)
         (merge element default-params)]
@@ -195,7 +100,7 @@
 (defn add-element
   [context kind id name]
   (add-rectangle context
-                 alias-title
+                 name/alias-title
                  id
                  name
                  {:kind kind}))
@@ -233,14 +138,14 @@
    (add-interface context nil interface-name add-params))
   ([context alias interface-name add-params]
    (add-rectangle context
-                  patch-raw-name
+                  name/patch-raw-name
                   alias interface-name
                   (merge add-params
                          {:kind :application-interface}))))
 
 (defn get-interface
   [context interface-name]
-  (let [alias (get-element-alias patch-raw-name nil
+  (let [alias (get-element-alias name/patch-raw-name nil
                                  interface-name :application-interface)]
     (model/element context alias)))
 
@@ -249,7 +154,7 @@
    (add-component context nil component-name {}))
   ([context alias component-name add-params]
    (add-rectangle context
-                  alias-title
+                  name/alias-title
                   alias component-name
                   (merge add-params
                          {:kind :application-component}))))
@@ -259,7 +164,7 @@
    (add-app-collaboration context collaboration-name {}))
   ([context collaboration-name add-params]
    (add-rectangle context
-                  alias-title
+                  name/alias-title
                   collaboration-name
                   (merge {:skin "platform"}
                          add-params
@@ -268,18 +173,18 @@
 (defn add-software
   [context software-name]
   (add-rectangle context
-                 patch-raw-name
+                 name/patch-raw-name
                  software-name
                  {:kind :technology-system-software}))
 
 (defn add-grouping
   ([context group-name]
-   (let [title (escape-special-chars group-name)
-         alias (str (alias-title title) "_g")]
+   (let [title (name/escape-special-chars group-name)
+         alias (str (name/alias-title title) "_g")]
      (add-grouping context alias group-name)))
   ([context alias-or-id group-name]
    (let [kind :grouping
-         title (escape-special-chars group-name)
+         title (name/escape-special-chars group-name)
          alias (if (only-int? alias-or-id)
                  (str "g" alias-or-id)
                  alias-or-id)]
@@ -295,12 +200,12 @@
 
 (defn add-connector
   ([context type junction-name]
-   (let [title (escape-special-chars junction-name)
-         alias (str (alias-title title) "_jc")]
+   (let [title (name/escape-special-chars junction-name)
+         alias (str (name/alias-title title) "_jc")]
      (add-connector context type alias junction-name)))
   ([context type alias-or-id junction-name]
    (let [kind :connector
-         title (escape-special-chars junction-name)
+         title (name/escape-special-chars junction-name)
          alias (if (only-int? alias-or-id)
                  (str "jc" alias-or-id)
                  alias-or-id)]
@@ -308,7 +213,7 @@
         [context connector]
         (let [connector (-> (merge {:kind kind
                                     :type type
-                                    :title (subsplit title)
+                                    :title (name/lex-name title)
                                     :name title
                                     :alias alias}))]
           [(model/add-connector context alias connector)

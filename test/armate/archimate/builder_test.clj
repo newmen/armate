@@ -1,10 +1,10 @@
 (ns armate.archimate.builder-test
   (:require [clojure.test :refer [deftest is]]
-            [armate.archimate.builder :as abd]))
+            [armate.archimate.name :as name]))
 
 (deftest patch-raw-name-test
-  (is (= "" (abd/patch-raw-name "")))
+  (is (= "" (name/patch-raw-name "")))
   (is (= "hello_world_"
-         (abd/patch-raw-name "hello-world?")))
+         (name/patch-raw-name "hello-world?")))
   (is (= "hello___world___"
-         (abd/patch-raw-name "hello *(world)+?"))))
+         (name/patch-raw-name "hello *(world)+?"))))

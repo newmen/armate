@@ -180,6 +180,31 @@
                                                   :h {:kind :application-component}}}
                                       (alg/build-up-down-map graph)))))))
 
+(deftest append-hidden-aligns-test
+  (is (= {:hidden {}}
+         (alg/append-hidden-aligns {})))
+  (let [context {:relations {:a {:b #{{:type :composition :direction :down}}
+                                  :c #{{:type :assignment :direction :up}}
+                                  :d #{{:type :assignment :direction :up}}
+                                  :f #{{:type :assignment :direction :up}}}
+                              :b {:e #{{:type :assignment :direction :up}}}}
+                 :elements {:a {:kind :application-component}
+                            :b {:kind :application-component}
+                            :c {:kind :application-interface}
+                            :d {:kind :application-interface}
+                            :e {:kind :application-interface}
+                            :f {:kind :application-interface}}}
+        expected {:c {:f #{{:from :application-interface
+                            :to :application-interface
+                            :raw "-[hidden]->"}}}
+                  :d {:f #{{:from :application-interface
+                            :to :application-interface
+                            :raw "-[hidden]->"}}}}]
+    (is (= expected
+           (with-redefs [alg/max-in-row 1
+                         alg/too-many-rels 2]
+             (:hidden (alg/append-hidden-aligns context)))))))
+
 (deftest calc-hiddens-test
   (is (= {} (alg/calc-hiddens {})))
   (is (= {:c {:f #{{:from :application-interface

@@ -2,9 +2,9 @@
   (:require [clojure.tools.logging :as log]
             [clojure.string :as s]
             [clojure.xml :as xml]
-            [armate.archimate.archi.title :as tit]
             [armate.archimate.builder :as abd]
             [armate.archimate.model :as model]
+            [armate.archimate.name :as name]
             [armate.archimate.multi-graph :as mg])
   (:import [java.io ByteArrayInputStream]))
 
@@ -266,7 +266,7 @@
    (let [id (get-id item)
          xtype (get-xtype item)
          name (get-in item [:attrs :name])
-         name (tit/normalize-title name)
+         name (name/normalize-name name)
          name (if names-replacer
                 (names-replacer name)
                 name)
