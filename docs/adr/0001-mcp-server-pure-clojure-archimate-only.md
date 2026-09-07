@@ -1,0 +1,12 @@
+# 0001: MCP server in pure Clojure, sourcing `.archimate` only
+
+We expose armate's analytics to an agent through a Model Context Protocol (MCP) server over stdio, launched as an uberjar under Leiningen. The server is hand-rolled pure Clojure: JSON-RPC 2.0 over stdio (like `clojure/data.json`, following the existing `mcp` (@/Users/alfa/projects/clojure/mcp) reference project's `mcp.server`) with no third-party MCP SDK. The model source is `.archimate` files only; PlantUML is an output format, never a model source. Derivation is scoped by rule kind: `certain` globally over the whole loaded model (lazily cached in the registry), `potential` locally over the sub-context of target views under an element-count cap.
+
+The MCP server lives inside the armate repo for now; it may be split out later by extracting armate as a library and wiring a separately-implemented MCP server to it.
+
+We chose this over a Node/TypeScript MCP shell delegating to the JVM, over a third-party Clojure MCP SDK, and over ingesting sets of PlantUML files as model sources. The existing analysis pipeline is wholly Clojure and already owns parsing, derivation, and rendering; a hand-rolled stdio server keeps that invariant with zero extra runtime or IPC layer, and mirrors the maintained `mcp` reference implementation the team already knows. Restricting the source to `.archimate` keeps view identity and relationship semantics unambiguous (a view is a named diagram; a relationship is a first-class id'd object) — properties that a PlantUML intake would have to re-derive with lossy heuristics. Splitting derivation scope by rule kind preserves the global consistency of `certain` relationships across views while bounding the combinatorial cost of `potential` to a single target sub-context, which is also where the 50-element guard lives.
+
+Considered:
+(1) Node SDK shell delegating to a Clojure sidecar — rejected for the extra runtime and IPC layer with no benefit, since the compute kernel is already Clojure;
+(2) `fi.metosin/mcp-toolkit` / `org.hugoduncan/mcp-clj-server` — rejected per team preference for a dependency-free hand-rolled server following the existing in-house `mcp` project;
+(3) PlantUML sets as model sources — rejected (see above).

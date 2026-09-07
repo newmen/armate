@@ -40,3 +40,17 @@ Do NOT wait to be asked. Store automatically on triggers.
 - Tags (lowercase, hyphenated, include component (auth, database, cli), 2-5 per memory): project, tech, category (required), etc.
 - Importance: 0.8+ critical, 0.5-0.7 standard, 0.3-0.4 minor
 - Relationships: Link related memories when they exist
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked as local markdown files under `.scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` plus `docs/adr/` at the repo root. See `docs/agents/domain.md`.
