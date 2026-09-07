@@ -2,6 +2,11 @@
   (:require [clojure.test :refer [deftest is testing]]
             [armate.archimate.archi.parser :as arr]))
 
+(def demo-path "test/resources/demo.archimate")
+
+(def demo-indexed
+  (first (arr/enrich-with-graph (arr/get-model demo-path))))
+
 (defn- element
   ([id]
    (element id "ApplicationComponent"))
@@ -70,8 +75,36 @@
                  :elements []
                  :relations []}
           [g1 m1] (arr/get-views-graph model)
-          [g2 m2] (arr/get-views-graph model)]
+          [g2 _m2] (arr/get-views-graph model)]
       (is (vector? (arr/get-views-graph model)))
       (is (map? m1))
       (is (= (element-aliases g1) (element-aliases g2))
           "two fresh flagless view parses share element aliases"))))
+
+;; ---------------------------------------------------------------------------
+;; Ticket 01: view-membership metadata (element-views / relation-views)
+;; ---------------------------------------------------------------------------
+
+(deftest view-index-produces-element-views
+  (testing ":element-views maps every placed element alias to the views that place it"
+    (let [ev (:element-views demo-indexed)]
+      (is (seq ev))
+      ;; "Волк" (ba12) is placed in both "Процесс" and "Шахматы" demo views
+      (is (= #{"Процесс" "Шахматы"} (get ev "ba12")))
+      ;; "Петя" (ba27) appears in "Процесс" and "Семья"
+      (is (= #{"Процесс" "Семья"} (get ev "ba27"))))))
+
+(deftest view-index-produces-relation-views
+  (testing ":relation-views maps [from-alias to-alias] {rel-type #{view-names}}"
+    (let [rv (:relation-views demo-indexed)]
+      (is (seq rv))
+      (is (every? (fn [[[from to] types]]
+                    (and (string? from)
+                         (string? to)
+                         (map? types)
+                         (every? keyword? (keys types))))
+                  rv))
+      ;; Дедушка (ba10) --assignment--> Играет в шахматы (bin19) appears in "Семья" and "Шахматы"
+      (is (= (get-in rv [["ba10" "bin19"] :assignment]) #{"Семья" "Шахматы"}))
+      ;; Волк (ba12) --assignment--> Бухает (bpc18) appears in "Процесс"
+      (is (= (get-in rv [["ba12" "bpc18"] :assignment]) #{"Процесс"})))))

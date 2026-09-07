@@ -5,7 +5,8 @@
             [armate.archimate.builder :as abd]
             [armate.archimate.model :as model]
             [armate.archimate.name :as name]
-            [armate.archimate.multi-graph :as mg])
+            [armate.archimate.multi-graph :as mg]
+            [armate.utils :as u])
   (:import [java.io ByteArrayInputStream]))
 
 (defn get-idx
@@ -118,72 +119,6 @@
    :relations (get-relations content)
    :views (get-views content)})
 
-;; (defn search-elements
-;;   [model substr]
-;;   (let [ln (s/lower-case substr)]
-;;     (->> (:elements model)
-;;          (filter (fn [item]
-;;                    (s/includes? (s/lower-case (get-in item [:attrs :name])) ln))))))
-
-;; (defn get-relations-between
-;;   [model target-id source-id]
-;;   (->> (:relations model)
-;;        (filter (fn [{attrs :attrs}]
-;;                  (or (and (= target-id (:target attrs))
-;;                           (= source-id (:source attrs)))
-;;                      (and (= target-id (:source attrs))
-;;                           (= source-id (:target attrs))))))))
-
-;; (defn search-relations-between
-;;   [model target-substr source-substr]
-;;   (let [targets (search-elements model target-substr)
-;;         sources (search-elements model source-substr)]
-;;     (set (apply concat
-;;                 (for [target targets
-;;                       source sources]
-;;                   (let [target-id (get-id target)
-;;                         source-id (get-id source)]
-;;                     (->> (get-relations-between model target-id source-id)
-;;                          (map (comp (partial vector target source) get-id)))))))))
-
-;; (defn src-connect?
-;;   [rel-ids item]
-;;   (and (= :sourceConnection (:tag item))
-;;        (rel-ids (get-in item [:attrs :archimateRelationship]))))
-
-;; (defn has-relations?
-;;   [rel-ids view]
-;;   (seq (get-inside #(= :child (:tag %))
-;;                    (partial src-connect? rel-ids)
-;;                    (:content view))))
-
-;; (defn search-view-with-rel-btw
-;;   [model target-substr source-substr]
-;;   (let [rel-ids (->> (search-relations-between model target-substr source-substr)
-;;                      (map last)
-;;                      (into #{}))]
-;;     (->> (:views model)
-;;          (filter (partial has-relations? rel-ids))
-;;          (map #(get-in % [:attrs :name]))
-;;          (into #{}))))
-
-;; (defn has-elements?
-;;   [element-ids view]
-;;   (seq (get-inside #(and (= :child (:tag %))
-;;                          (element-ids (get-in % [:attrs :archimateElement])))
-;;                    identity
-;;                    (:content view))))
-
-;; (defn search-view-with-element
-;;   [model target-substr]
-;;   (let [target-ids (->> (search-elements model target-substr)
-;;                         (map #(get-in % [:attrs :id]))
-;;                         (set))]
-;;     (->> (:views model)
-;;          (filter (partial has-elements? target-ids))
-;;          (map #(get-in % [:attrs :name]))
-;;          (into #{}))))
-
 (defn build-map
   [model key f]
   (->> (model key)
@@ -197,6 +132,9 @@
           :relations (build-map model :relations get-id)
           :views (build-map model :views #(get-in % [:attrs :name]))}})
 
+(declare get-full-graph)
+(declare rel-types-map)
+
 (defn get-model
   [model-path]
   (let [model (->> (read-archi-file model-path)
@@ -205,6 +143,71 @@
     (-> model
         (assoc :path model-path)
         (assoc :name (get-file-name model-path)))))
+
+(defn view-placed-ids
+  "For a view's content, the sets of depicted element-ids and relationship-ids
+   (from `:child/@archimateElement` and `:child/:sourceConnection/@archimateRelationship`)."
+  [view-content]
+  (reduce (fn [acc item]
+            (if (= :child (:tag item))
+              (let [rels (reduce (fn [a conn]
+                                   (if (= :sourceConnection (:tag conn))
+                                     (conj a (get-in conn [:attrs :archimateRelationship]))
+                                     a))
+                                 #{}
+                                 (:content item))]
+                (-> acc
+                    (update :elements conj (get-in item [:attrs :archimateElement]))
+                    (update :relations into rels)))
+              acc))
+          {:elements #{} :relations #{}}
+          view-content))
+
+(defn build-view-indexes
+  "Build the view-membership metadata for an enriched @model (as returned by @get-model):
+   `:element-views {element-alias #{view-names}}` and
+   `:relation-views {[from-alias to-alias] {rel-type #{view-names}}}` keyed by alias.
+
+   @archi-alias is the id→element map (see @enrich-with-graph); it must come from the same
+   full-graph build so aliases match the graph. Pure: threads an accumulator, no mutable
+   state."
+  [model archi-alias]
+  (let [id->alias (fn [id] (get-in archi-alias [id :alias]))
+        find-rel (fn [rid] (get-in model [:maps :relations rid]))]
+    (reduce (fn [acc [view-name view]]
+              (let [{:keys [elements relations]} (view-placed-ids (:content view))]
+                (reduce (fn [a1 eid]
+                          (if-let [alias (id->alias eid)]
+                            (update-in a1 [:element-views alias] u/fnil-conj-set view-name)
+                            a1))
+                        (reduce (fn [a2 rid]
+                                  (if-let [rel (find-rel rid)]
+                                    (let [src (id->alias (get-in rel [:attrs :source]))
+                                          tgt (id->alias (get-in rel [:attrs :target]))
+                                          rtype (rel-types-map (get-xtype rel))]
+                                      (if (and src tgt)
+                                        (update-in a2 [:relation-views [src tgt] rtype]
+                                                   u/fnil-conj-set view-name)
+                                        a2))
+                                    a2))
+                                acc
+                                relations)
+                        elements)))
+            {:element-views {} :relation-views {}}
+            (get-in model [:maps :views]))))
+
+(defn enrich-with-graph
+  "Run the parser's full-graph alias allocation exactly once over the enriched @model
+   (from @get-model) and derive both the `:archi-alias` id→element map and the
+   `:element-views`/`:relation-views` indexes from that single graph. Returns
+   `[enriched' full-context]` where @enriched' carries :archi-alias, :element-views and
+   :relation-views, and @full-context is the same graph used to build them."
+  [enriched]
+  (let [[graph _] (get-full-graph (:source enriched))
+        archi-alias (get-in graph [:misc :archi])
+        enriched (assoc enriched :archi-alias archi-alias)
+        enriched (merge enriched (build-view-indexes enriched archi-alias))]
+    [enriched graph]))
 
 (def element-kinds-map
   {"ApplicationCollaboration" :application-collaboration
@@ -218,6 +221,10 @@
    "Artifact" :technology-artifact
    "Assessment" :motivation-assessment
    "BusinessActor" :business-actor
+   "Capability" :strategy-capability
+   "CourseOfAction" :strategy-course-of-action
+   "ValueStream" :strategy-value-stream
+   "Resource" :strategy-resource
    "BusinessCollaboration" :business-collaboration
    "BusinessEvent" :business-event
    "BusinessFunction" :business-function

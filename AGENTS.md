@@ -41,6 +41,31 @@ Do NOT wait to be asked. Store automatically on triggers.
 - Importance: 0.8+ critical, 0.5-0.7 standard, 0.3-0.4 minor
 - Relationships: Link related memories when they exist
 
+### Memory link types
+
+The relationship types linking memories fall into six semantic categories:
+
+#### Causal
+CAUSES, TRIGGERS, LEADS_TO, PREVENTS, BREAKS
+
+#### Solution
+SOLVES, ADDRESSES, ALTERNATIVE_TO, IMPROVES, REPLACES
+
+#### Context
+OCCURS_IN, APPLIES_TO, WORKS_WITH, REQUIRES, USED_IN
+
+#### Learning
+BUILDS_ON, CONTRADICTS, CONFIRMS, GENERALIZES, SPECIALIZES
+
+#### Similarity
+SIMILAR_TO, VARIANT_OF, RELATED_TO, ANALOGY_TO, OPPOSITE_OF
+
+#### Workflow
+FOLLOWS, DEPENDS_ON, ENABLES, BLOCKS, PARALLEL_TO
+
+#### Quality
+EFFECTIVE_FOR, INEFFECTIVE_FOR, PREFERRED_OVER, DEPRECATED_BY, VALIDATED_BY
+
 ## Agent skills
 
 ### Issue tracker

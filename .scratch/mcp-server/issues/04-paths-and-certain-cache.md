@@ -4,8 +4,12 @@
 
 **Blocked by:** 01 (View-membership metadata in the `.archimate` parser)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `shortest_path` / `all_paths` (whole model, configurable rel-types, original only).
-- [ ] Lazy global `certain` derivation cache in the registry.
-- [ ] Cache invalidated by reload.
+- [x] `shortest_path` / `all_paths` (whole model, configurable rel-types, original only).
+- [x] Lazy global `certain` derivation cache in the registry.
+- [x] Cache invalidated by reload.
+
+**Resolved decisions:**
+- `rel-types` category filter accepts structural/dependency/dynamic/other plus concrete types (`:specialization` etc.); invalid `rel-types` is an `isError`.
+- The `certain` cache is a `delay` on the model record, forced lazily and invalidated by `reload_model`.

@@ -1,0 +1,1 @@
+Always add `spec` (`clojure.spec.alpha`) for data validation to avoid insufficient type knowledge.

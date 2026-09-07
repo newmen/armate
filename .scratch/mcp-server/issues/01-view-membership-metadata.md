@@ -4,8 +4,13 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `element-views`: `{element-alias #{view-names}}`
-- [ ] `relation-views`: `{[from-alias to-alias] {relation-type #{view-names}}}`
-- [ ] Built during parse of `test/resources/demo.archimate`; unit tests assert the indexes match the views' `child`/`sourceConnection` content.
+- [x] `element-views`: `{element-alias #{view-names}}`
+- [x] `relation-views`: `{[from-alias to-alias] {relation-type #{view-names}}}`
+- [x] Built during parse of `test/resources/demo.archimate`; unit tests assert the indexes match the views' `child`/`sourceConnection` content.
+
+**Resolved decisions:**
+- `build-view-indexes` is **pure** (single threaded `reduce`, no atoms); it takes the `:archi-alias` id→element map as an argument.
+- `enrich-with-graph` runs `get-full-graph` **exactly once** per load and derives both `:archi-alias` and the indexes from that one graph, returning `[enriched graph]`. The same graph feeds the model context (no rebuild).
+- Aliases in the indexes are exactly the model-global aliases the tools and `render_view` emit.

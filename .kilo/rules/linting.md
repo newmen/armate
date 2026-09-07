@@ -1,0 +1,1 @@
+Always use `clj-kondo` after task done. Fix all warnings.

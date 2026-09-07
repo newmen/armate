@@ -1,7 +1,6 @@
 (ns armate.archimate.metamodel.derivation.match
   (:require [clojure.tools.logging :as log]
             [clojure.set :as o]
-            [armate.archimate.metamodel.derivation.rules :as drs]
             [armate.archimate.metamodel.rank :as rank]
             [armate.archimate.metamodel.solver :as slv]
             [armate.archimate.multi-graph :as mg]

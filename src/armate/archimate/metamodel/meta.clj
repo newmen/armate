@@ -1,4 +1,5 @@
 (ns armate.archimate.metamodel.meta
+  (:gen-class)
   (:require [clojure.set :as o]
             [armate.archimate.metamodel.derivation.rules :as drs]
             [armate.archimate.metamodel.solver :as slv]))

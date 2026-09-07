@@ -4,9 +4,13 @@
 
 **Blocked by:** 01 (View-membership metadata in the `.archimate` parser)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `list_elements`-shaped function: roster `{name alias kind layer}`.
-- [ ] Filter by type / by layer, with optional `view` narrowing.
-- [ ] Name→alias resolution with non-unique-name candidate list.
-- [ ] `get_stats` over the whole model.
+- [x] `list_elements`-shaped function: roster `{name alias kind layer}`.
+- [x] Filter by type / by layer, with optional `view` narrowing.
+- [x] Name→alias resolution with non-unique-name candidate list.
+- [x] `get_stats` over the whole model.
+
+**Resolved decisions:**
+- The tool-level roaster (`list_elements` / `filter_by_type` / `filter_by_layer`) appends each element's view set (`| views: ...`), derived from `:element-views`.
+- Unknown-name errors from a tool list a sample of available element names to help the caller correct the name.

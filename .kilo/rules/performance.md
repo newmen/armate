@@ -1,0 +1,1 @@
+After writing a working solution and before the final answer, always suggest refactoring to improve Big-O complexity and reduce memory consumption. If possible, compare the two approaches (current and optimized) with memory and time estimates.

@@ -79,16 +79,35 @@
                                           rel-type)))
                            (:relations context)))
 
+(defn- derivate-by-rules
+  "Run each [@derivate-kind @restricted-fn @rules] pass over @context, appending the
+   derived relationships the rules yield for the current relations and re-deriving from
+   the growing context."
+  [context passes]
+  (reduce (fn [acc [derivation rf? rules]]
+            (log/info (str "Derivating " (name derivation) " rules"))
+            (let [relations (filter-possible-relations acc)
+                  derivated-relations (mch/derivate-relationships rf? rules relations)]
+              (append-relations derivation acc derivated-relations)))
+          context
+          passes))
+
+(defn derivate-certain-relations
+  "Derive only the `certain` ArchiMate relationships in @context (per DR1-DR8). No
+   `potential` rules run, so the result carries no `:potential`-derived relations. Used for
+   `certain`/`derived_relations` where only guaranteed implications should surface."
+  [context]
+  (let [crd? (get-restricted-f mem-restricted? context)]
+    (derivate-by-rules context [[:certain crd? drs/certain-rules]])))
+
 (defn derivate-relations
+  "Derive the `certain` then `potential` ArchiMate relationships in @context (per Appendix
+   B normative rules). The result carries both `:certain` and `:potential`-derived
+   relationships. Used for the `certain+potential` MCP mode."
   [context]
   (let [crd? (get-restricted-f mem-restricted? context)
         grd? (get-restricted-f (memoize grouping-restricted?) context)]
-    (reduce (fn [acc [derivate-kind rf? rules]]
-              (log/info (str "Derivating " (name derivate-kind) " rules"))
-              (let [relations (filter-possible-relations acc)
-                    derivated-relations (mch/derivate-relationships rf? rules relations)]
-                (append-relations derivate-kind acc derivated-relations)))
-            context
-            [[:certain crd? drs/certain-rules]
-             [:potential crd? drs/potential-rules]
-             [:potential grd? drs/potential-group-around-rules]])))
+    (derivate-by-rules context
+                       [[:certain crd? drs/certain-rules]
+                        [:potential crd? drs/potential-rules]
+                        [:potential grd? drs/potential-group-around-rules]])))

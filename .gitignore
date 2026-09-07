@@ -6,6 +6,7 @@ pom.xml
 pom.xml.asc
 *.jar
 *.class
+*.archimate.bak
 /.lein-*
 /.nrepl-port
 /.prepl-port

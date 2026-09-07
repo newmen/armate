@@ -1,4 +1,5 @@
 (ns armate.archimate.metamodel.appendix
+  (:gen-class)
   (:require [armate.archimate.metamodel.derivation.match :as mch]
             [armate.archimate.metamodel.derivation.restrictions :as rtr]
             [armate.archimate.metamodel.derivation.rules :as drs]

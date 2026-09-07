@@ -4,8 +4,11 @@
 
 **Blocked by:** 01 (View-membership metadata in the `.archimate` parser)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Depth-limited (undirected) element selection from a root.
-- [ ] Relationships = all model relationships between the selected elements (+ optional `certain`).
-- [ ] Rendered as PlantUML (a dynamic view).
+- [x] Depth-limited (undirected) element selection from a root.
+- [x] Relationships = all model relationships between the selected elements (+ optional `certain`).
+- [x] Rendered as PlantUML (a dynamic view).
+
+**Resolved decisions:**
+- `related_elements` runs on the model's global aliases (the root and placed elements are addressed by the global aliases, same as `render_view` / `list_elements`), so the output is cross-referencable with the other tools.
