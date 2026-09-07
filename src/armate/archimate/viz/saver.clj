@@ -7,8 +7,8 @@
             [armate.archimate.viz.combiner :as cmb]))
 
 (defn align-elements
-  [context]
-  (if align/align?
+  [align? context]
+  (if align?
     (align/append-hidden-aligns context)
     context))
 
@@ -20,13 +20,15 @@
 
 (defn save-puml
   ([context file-path]
+   (save-puml context file-path false))
+  ([context file-path align?]
    (let [title (:title (model/start context))
          title (if (or (not title)
                        (s/starts-with? title abd/title-generated-at-prefix))
                  (cut-file-name file-path)
                  title)]
      (->> (model/set-start-title context title)
-          (align-elements)
+          (align-elements align?)
           (ccr/add-call-rates)
           (cmb/on-fly-generate-puml)
           (spit file-path)))))

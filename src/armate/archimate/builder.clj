@@ -1,6 +1,5 @@
 (ns armate.archimate.builder
-  (:require [clojure.string :as s]
-            [armate.archimate.model :as model]
+  (:require [armate.archimate.model :as model]
             [armate.archimate.name :as name]
             [armate.utils :as u])
   (:import [java.time Instant]))
@@ -79,9 +78,8 @@
   ([context patch-f id title kind-hm]
    (let [kind (:kind kind-hm)
          alias (get-element-alias patch-f id title kind)
-         kind-parts (s/split (name kind) #"-")
-         specie (keyword (s/join "-" (rest kind-parts)))
-         layer (keyword (first kind-parts))
+         specie (model/element-specie kind-hm)
+         layer (model/element-layer kind-hm)
          default-params (assoc kind-hm :type (get-sprite-name kind))
          split-title (if split-title? (name/lex-name title) title)]
      (if-let [element (check-cache context kind alias)]

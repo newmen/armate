@@ -8,18 +8,14 @@
             [armate.archimate.multi-graph :as mg])
   (:import [java.io ByteArrayInputStream]))
 
-(defonce idx-value (atom 0))
-(defonce idx-map (atom {}))
-
 (defn get-idx
-  ([]
-   (str (swap! idx-value inc)))
-  ([id]
-   (if-let [idx (get @idx-map id)]
-     idx
-     (let [idx (get-idx)]
-       (swap! idx-map assoc id idx)
-       idx))))
+  "Pure id → ordinal-string allocation. Returns [idx id-map']. Same id always maps to the
+  same ordinal for a given id-map; a fresh (empty) id-map seeds indexing at 1."
+  ([id-map id]
+   (if-let [idx (get id-map id)]
+     [idx id-map]
+     (let [idx (str (inc (count id-map)))]
+       [idx (assoc id-map id idx)]))))
 
 (def elemenet-folder-types
   #{"strategy"
@@ -260,9 +256,13 @@
       (keyword)))
 
 (defn add-element
+  "Return [id id-map' context element] for @item, allocating a fresh immutable alias via
+  @id-map (threaded, returned as id-map')."
   ([context item]
-   (add-element context item nil))
+   (add-element context item nil {}))
   ([context item names-replacer]
+   (add-element context item names-replacer {}))
+  ([context item names-replacer id-map]
    (let [id (get-id item)
          xtype (get-xtype item)
          name (get-in item [:attrs :name])
@@ -270,35 +270,41 @@
          name (if names-replacer
                 (names-replacer name)
                 name)
-         idx (get-idx id)]
-     (cons id
-           (case xtype
-             "Grouping" (abd/add-grouping context idx name)
-             "Junction" (let [jt (keyword (get-type item "and"))]
-                          (abd/add-connector context jt idx name))
-             (let [kind (element-kinds-map xtype)]
-               (if kind
-                 (abd/add-element context kind idx name)
-                 (throw (ex-info (str "Undefined " xtype)
-                                 {:type xtype :id id :name name})))))))))
+         [idx id-map'] (get-idx id-map id)
+         [ctx element] (case xtype
+                         "Grouping" (abd/add-grouping context idx name)
+                         "Junction" (let [jt (keyword (get-type item "and"))]
+                                      (abd/add-connector context jt idx name))
+                         (let [kind (element-kinds-map xtype)]
+                           (if kind
+                             (abd/add-element context kind idx name)
+                             (throw (ex-info (str "Undefined " xtype)
+                                             {:type xtype :id id :name name})))))]
+     [id id-map' ctx element])))
 
 (defn add-elements
+  "Return [context id-map'] with all @elements added, threading a pure id-map alias allocator.
+  Each element registers its id -> alias mapping through @model/cache-alias (the seam owns the
+  @:misc :archi@ bookkeeping), and a fresh id-map seed keeps output identical to the legacy
+  global-counter behaviour."
   ([context elements]
-   (add-elements context elements nil))
+   (add-elements context elements nil {}))
   ([context elements names-replacer]
-   (reduce (fn [acc item]
+   (add-elements context elements names-replacer {}))
+  ([context elements names-replacer id-map]
+   (reduce (fn [[ctx id-map] item]
              (if item
-               (let [[id ctx element] (add-element acc item names-replacer)]
-                 (assoc-in ctx [:misc :archi id] element))
-               acc))
-           context
+               (let [[id id-map' ctx element] (add-element ctx item names-replacer id-map)]
+                 [(model/cache-alias ctx id element) id-map'])
+               [ctx id-map]))
+           [context id-map]
            elements)))
 
 (defn add-relations
   [context relations]
   (reduce (fn [acc item]
             (if item
-              (let [gef #(get-in acc [:misc :archi (get-in item [:attrs %])])
+              (let [gef #(model/alias-for-id acc (get-in item [:attrs %]))
                     source (gef :source)
                     target (gef :target)
                     strength (get-in item [:attrs :strength])
@@ -319,12 +325,18 @@
           relations))
 
 (defn get-full-graph
+  "Build the full graph context for @model. Pure w.r.t. aliases: with no id-map, indexing is
+  deterministic (1,2,3,…) for a given element order. Returns [context id-map']."
   ([model]
-   (get-full-graph model nil))
+   (get-full-graph model nil {}))
   ([model names-replacer]
-   (-> abd/init-context
-       (add-elements (:elements model) names-replacer)
-       (add-relations (:relations model)))))
+   (get-full-graph model names-replacer {}))
+  ([model names-replacer id-map]
+   (let [[context id-map] (add-elements abd/init-context
+                                        (:elements model)
+                                        names-replacer
+                                        id-map)]
+     [(add-relations context (:relations model)) id-map])))
 
 (declare add-inner)
 (defn add-child-element
@@ -351,15 +363,11 @@
       (log/warn "Incorrect item tag" item)
       submodel)))
 
-(defn get-views-graph
-  [model & view-names]
-  (let [names-replacer (last view-names)
-        names-replacer2 (when-not (string? names-replacer)
-                          names-replacer)
-        view-names (if names-replacer2
-                     (drop-last view-names)
-                     view-names)
-        view-names2 (if (empty? view-names)
+(defn build-views-graph
+  "Core: build a graph for @view-names (all views when empty) from @model, threading a pure
+  id-map alias allocator and an optional names-replacer fn. Returns [context id-map']."
+  [model view-names names-replacer id-map]
+  (let [view-names2 (if (empty? view-names)
                       (keys (get-in model [:maps :views]))
                       view-names)
         submodel (reduce (fn [acc view-name]
@@ -369,11 +377,25 @@
                                      (:content view))))
                          {:elements []
                           :relations []}
-                         view-names2)]
-    (-> (get-full-graph submodel names-replacer2)
-        (update :relations (partial mg/erase-transitive-relationships
-                                    #{:aggregation :composition}))
-        (model/set-start-title (s/join ", " view-names)))))
+                         view-names2)
+        [graph id-map] (get-full-graph submodel names-replacer id-map)]
+    [(-> graph
+         (update :relations (partial mg/erase-transitive-relationships
+                                     #{:aggregation :composition}))
+         (model/set-start-title (s/join ", " view-names)))
+     id-map]))
+
+(defn get-views-graph
+  "Build a graph for the view(s) named in @view-names, or every view when none are given.
+  Optional trailing arg is a names-replacer fn (kept for legacy callers). Returns [graph id-map']."
+  [model & view-names]
+  (let [names-replacer (last view-names)
+        names-replacer2 (when-not (string? names-replacer)
+                          names-replacer)
+        view-names (if names-replacer2
+                     (drop-last view-names)
+                     view-names)]
+    (build-views-graph model view-names names-replacer2 {})))
 
 (defn get-component-names
   ([context]

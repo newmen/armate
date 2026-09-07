@@ -99,10 +99,6 @@
       (s/replace #"_ | _" "_")
       (collapse-slash-spaces)))
 
-(def normalize-title
-  "Legacy alias of `normalize-name` (was armate.archimate.archi.title/normalize-title)."
-  normalize-name)
-
 ;; ---------------------------------------------------------------------------
 ;; Alias build: name -> alias (moved from armate.archimate.builder)
 
@@ -144,10 +140,6 @@
   "Legacy alias of `patch-alias` (was armate.archimate.builder/patch-raw-name)."
   patch-alias)
 
-(def cut-too-long
-  "Legacy alias of `length-cap` (was armate.archimate.builder/cut-too-long)."
-  length-cap)
-
 ;; ---------------------------------------------------------------------------
 ;; Name flattening, .puml intake (moved from armate.archimate.plantuml.parser)
 
@@ -155,10 +147,6 @@
   "Collapse runs of whitespace / literal \\n to a single space."
   [title]
   (s/replace title #"(?s)(\s|\\n)+" " "))
-
-(def strait-string
-  "Legacy alias of `strait-name` (was armate.archimate.plantuml.parser/strait-string)."
-  strait-name)
 
 ;; ---------------------------------------------------------------------------
 ;; Splitting / length (moved from armate.archimate.builder)
@@ -225,9 +213,5 @@
                          (concat (rest @dsub-parts) tail))
                   (recur acc (concat @dsub-parts tail)))
                 (recur (conj acc part) tail))
-              (recur (u/replace-last acc (str prev part))
+(recur (u/replace-last acc (str prev part))
                      tail))))))))
-
-(def subsplit
-  "Legacy alias of `lex-name` (was armate.archimate.builder/subsplit)."
-  lex-name)

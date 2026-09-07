@@ -64,3 +64,18 @@
     (is (= :technology-node (model/element-kind ctx "x")))
     (is (= :technology (model/element-layer el))
         "a raw element (no :layer stored) still derives its layer from its kind")))
+
+(deftest archi-id-map-behind-the-seam
+  (testing "cache-alias / alias-for-id / archi-id? / archi-id-map own the archi id -> alias slot"
+    (let [ctx (-> (model/cache-alias {} "id-a" "acp1")
+                  (model/cache-alias "id-b" "acp2")
+                  (model/cache-alias "id-a" "acp1"))]
+      (is (= "acp1" (model/alias-for-id ctx "id-a")))
+      (is (= "acp2" (model/alias-for-id ctx "id-b")))
+      (is (nil? (model/alias-for-id ctx "missing")))
+      (is (model/archi-id? ctx "id-a"))
+      (is (not (model/archi-id? ctx "nope")))
+      (is (= {"id-a" "acp1" "id-b" "acp2"} (model/archi-id-map ctx))
+          "overwriting the same id keeps the latest alias")
+      (is (nil? (model/archi-id-map {}))
+          "no archi ids yields no archi map"))))

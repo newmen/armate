@@ -2,6 +2,7 @@
   (:require [clojure.tools.logging :as log]
             [clojure.set :as o]
             [armate.archimate.metamodel.derivation.rules :as drs]
+            [armate.archimate.metamodel.rank :as rank]
             [armate.archimate.metamodel.solver :as slv]
             [armate.archimate.multi-graph :as mg]
             [armate.utils :as u]))
@@ -9,28 +10,13 @@
 (def log-each-step 100)
 (def log-sub-step? false)
 
-(defn get-rel-wieght
-  [rel]
-  (let [dynamic-index (.indexOf drs/dynamic-rels rel)]
-    (if-not (neg? dynamic-index)
-      (inc dynamic-index)
-      (let [dependency-index (.indexOf drs/dependency-rels rel)]
-        (if-not (neg? dependency-index)
-          (* 100 (inc dependency-index))
-          (let [structural-index (.indexOf drs/structural-rels rel)]
-            (if-not (neg? structural-index)
-              (* 1000 (inc structural-index))
-              (if (= :specialization rel)
-                10000
-                (throw (ex-info "Unknown relation" {:rel rel}))))))))))
-
 (defn make-rules-map
   [rules]
   (->> rules
        (group-by (comp first first))
        (map (juxt first
                   (fn [[_ group]]
-                    (sort-by (comp - get-rel-wieght first second) group))))
+                    (sort-by (comp - rank/relation-weight first second) group))))
        (into {})))
 
 (defn count-influence

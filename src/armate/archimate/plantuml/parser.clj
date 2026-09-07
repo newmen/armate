@@ -8,202 +8,14 @@
             [armate.archimate.name :as name]
             [armate.archimate.multi-graph :as mg]
             [armate.archimate.viz.common :as vcm]
+            [armate.archimate.plantuml.lex :as lex]
+            [armate.archimate.plantuml.structure :as strc]
             [armate.utils :as u]))
-
-(def call-re
-  #"^([A-Za-z_]+)\s*\(([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)(?:\s*,\s*(.+?))?\)$")
-
-(def full-line-re
-  #"^([A-Za-z_]+)\s*\(([A-Za-z0-9_]+)\s*,\s*(\"[^\"]+\"|[^\"\s]+)(?:\s*,\s*(.+?))?\)\s*([^\s]+)?\s*(\{)?$")
-
-(def quoted-split-re
-  #"(?:\"[^\"]+\"|[^\"\s]+)")
-
-(defn quoted-brackets-split
-  [line]
-  (if-let [full-match (re-matches full-line-re line)]
-    (remove nil? (rest full-match))
-    (re-seq quoted-split-re line)))
-
-(defn get-parts
-  [line]
-  (let [parts (quoted-brackets-split line)]
-    (if (= (last parts) "{")
-      {:parts (vec (drop-last parts))
-       :block? true}
-      (let [lp (last parts)]
-        (if (s/ends-with? lp "{")
-          (let [cut-last (subs lp 0 (dec (count lp)))]
-            {:parts (conj (vec (drop-last parts)) cut-last)
-             :block? true})
-          (if-let [matches (re-matches call-re line)]
-            {:parts (vec (rest matches))
-             :block? false}
-            {:parts parts
-             :block? false}))))))
-
-(defn cut1
-  [string]
-  (subs string 1 (dec (count string))))
-
-(defn cut2
-  [string]
-  (cut1 (cut1 string)))
-
-(defn wrapped?
-  [start end part]
-  (when part
-    (and (s/starts-with? part start)
-         (s/ends-with? part end))))
-
-(def fur?
-  (partial wrapped? "<<" ">>"))
-
-(def fur-re
-  #"(<<[^>]+>>|[^<>]+)")
-
-(defn cut-furs
-  [part]
-  (->> (re-seq fur-re part)
-       (map second)
-       (map #(if (fur? %) (cut2 %) %))))
-
-(def quoted?
-  (partial wrapped? "\"" "\""))
-
-(defn cut-quotes
-  [part]
-  (if (quoted? part)
-    (cut1 part)
-    part))
 
 (defn color?
   [part]
   (when part
     (re-matches #"#[0-9a-fA-F]{6}" part)))
-
-(defn variable?
-  [line]
-  (and (s/starts-with? line "!")
-       (not (s/starts-with? line "!include"))
-       (s/includes? line "=")))
-
-(def variable-re
-  #"\!(.+?)\s*=\s*(.+)")
-
-(defn parse-variable
-  [line]
-  (when (variable? line)
-    (when-let [matches (re-matches variable-re line)]
-      [(second matches) (cut-quotes (last matches))])))
-
-(defn mask-specials
-  [name]
-  (reduce (fn [acc c]
-            (s/replace acc (str c) (str "\\" c)))
-          name
-          [\^ \. \+ \* \? \[ \] \( \) \{ \} \- \$]))
-
-(defn mask-variable
-  [name]
-  (let [checks [[(partial re-seq #"^[A-Za-z0-9]+")
-                 #(str "\\b" %)]
-                [(partial re-seq #"[A-Za-z0-9]+$")
-                 #(str % "\\b")]]]
-    (reduce (fn [acc [check replacement]]
-              (if (check name) (replacement acc) acc))
-            (mask-specials name)
-            checks)))
-
-(defn apply-variables
-  [variables line]
-  (reduce-kv (fn [full k v]
-               (let [re (re-pattern (mask-variable k))]
-                 (s/replace full re v)))
-             line
-             variables))
-
-(defn left-to-right?
-  [parts]
-  (= ["left" "to" "right" "direction"]
-     parts))
-
-(defn get-blocks
-  [content]
-  (let [lines (s/split-lines content)
-        indexes (map inc (range))]
-    (loop [lines-is (map vector lines indexes)
-           vars {}
-           blocks []
-           outer-blocks '()]
-      (if (empty? lines-is)
-        (if (seq outer-blocks)
-          (throw (ex-info "Unclosed block" {:blocks (vec outer-blocks)}))
-          blocks)
-        (let [line-i (first lines-is)
-              line (s/trim (first line-i))
-              index (second line-i)
-              rest-lines-is (rest lines-is)]
-          (if (or (empty? line)
-                  (s/starts-with? line "'"))
-            (recur rest-lines-is vars blocks outer-blocks)
-            (if-let [[name value] (parse-variable line)]
-              (recur rest-lines-is
-                     (assoc vars name value)
-                     blocks
-                     outer-blocks)
-              (let [full-line (apply-variables vars line)
-                    {parts :parts
-                     block? :block?} (get-parts full-line)]
-                (if (left-to-right? parts)
-                  (recur rest-lines-is vars blocks outer-blocks)
-                  (if block?
-                    (recur rest-lines-is
-                           vars
-                           blocks
-                           (cons {:parts parts :line index} outer-blocks))
-                    (if (seq outer-blocks)
-                      (let [outer-block (first outer-blocks)]
-                        (if (= full-line "}")
-                          (if-let [prev-block (second outer-blocks)]
-                            (recur rest-lines-is
-                                   vars
-                                   blocks
-                                   (cons (update prev-block :props
-                                                 (fnil conj [])
-                                                 outer-block)
-                                         (rest (rest outer-blocks))))
-                            (recur rest-lines-is
-                                   vars
-                                   (conj blocks outer-block)
-                                   (rest outer-blocks)))
-                          (recur rest-lines-is
-                                 vars
-                                 blocks
-                                 (cons (update outer-block :props
-                                               (fnil conj [])
-                                               {:parts parts :line index})
-                                       (rest outer-blocks)))))
-                      (recur rest-lines-is
-                             vars
-                             (conj blocks {:parts parts :line index})
-                             outer-blocks))))))))))))
-
-(def rel-f-re
-  #"(?i)^Rel_(.+?)(?:_(Up|Down|Left|Right))?$")
-
-(def rel-b-res
-  [#"(?i)(.*?\.+)(up|down|left|right|u|d|l|r)(\.+.*)"
-   #"(?i)(.*?-+)(up|down|left|right|u|d|l|r)(-+.*)"
-   #"(?i)(.*?~+)(up|down|left|right|u|d|l|r)(~+.*)"
-   #"(.*?[\.\-\~]+)(.*)"])
-
-(defn match-rel-b
-  [dir-bond]
-  (some #(re-matches % dir-bond) rel-b-res))
-
-(def pin-re
-  #"([^\.\-\~]*)?([\.\-\~]+)([^\.\-\~]*)?")
 
 (defn match-pos-bond
   [mbond]
@@ -238,6 +50,22 @@
      ["^" \- ""]) {:type :specialization :reverse? true}
     {:type :unknown}))
 
+(def rel-f-re
+  #"(?i)^Rel_(.+?)(?:_(Up|Down|Left|Right))?$")
+
+(def rel-b-res
+  [#"(?i)(.*?\.+)(up|down|left|right|u|d|l|r)(\.+.*)"
+   #"(?i)(.*?-+)(up|down|left|right|u|d|l|r)(-+.*)"
+   #"(?i)(.*?~+)(up|down|left|right|u|d|l|r)(~+.*)"
+   #"(.*?[\.\-\~]+)(.*)"])
+
+(defn match-rel-b
+  [dir-bond]
+  (some #(re-matches % dir-bond) rel-b-res))
+
+(def pin-re
+  #"([^\.\-\~]*)?([\.\-\~]+)([^\.\-\~]*)?")
+
 (defn b-matches
   [dir-bond]
   (when-let [matches (match-rel-b dir-bond)]
@@ -263,7 +91,7 @@
               type (if possible? kind :unknown)
               direction (when-let [d (last f-matches)]
                           (keyword (s/lower-case d)))
-              desc2 (cut-quotes desc)
+              desc2 (lex/cut-quotes desc)
               result {:type type
                       :from s
                       :to to
@@ -328,7 +156,7 @@
   (let [tail (rest parts)]
     (if (empty? tail)
       [:default]
-      (vec (cut-furs (first tail))))))
+      (vec (lex/cut-furs (first tail))))))
 
 (defn get-type-kind
   [parts]
@@ -342,15 +170,15 @@
 (defn get-rectangle-block
   [parts]
   (let [shape (first parts)
-        title (cut-quotes (second parts))
+        title (lex/cut-quotes (second parts))
         alias (nth parts 3 nil)
         type (nth parts 4 nil)
         skin (nth parts 5 nil)
         layer (last parts)
-        [type3 skin2] (when type (cut-furs type))
-        skin3 (if skin2 skin2 (when (fur? skin) (cut2 skin)))
+        [type3 skin2] (when type (lex/cut-furs type))
+        skin3 (if skin2 skin2 (when (lex/fur? skin) (lex/cut2 skin)))
         layer2 (if (or (= 2 (count parts))
-                       (fur? layer))
+                       (lex/fur? layer))
                  nil
                  layer)
         color (when layer2
@@ -376,7 +204,7 @@
 (defn get-element-block
   [parts]
   (let [[fn-name alias title color] parts
-        title2 (cut-quotes title)]
+        title2 (lex/cut-quotes title)]
     (merge (get-layer-kind fn-name)
            {:title title2
             :name (name/strait-name title2)
@@ -387,7 +215,7 @@
 (defn get-group-block
   [parts]
   (let [[cap-type alias title color] parts
-        title2 (cut-quotes title)]
+        title2 (lex/cut-quotes title)]
     {:title title2
      :name (name/strait-name title2)
      :alias alias
@@ -398,7 +226,7 @@
 (defn get-connector-block
   [parts]
   (let [[con-type alias title] parts
-        title2 (cut-quotes title)
+        title2 (lex/cut-quotes title)
         type (-> con-type
                  (s/split #"_")
                  (second)
@@ -430,10 +258,10 @@
     (cond
       (match-start? parts) (let [result2 (rf :start)]
                              (if (> (count parts) 1)
-                               (assoc-in result2 [:body :title] (cut-quotes (second parts)))
+                               (assoc-in result2 [:body :title] (lex/cut-quotes (second parts)))
                                result2))
       (match-end? parts) (rf :end)
-      (match-include? parts) (let [package (cut1 (second parts))]
+      (match-include? parts) (let [package (lex/cut1 (second parts))]
                                (bf [:includes package]
                                    {:package package}))
       (match-skinparam? parts) (let [targets (get-skinparam-target parts)
@@ -640,9 +468,9 @@
                               vals
                               forward-graph)))
              (mapcat (partial apply combo/cartesian-product))
-(reduce (fn [acc [from to rel]]
-                        (model/set-relation acc from to
-                                            (assoc rel :derivate :connecting)))
+             (reduce (fn [acc [from to rel]]
+                       (model/set-relation acc from to
+                                           (assoc rel :derivate :connecting)))
                      base))))))
 
 (defn get-connectors-diff-rels-info
@@ -702,4 +530,4 @@
 
 (defn analyze-content
   [content]
-  (analyze (get-blocks content)))
+  (analyze (strc/get-blocks content)))

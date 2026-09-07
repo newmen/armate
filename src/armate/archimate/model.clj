@@ -3,9 +3,8 @@
 
   Every reader/writer of the model (the .puml intake, the .archimate intake, the
   derivation engine, the collector, and each renderer) crosses this module instead of
-  assembling paths by hand. The @:misc@ cache and the call-count buckets live behind this
-  seam; the archi intake id->alias map (@:misc :archi@) is owned by the archi intake and is
-  hoisted by task 04."
+  assembling paths by hand. The @:misc@ cache, the call-count buckets, and the archi
+  intake id->alias map (@:misc :archi@) all live behind this seam."
   (:require [clojure.string :as s]
             [armate.archimate.multi-graph :as mg]
             [armate.utils :as u]))
@@ -228,3 +227,27 @@
   "Drop the internal @:misc@ slot (cache, counters, archi map) from the output model."
   [context]
   (dissoc context :misc))
+
+;; archi id -> alias map (meaning b), owned by this seam
+
+(defn cache-alias
+  "Record the archi id -> alias resolution for @id in @:misc :archi@ and return the updated
+  context. Idempotent: re-recording the same @id overwrites the alias. Deterministic —
+  the @:misc :archi@ map is derived solely from the invocations made against a context."
+  [context id alias]
+  (assoc-in context [:misc :archi id] alias))
+
+(defn alias-for-id
+  "The element/alias stored for archi @id under @:misc :archi@, or nil."
+  [context id]
+  (get-in context [:misc :archi id]))
+
+(defn archi-id-map
+  "The whole archi id -> alias map under @:misc :archi@."
+  [context]
+  (get-in context [:misc :archi]))
+
+(defn archi-id?
+  "Whether @id is a registered archi id (present in @:misc :archi@)."
+  [context id]
+  (boolean (get-in context [:misc :archi id])))

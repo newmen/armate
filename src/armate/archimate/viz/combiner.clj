@@ -1,7 +1,7 @@
 (ns armate.archimate.viz.combiner
   (:require [clojure.string :as s]
             [clojure.set :as o]
-            [armate.archimate.metamodel.derivation.match :as mch]
+            [armate.archimate.metamodel.rank :as rank]
             [armate.archimate.model :as model]
             [armate.archimate.multi-graph :as mg]
             [armate.archimate.viz.common :as vcm]))
@@ -19,20 +19,6 @@
 (def escape-derivated
   #{:certain :potential})
 
-(def layer-order
-  {:motivation 0
-   :strategy 1
-   :business 2
-   :application 3
-   :technology 4
-   :implementation 5})
-
-(def default-layer-rank 6)
-
-(defn element-layer-rank
-  [element]
-  (layer-order (:layer element) default-layer-rank))
-
 (defn sort-elements
   "Elements with :line keep the original file order.
    Others are ordered by layer (Motivation..Implementation, composite last)
@@ -40,7 +26,7 @@
   [items]
   (let [groups (group-by #(contains? % :line) items)]
     (concat (sort-by :line (groups true []))
-            (sort-by (juxt element-layer-rank :alias) (groups false [])))))
+            (sort-by (juxt rank/element-rank :alias) (groups false [])))))
 
 (def indent "  ")
 
@@ -238,7 +224,7 @@
   [[from to rel]]
   [(get rel :line 999999)
    (if-let [t (:type rel)]
-     (- (mch/get-rel-wieght t))
+     (- (rank/relation-weight t))
      0)
    (or from "")
    (or to "")])

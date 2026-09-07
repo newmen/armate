@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is]]
             [armate.archimate.metamodel.derivation.rules :as drs]
             [armate.archimate.metamodel.derivation.match :as mch]
+            [armate.archimate.metamodel.rank :as rank]
             [armate.archimate.multi-graph :as mg]))
 
 (def graph0
@@ -32,11 +33,11 @@
   [_a _b _c _s]
   false)
 
-(deftest get-rel-wieght-test
-  (is (= 10000 (mch/get-rel-wieght :specialization)))
-  (is (= 3000 (mch/get-rel-wieght :aggregation)))
-  (is (= 500 (mch/get-rel-wieght :access_r)))
-  (is (= 2 (mch/get-rel-wieght :flow))))
+(deftest relation-weight-test
+  (is (= 10000 (rank/relation-weight :specialization)))
+  (is (= 3000 (rank/relation-weight :aggregation)))
+  (is (= 500 (rank/relation-weight :access_r)))
+  (is (= 2 (rank/relation-weight :flow))))
 
 (deftest make-rules-map-test
   (is (= {:serving [[[:serving :c :a] [:realization :b :a] [:serving :c :b]]]

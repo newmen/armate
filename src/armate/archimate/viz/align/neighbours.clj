@@ -1,5 +1,6 @@
 (ns armate.archimate.viz.align.neighbours
-  (:require [armate.archimate.metamodel.solver :as slv]
+  (:require [armate.archimate.metamodel.rank :as rank]
+            [armate.archimate.metamodel.solver :as slv]
             [armate.archimate.multi-graph :as mg]
             [armate.archimate.viz.align.common :as cmn]
             [armate.archimate.viz.align.grid :as grid]
@@ -35,40 +36,10 @@
             (:udmap data)
             (:nesting data))))
 
-(def element-kinds-order
-  [:business-actor
-   :business-role
-   :business-interaction
-   :business-product
-   :business-service
-   :business-event
-   :business-function
-   :business-process
-   :business-collaboration
-   :application-service
-   :application-data-object
-   :application-interface
-   :technology-system-software
-   :application-component
-   :application-collaboration
-   :technology-artifact
-   :technology-node
-   :technology-collaboration
-   :technology-path
-   :technology-interaction])
-
-(def weight-step 5)
-
-(def kind-weights
-  (->> (range)
-       (map (partial * weight-step))
-       (map inc)
-       (zipmap element-kinds-order)))
-
 (defn build-weight-map
   [context]
   (reduce (fn [acc element]
-            (let [weight (kind-weights (:kind element) 1)
+            (let [weight (rank/kind-weights (:kind element) 1)
                   alias (:alias element)]
               (update acc
                       alias

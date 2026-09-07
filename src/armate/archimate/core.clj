@@ -31,14 +31,6 @@
 
 (get-element-group {:kind :application-event})
 
-(defn get-element-layer
-  [element]
-  (-> (:kind element)
-      (name)
-      (s/split #"-")
-      (first)
-      (keyword)))
-
 (defn get-rel-group
   [relation]
   (let [t (:type (last relation))]
@@ -56,7 +48,7 @@
         gf (comp :type last)]
     {:types (count (:types context))
      :elements (assoc (get-total-map :kind get-element-group elements)
-                      :layer (frequencies (map get-element-layer elements)))
+                      :layer (frequencies (map model/element-layer elements)))
      :relations {:original (get-total-map gf get-rel-group (groups nil []))
                  :nesting (get-total-map gf get-rel-group (groups :nesting []))
                  :certain (get-total-map gf get-rel-group (groups :certain []))

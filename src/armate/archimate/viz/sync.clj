@@ -26,12 +26,18 @@
           path-prefix (-> (str out-dir "/")
                           (s/replace #"//" "/"))
           views (get-in model [:maps :views])]
-      (doseq [[view-key _] views]
-        (let [graph (arr/get-views-graph model view-key)
-              view-name (s/replace view-key #"\s" "_")
-              out-file-path (str path-prefix view-name ".puml")]
-          (log/info (str "Creating " out-file-path " ..."))
-          (svr/save-puml graph out-file-path)))
+      (loop [views views
+             id-map {}]
+        (when-let [[[view-key _] & rest-views] (seq views)]
+          (let [[graph id-map] (arr/build-views-graph model
+                                                      [view-key]
+                                                      nil
+                                                      id-map)
+                view-name (s/replace view-key #"\s" "_")
+                out-file-path (str path-prefix view-name ".puml")]
+            (log/info (str "Creating " out-file-path " ..."))
+            (svr/save-puml graph out-file-path)
+            (recur rest-views id-map))))
       (println (str (count views) " have been synchronized")))
     (throw (ex-info "Can't craete directory"
                     {:out-dir out-dir}))))

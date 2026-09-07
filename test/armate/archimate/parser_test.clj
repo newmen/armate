@@ -3,82 +3,6 @@
             [clojure.string :as s]
             [armate.archimate.plantuml.parser :as prr]))
 
-(deftest call-re-test
-  (is (= ["Rel_Assignment_Up(operationsI, tapeS)" "Rel_Assignment_Up" "operationsI" "tapeS" nil]
-         (re-matches prr/call-re "Rel_Assignment_Up(operationsI, tapeS)")))
-  (is (= ["Rel_Assignment_Up(operationsI, tapeS, \"Some description\")" "Rel_Assignment_Up" "operationsI" "tapeS" "\"Some description\""]
-         (re-matches prr/call-re "Rel_Assignment_Up(operationsI, tapeS, \"Some description\")")))
-  (is (nil? (re-matches prr/call-re "abs *-up- online"))))
-
-(deftest full-line-re-test
-  (is (= ["Rel_Serves(A, \"B\", \"C\", \"D\")" "Rel_Serves" "A" "\"B\"" "\"C\", \"D\"" nil nil]
-         (re-matches prr/full-line-re "Rel_Serves(A, \"B\", \"C\", \"D\")")))
-  (is (= ["Grouping(business_r, \"Бизнес\") #1122f3 {" "Grouping" "business_r" "\"Бизнес\"" nil "#1122f3" "{"]
-         (re-matches prr/full-line-re "Grouping(business_r, \"Бизнес\") #1122f3 {")))
-  (is (nil? (re-matches prr/full-line-re "rectangle \"Получение\nспискa\" as list_as <<$aService>> #Application")))
-  (is (nil? (re-matches prr/full-line-re "accountOptionsService_acp -[hidden]down-> templatesService_acp"))))
-
-(deftest quoted-brackets-split-test
-  (is (= ["@startuml"]
-         (prr/quoted-brackets-split "@startuml")))
-  (is (= ["@startuml" "\"Какое-то длинное описание\""]
-         (prr/quoted-brackets-split "@startuml \"Какое-то длинное описание\"")))
-  (is (= ["rectangle" "\"Component1\"" "as" "c1" "<<$aComponent>>"]
-         (prr/quoted-brackets-split "rectangle \"Component1\" as c1 <<$aComponent>>")))
-  (is (= ["rectangle" "\"Component 2\"" "as" "c2" "<<$aComponent>>"]
-         (prr/quoted-brackets-split "rectangle \"Component 2\" as c2 <<$aComponent>>")))
-  (is (= ["rectangle" "Component3" "as" "c3" "<<$aComponent>>"]
-         (prr/quoted-brackets-split "rectangle Component3 as c3 <<$aComponent>>")))
-  (is (= ["skinparam" "rectangle<<sub>>" "{"]
-         (prr/quoted-brackets-split "skinparam rectangle<<sub>> {")))
-  (is (= ["Rel_Serves" "A" "\"B\"" "\"C\", D"]
-         (prr/quoted-brackets-split "Rel_Serves(A, \"B\", \"C\", D)")))
-  (is (= ["Grouping" "business_r" "\"Бизнес\"" "#1122f3" "{"]
-         (prr/quoted-brackets-split "Grouping(business_r, \"Бизнес\") #1122f3 {"))))
-
-(deftest get-parts-test
-  (is (= {:parts ["skinparam" "rectangle<<sub>>"] :block? true}
-         (prr/get-parts "skinparam rectangle<<sub>> {")))
-  (is (= {:parts ["skinparam" "rectangle<<sub>>"] :block? true}
-         (prr/get-parts "skinparam rectangle<<sub>>{")))
-  (is (= {:parts ["sprite" "$aCollaboration" "jar:archimate/application-collaboration"] :block? false}
-         (prr/get-parts "sprite $aCollaboration jar:archimate/application-collaboration")))
-  (is (= {:parts ["abs" "*-up-" "online"] :block? false}
-         (prr/get-parts "abs *-up- online")))
-  (is (= {:parts ["Rel_Assignment_Up" "operationsI" "tapeS" nil] :block? false}
-         (prr/get-parts "Rel_Assignment_Up(operationsI, tapeS)")))
-  (is (= {:parts ["Rel_Assignment_Up" "operationsI" "tapeS" "\"Some description\""] :block? false}
-         (prr/get-parts "Rel_Assignment_Up(operationsI, tapeS, \"Some description\")"))))
-
-(deftest parse-variables-test
-  (is (= ["$a" "1"]
-         (prr/parse-variable "!$a = 1")))
-  (is (= ["a" "1"]
-         (prr/parse-variable "!a = 1")))
-  (is (= ["a" "123"]
-         (prr/parse-variable "!a=123")))
-  (is (= ["a" "11"]
-         (prr/parse-variable "!a =11")))
-  (is (= ["abc" "11"]
-         (prr/parse-variable "!abc= 11"))))
-
-(deftest mask-variable-test
-  (is (= "\\$a\\b"
-         (prr/mask-variable "$a")))
-  (is (= "\\$\\$a\\b"
-         (prr/mask-variable "$$a")))
-  (is (= "\\$a\\$"
-         (prr/mask-variable "$a$")))
-  (is (= "\\ba\\b"
-         (prr/mask-variable "a"))))
-
-(deftest apply-variables-test
-  (is (= "-1- line has variable"
-         (prr/apply-variables {"a" "1"
-                                "with" "has"} "-a- line with variable")))
-  (is (= "a line with 1 variable"
-         (prr/apply-variables {"$a" "1"} "a line with $a variable"))))
-
 (deftest rel-f-re-test
   (is (= ["Rel_Assignment_Up" "Assignment" "Up"]
          (re-matches prr/rel-f-re "Rel_Assignment_Up")))
@@ -137,23 +61,6 @@
   (is (= {:type :unknown :direction nil :from "A" :to "B" :desc "desc"
           :raw "Rel_Some" :cut :some}
          (prr/match-rel ["Rel_Some" "A" "B" "desc"]))))
-
-(deftest fur-re-test
-  (is (= [["rectangle" "rectangle"] ["<<db>>" "<<db>>"]]
-         (re-seq prr/fur-re "rectangle<<db>>")))
-  (is (= [["<<$aCollaboration>>" "<<$aCollaboration>>"] ["<<platform>>" "<<platform>>"]]
-         (re-seq prr/fur-re "<<$aCollaboration>><<platform>>"))))
-
-(deftest cut-furs-test
-  (is (= ["rectangle" "db"] (prr/cut-furs "rectangle<<db>>")))
-  (is (= ["$aCollaboration" "platform"] (prr/cut-furs "<<$aCollaboration>><<platform>>")))
-  (is (= ["$aCollaboration"] (prr/cut-furs "<<$aCollaboration>>"))))
-
-(deftest cut1-test
-  (is (= "archimate/Archimate" (prr/cut1 "<archimate/Archimate>"))))
-
-(deftest cut2-test
-  (is (= "$aComponent" (prr/cut2 "<<$aComponent>>"))))
 
 (deftest match-block-test
   (is (= {:body {:line 1} :in [:start]}
