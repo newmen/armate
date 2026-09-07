@@ -4,6 +4,7 @@
             [clojure.xml :as xml]
             [armate.archimate.archi.title :as tit]
             [armate.archimate.builder :as abd]
+            [armate.archimate.model :as model]
             [armate.archimate.multi-graph :as mg])
   (:import [java.io ByteArrayInputStream]))
 
@@ -372,7 +373,7 @@
     (-> (get-full-graph submodel names-replacer2)
         (update :relations (partial mg/erase-transitive-relationships
                                     #{:aggregation :composition}))
-        (assoc-in [:start :title] (s/join ", " view-names)))))
+        (model/set-start-title (s/join ", " view-names)))))
 
 (defn get-component-names
   ([context]

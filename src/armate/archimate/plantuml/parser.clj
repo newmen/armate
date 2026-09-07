@@ -4,6 +4,7 @@
             [camel-snake-kebab.core :as csk]
             [armate.archimate.metamodel.meta :as mt]
             [armate.archimate.metamodel.appendix :as adx]
+            [armate.archimate.model :as model]
             [armate.archimate.multi-graph :as mg]
             [armate.archimate.viz.common :as vcm]
             [armate.utils :as u]))
@@ -477,22 +478,15 @@
         add-err (fn [ctx level kind bd]
                   (update ctx :lints conj (err level kind bd)))
         add-ctx (fn [ctx bd]
-                  (if-let [prev-bd (get-in ctx in)]
-                    (if (and (set? prev-bd)
-                             (set? bd)
-                             (= 1 (count bd)))
-                      (let [bd1 (first bd)
-                            type (:type bd1)
-                            ctx2 (if (and type
-                                          (or (mt/relationship? type)
-                                              (neg? (.indexOf (mapv :type prev-bd) type))))
-                                   ctx
-                                   (add-err ctx :error :duplicate bd1))]
-                        (update-in ctx2 in conj bd1))
-                      (-> ctx
-                          (add-err :error :duplicate bd)
-                          (update-in in merge bd)))
-                    (assoc-in ctx in bd)))
+                  (let [duplicate? (fn [prev-bd bd1]
+                                     (not (and (:type bd1)
+                                               (or (mt/relationship? (:type bd1))
+                                                   (neg? (.indexOf (mapv :type prev-bd)
+                                                                   (:type bd1)))))))
+                        {:keys [model duplicate]} (model/upsert-slot duplicate? ctx in bd)]
+                    (if duplicate
+                      (add-err model :error :duplicate duplicate)
+                      model)))
         lint-ctx (fn [ctx bd checks]
                    (reduce (fn [cx [check [level kind] ctx-extra-check]]
                              (if (and (or (not ctx-extra-check)
@@ -516,7 +510,7 @@
                        layer :layer
                        inside :inside} body
                       alias (last in)
-                      tkf #(get-in context [:types % :kind])
+                      tkf #(model/type-kind context %)
                       group? (= :grouping kind)
                       kind2 (or kind
                                 (tkf type))
@@ -553,7 +547,7 @@
                                        [:warn :unsupporting-element-layer]]
                                       [(when skin
                                          (let [shape (:shape body)]
-                                           #(not (get-in context [:skins [shape skin]]))))
+                                           #(not (model/skin context [shape skin]))))
                                        [:warn :undefined-element-skin]]
                                       [#(and (not kind2) (not inside-comps?))
                                        [:error :undefined-element-type]]])
@@ -577,8 +571,7 @@
        :hidden) (let [{from :from
                        to :to
                        type :type} body
-                      cf #(or (get-in context [:elements %])
-                              (get-in context [:connectors %]))
+                      cf #(model/resolve-model context %)
                       from-c (cf from)
                       to-c (cf to)
                       from-kind (:kind from-c)
@@ -609,7 +602,9 @@
                                          (and (= in (:in ll))
                                               (#{:undefined-relation-from
                                                  :undefined-relation-to} (:kind ll)))))))]
-                              [#(get-in context [context-key to from])
+                              [#(model/relation-between-reverse context
+                                                               context-key
+                                                               to from)
                                [:warn :relation-between-elements-already-present]]]
                       linted-ctx (lint-ctx context body2 checks)]
                   (add-ctx linted-ctx #{body2})))))
@@ -648,9 +643,9 @@
                               vals
                               forward-graph)))
              (mapcat (partial apply combo/cartesian-product))
-             (reduce (fn [acc [from to rel]]
-                       (update-in acc [:relations from to] u/fnil-conj-set
-                                  (assoc rel :derivate :connecting)))
+(reduce (fn [acc [from to rel]]
+                        (model/set-relation acc from to
+                                            (assoc rel :derivate :connecting)))
                      base))))))
 
 (defn get-connectors-diff-rels-info
@@ -691,7 +686,7 @@
   [context]
   (let [checks [[#(not (:start %)) [:warn :missing-start]]
                 [#(not (:end %)) [:warn :missing-end]]
-                [#(not (get-in % [:includes "archimate/Archimate"]))
+                [#(not (model/has-include? % "archimate/Archimate"))
                  [:warn :missing-archimate-include]]
                 [get-connectors-diff-rels-info
                  [:error :incorrect-connector-using true]]]]

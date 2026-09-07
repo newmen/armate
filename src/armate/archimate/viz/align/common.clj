@@ -1,5 +1,6 @@
 (ns armate.archimate.viz.align.common
-  (:require [armate.archimate.multi-graph :as mg]
+  (:require [armate.archimate.model :as model]
+            [armate.archimate.multi-graph :as mg]
             [armate.utils :as u]))
 
 (defn get-align-matrix
@@ -20,7 +21,7 @@
 
 (defn add-ud-hidden
   [context acc [from to]]
-  (let [gf #(get-in context [:elements % :kind])
+  (let [gf #(model/element-kind context %)
         relation {:from (gf from)
                   :to (gf to)
                   :raw "-[hidden]->"}]

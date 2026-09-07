@@ -1,5 +1,6 @@
 (ns armate.archimate.viz.call-counter
-  (:require [armate.archimate.multi-graph :as mg]
+  (:require [armate.archimate.model :as model]
+            [armate.archimate.multi-graph :as mg]
             [armate.utils :as u]))
 
 (defn get-max-number
@@ -63,7 +64,7 @@
 
 (defn rate-calls
   [context]
-  (let [buckets (vals (get-in context [:misc :counters :buckets]))]
+  (let [buckets (vals (model/call-rate-buckets context))]
     (when (< 1 (apply + (map :tn buckets)))
       (let [[tn counters] (rerate-buckets buckets)]
         (update context :relations (partial rate-relations counters tn))))))

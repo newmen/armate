@@ -3,6 +3,7 @@
             [armate.archimate.collector :as acl]
             [armate.archimate.metamodel.derivation.core :as dcr]
             [armate.archimate.metamodel.meta :as mt]
+            [armate.archimate.model :as model]
             [armate.archimate.viz.saver :as svr]
             [armate.archimate.multi-graph :as mg]
             [armate.archimate.plantuml.parser :as prr]))
@@ -91,9 +92,9 @@
   (reduce (fn [acc item]
             (if (vector? item)
               (-> acc
-                  (conj (get-in context [:elements (first item) :name]))
+                  (conj (model/element-name context (first item)))
                   (conj (select-keys (second item) [:type :kind])))
-              (conj acc (get-in context [:elements item :name]))))
+              (conj acc (model/element-name context item))))
           []
           path))
 
@@ -103,7 +104,7 @@
 
 (defn filter-elements
   [context predicate]
-  (let [elem-pred (comp predicate #(get-in context [:elements %]))
+  (let [elem-pred (comp predicate #(model/element context %))
         rel-pred (fn [[from to _]]
                    (and (elem-pred from) (elem-pred to)))]
     (-> context
@@ -139,7 +140,7 @@
      (-> context
          (acl/ungroup)
          (dissoc :connectors)
-         (dissoc :misc)
+         (model/without-internals)
          (filter-elements element-predicate)
          (filter-relationships :relations relation-predicate)
          (acl/erase-groups-wihtout-elements element-predicate)
@@ -157,7 +158,7 @@
      (-> context
          (acl/ungroup)
          (dissoc :connectors)
-         (dissoc :misc)
+         (model/without-internals)
          (dcr/derivate-relations)
          (filter-elements element-predicate)
          (filter-relationships :relations relation-predicate)

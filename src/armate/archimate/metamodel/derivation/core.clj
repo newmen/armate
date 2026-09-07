@@ -4,8 +4,8 @@
             [armate.archimate.metamodel.derivation.match :as mch]
             [armate.archimate.metamodel.derivation.restrictions :as rtr]
             [armate.archimate.metamodel.derivation.rules :as drs]
-            [armate.archimate.multi-graph :as mg]
-            [armate.utils :as u]))
+            [armate.archimate.model :as model]
+            [armate.archimate.multi-graph :as mg]))
 
 (defn- get-relation
   [graph from to relation-type]
@@ -16,22 +16,22 @@
 (defn- append-relation
   [context from to relation]
   (if-let [r (get-relation (:relations context) from to (:type relation))]
-    (let [rs (get-in context [:relations from to])
+    (let [rs (model/relation context from to)
           rs2 (disj rs r)
           rs3 (conj rs2 (-> r
                             (assoc :derivate (:derivate relation))
                             (assoc :original? true)))]
       (log/info (str "Derivated relation " (:type relation) " between [" from " " to "] detected"))
-      (assoc-in context [:relations from to] rs3))
-    (update-in context [:relations from to] u/fnil-conj-set relation)))
+      (model/assoc-relations context from to rs3))
+    (model/set-relation context from to relation)))
 
 (defn- append-relations
   [derivate-kind context relations]
   (reduce (fn [acc [from to rel]]
             (if (= from to)
               acc
-              (let [from-kind (get-in context [:elements from :kind])
-                    to-kind (get-in context [:elements to :kind])
+              (let [from-kind (model/element-kind acc from)
+                    to-kind (model/element-kind acc to)
                     rel-type (:type rel)
                     relation (-> (select-keys rel [:type :desc])
                                  (assoc :from from-kind)
@@ -39,12 +39,8 @@
                                  (assoc :derivate derivate-kind))]
                 (if (contains? (get-in adx/total-relationships [from-kind to-kind]) rel-type)
                   (append-relation acc from to relation)
-                  (let [skf #(-> (get-in context [:elements %])
+                  (let [skf #(-> (model/element acc %)
                                  (select-keys [:name :alias :kind]))]
-                    ;; (throw (ex-info "Unexpected relation has been derived"
-                    ;;                 {:from (skf from)
-                    ;;                  :to (skf to)
-                    ;;                  :relation (select-keys relation [:type :derivate])}))
                     (log/warn "Unexpected relation has been derived"
                               {:from (skf from)
                                :to (skf to)
@@ -56,7 +52,7 @@
 (defn- get-restricted-f
   [rf? context]
   (fn [a b c s]
-    (let [kf #(get-in context [:elements % :kind])
+    (let [kf #(model/element-kind context %)
           ak (kf a)
           bk (kf b)
           ck (kf c)]
@@ -75,8 +71,8 @@
 (defn filter-possible-relations
   [context]
   (mg/filter-relationships (fn [[from to rel]]
-                             (let [from-kind (get-in context [:elements from :kind])
-                                   to-kind (get-in context [:elements to :kind])
+                             (let [from-kind (model/element-kind context from)
+                                   to-kind (model/element-kind context to)
                                    rel-type (:type rel)]
                                (contains? (get-in adx/total-relationships
                                                   [from-kind to-kind])

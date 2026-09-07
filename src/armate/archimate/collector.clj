@@ -2,8 +2,8 @@
   (:require [clojure.string :as s]
             [clojure.set :as o]
             [armate.archimate.metamodel.meta :as mt]
-            [armate.archimate.multi-graph :as mg]
-            [armate.utils :as u]))
+            [armate.archimate.model :as model]
+            [armate.archimate.multi-graph :as mg]))
 
 (defn get-nbrs
   [rels-graph rel-type-f rel-to-f alias]
@@ -25,7 +25,7 @@
 (defn collect-interfaces
   [context component-alias]
   (->> (get-composed-aliases context component-alias)
-       (map #(get-in context [:elements %]))
+       (map #(model/element context %))
        (mapcat (fn [element]
                  (case (:kind element)
                    :application-component (collect-interfaces context (:alias element))
@@ -109,11 +109,10 @@
        (mg/get-relationships)
        (reduce (fn [acc [from to rel]]
                  (if (and (= :nesting (:derivate rel))
-                          (not= :grouping (get-in context [:elements from :kind])))
-                   (-> (assoc-in acc [:elements to :in] nil)
-                       (update-in [:relations from to] u/fnil-conj-set
-                                  (dissoc rel :derivate)))
-                   (update-in acc [:relations from to] u/fnil-conj-set rel)))
+                          (not= :grouping (model/element-kind acc from)))
+                   (-> (model/set-element-in acc to nil)
+                       (model/set-relation from to (dissoc rel :derivate)))
+                   (model/set-relation acc from to rel)))
                (assoc context :relations {}))))
 
 (defn erase-unbinded-elements
@@ -134,9 +133,9 @@
 (defn erase-groups-wihtout-elements
   [context element-predicate]
   (let [gf (fn [[from to rel]]
-             (and (= :grouping (get-in context [:elements from :kind]))
+             (and (= :grouping (model/element-kind context from))
                   (#{:aggregation :composition} (:type rel))
-                  (element-predicate (get-in context [:elements to]))))
+                  (element-predicate (model/element context to))))
         group-aliases (->> (:relations context)
                            (mg/filter-relationships gf)
                            (keys))

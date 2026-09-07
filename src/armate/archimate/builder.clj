@@ -1,5 +1,6 @@
 (ns armate.archimate.builder
   (:require [clojure.string :as s]
+            [armate.archimate.model :as model]
             [armate.transliteration :as tl]
             [armate.utils :as u])
   (:import [java.time Instant]))
@@ -158,7 +159,7 @@
 
 (defn check-cache
   [context misc-key alias]
-  (get-in context [:misc misc-key alias]))
+  (model/cache context misc-key alias))
 
 (defn get-element-alias
   [patch-f id title kind]
@@ -179,7 +180,7 @@
          default-params (assoc kind-hm :type (get-sprite-name kind))
          split-title (if split-title? (subsplit title) title)]
      (if-let [element (check-cache context kind alias)]
-       [(update-in context [:elements alias] merge default-params)
+       [(model/merge-element context alias default-params)
         (merge element default-params)]
        (let [element (merge default-params
                             {:shape "rectangle"
@@ -188,9 +189,7 @@
                              :title (if (= "" split-title) " " split-title)
                              :name title
                              :alias alias})]
-         [(-> context
-              (assoc-in [:misc kind alias] element)
-              (assoc-in [:elements alias] element))
+         [(model/add-element context alias element)
           element])))))
 
 (defn add-element
@@ -243,7 +242,7 @@
   [context interface-name]
   (let [alias (get-element-alias patch-raw-name nil
                                  interface-name :application-interface)]
-    (get-in context [:elements alias])))
+    (model/element context alias)))
 
 (defn add-component
   ([context component-name]
@@ -285,16 +284,14 @@
                  (str "g" alias-or-id)
                  alias-or-id)]
      (if-let [element (check-cache context kind alias)]
-       [context element]
-       (let [element (-> (merge {:kind kind
-                                 :type kind
-                                 :title title
-                                 :name title
-                                 :alias alias}))]
-         [(-> context
-              (assoc-in [:misc kind alias] element)
-              (assoc-in [:elements alias] element))
-          element])))))
+[context element]
+        (let [element (-> (merge {:kind kind
+                                  :type kind
+                                  :title title
+                                  :name title
+                                  :alias alias}))]
+          [(model/add-element context alias element)
+           element])))))
 
 (defn add-connector
   ([context type junction-name]
@@ -307,17 +304,15 @@
          alias (if (only-int? alias-or-id)
                  (str "jc" alias-or-id)
                  alias-or-id)]
-     (if-let [connector (check-cache context kind alias)]
-       [context connector]
-       (let [connector (-> (merge {:kind kind
-                                   :type type
-                                   :title (subsplit title)
-                                   :name title
-                                   :alias alias}))]
-         [(-> context
-              (assoc-in [:misc kind alias] connector)
-              (assoc-in [:connectors alias] connector))
-          connector])))))
+(if-let [connector (check-cache context kind alias)]
+        [context connector]
+        (let [connector (-> (merge {:kind kind
+                                    :type type
+                                    :title (subsplit title)
+                                    :name title
+                                    :alias alias}))]
+          [(model/add-connector context alias connector)
+           connector])))))
 
 (def init-context
   {:start {:title (str title-generated-at-prefix (Instant/now))}
@@ -340,14 +335,15 @@
 
 (defn- get-relation
   [context from to type params]
-  (let [key [:relations (:alias from) (:alias to)]
+  (let [from-alias (:alias from)
+        to-alias (:alias to)
         relation (merge params
                         {:from (:kind from)
                          :to (:kind to)
                          :type type})]
-    (if (contains? (get-in context key) relation)
+    (if (contains? (model/relation context from-alias to-alias) relation)
       context
-      (update-in context key u/fnil-conj-set relation))))
+      (model/set-relation context from-alias to-alias relation))))
 
 (defn add-relation
   ([context from to type direction]

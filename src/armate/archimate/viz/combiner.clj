@@ -2,9 +2,9 @@
   (:require [clojure.string :as s]
             [clojure.set :as o]
             [armate.archimate.metamodel.derivation.match :as mch]
+            [armate.archimate.model :as model]
             [armate.archimate.multi-graph :as mg]
-            [armate.archimate.viz.common :as vcm]
-            [armate.utils :as u]))
+            [armate.archimate.viz.common :as vcm]))
 
 (def do-grouping? false)
 (def group-modes
@@ -303,7 +303,7 @@
   [context triple]
   (let [[from to rel] triple]
     (if (and do-grouping?
-             (when-let [element (get-in context [:elements from])]
+             (when-let [element (model/element context from)]
                (contains? (group-modes (:kind element)) (:type rel))))
       [true [from to (assoc rel :derivate :nesting)]]
       [false triple])))
@@ -314,9 +314,9 @@
        (mg/get-relationships)
        (map (partial make-nesting context))
        (reduce (fn [acc [nesting? [from to rel]]]
-                 (let [ctx2 (update-in acc [:relations from to] u/fnil-conj-set rel)]
+                 (let [ctx2 (model/set-relation acc from to rel)]
                    (if nesting?
-                     (assoc-in ctx2 [:elements to :in] from)
+                     (model/set-element-in ctx2 to from)
                      ctx2)))
                (assoc context :relations {}))))
 
