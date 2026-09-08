@@ -6,8 +6,7 @@ both into a shared graph model, enriches them with relationships derived from th
 ArchiMate specification, and renders cleaned-up PlantUML views.
 
 It is primarily an in-memory analysis pipeline: model in, enriched model and
-PlantUML output out. The core entry points (`armate.core`) and the `dev/`
-usecases are exercised from a Clojure REPL under Leiningen.
+PlantUML output out. The core entry points (`armate.core`) are exercised from a Clojure REPL under Leiningen.
 
 ## Features
 
