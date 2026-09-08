@@ -52,6 +52,11 @@ src/armate/
       combiner.clj, sync.clj, common.clj
       align/                      element alignment (common, grid, neighbours)
       call_counter.clj
+  mcp/
+    server.clj                    stdio JSON-RPC 2.0 MCP server (init, tools/list, tools/call)
+    registry.clj                  in-memory model registry (load/reload/unload, caches)
+    analytics.clj                 model-record build + view-member/derivation analytics
+    tools.clj                     tool handlers + declarative tool schemas/descriptions
 test/                             unit tests
 dev/armate/usecases/              usage examples
 ```
