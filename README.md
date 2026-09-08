@@ -25,6 +25,8 @@ PlantUML output out. The core entry points (`armate.core`) are exercised from a 
   filtering.
 - **PlantUML rendering** — save derived/filtered models back out as `.puml`,
   with element alignment (grid/neighbours), combining, and sync support.
+- **MCP server** — expose the same analytics to an agent as a Model Context
+  Protocol server over stdio (see [MCP server](#mcp-server)).
 
 ## Project layout
 
@@ -67,6 +69,97 @@ throughout the code:
   and `potential` rules.
   - `certain` — applied over the whole loaded model.
   - `potential` — applied per view, under an element-count guard.
+
+## MCP server
+
+Armate ships a **Model Context Protocol (MCP) server** (`armate.mcp.server`) that
+exposes the ArchiMate analytics to an agent through a JSON-RPC 2.0 interface over
+stdio. It is a pure-Clojure, hand-rolled implementation (no third-party MCP SDK),
+following the in-house reference server. Models are loaded from `.archimate`
+files into an in-memory registry addressed by `model_id`; nothing is persisted
+between server runs.
+
+### Build
+
+Build the executable uberjar:
+
+```sh
+lein uberjar
+```
+
+This produces `target/armate-<version>-standalone.jar`, e.g.
+`target/armate-2.0.0-SNAPSHOT-standalone.jar`.
+
+### Run
+
+Launch the server in stdio mode (it reads JSON-RPC requests on stdin and writes
+responses to stdout):
+
+```sh
+java -jar target/armate-2.0.0-SNAPSHOT-standalone.jar
+```
+
+The server is a normal MCP stdio process; you generally do not run it by hand but
+register it with your MCP client (see below).
+
+### Tools
+
+`tools/list` advertises every tool below with its input schema. Note that
+`render_view`/`merge_views`/`related_elements` accept a derivation `mode`
+(`none` | `certain` | `certain+potential`); `certain` adds globally-implied
+relationships per the ArchiMate derivation rules, and `certain+potential` also
+adds locally-derivable ones (see `derived_relations` for direct access).
+Potential derivation is capped at 30 involved elements and denotes a
+*possibility*, not a certainty, of an inferred relationship.
+
+| Tool | Description |
+|------|-------------|
+| `load_model` | Load an `.archimate` file into the model registry, returning its `model_id`. |
+| `reload_model` | Re-read an already-loaded `model_id`'s file, keeping the same id. |
+| `list_models` | List the loaded model ids. |
+| `unload_model` | Remove a loaded model from the registry. |
+| `list_views` | List the view names of a model. |
+| `render_view` | Render a view to PlantUML `@startuml` text. Alias values are the stable model aliases shared by `list_elements` / `related_elements` / paths. `mode` adds inferred (derived) relationships per ArchiMate rules. |
+| `merge_views` | Render the union of several views to PlantUML. Like `render_view`, `mode` adds inferred relationships. |
+| `list_elements` | List model elements as `name \| alias \| kind \| layer \| views...`. Optionally narrow by view, type or layer. |
+| `filter_by_type` | List elements of a given type, optionally within a view. |
+| `filter_by_layer` | List elements of a given layer, optionally within a view. |
+| `element_views` | Which view names place a given element (by name). |
+| `relation_views` | Which views place a relationship between two elements (by names); without type, one line per relation type with its view set. |
+| `derived_relations` | List relationships inferred between two elements (by names) by the global `certain` derivation — implied relations the explicit model does not spell out. |
+| `related_elements` | Render the induced subgraph around an element (by name) up to a depth, as PlantUML. `mode` adds inferred relationships. |
+| `shortest_path` | Shortest path between two elements (by name) over original relationships, optionally filtered by rel-type category. Undirected by default; pass `directed=true` to follow relationship direction. |
+| `all_paths` | All simple paths between two elements over original relationships, limiting total length to 6 edges. Undirected by default; pass `directed=true` to follow direction. |
+| `get_stats` | Whole-model statistics. |
+
+Elements and relationships are addressed by human-readable `name`. A non-unique
+name returns an error listing the candidate `{alias, kind, layer}`; an unknown
+name returns an error listing the nearest available element names to help correct
+the call.
+
+### Registering in Kilo
+
+Add an entry under the `"mcp"` object in the global Kilo config
+(`~/.config/kilo/kilo.jsonc`), using the uberjar via `java -jar` (Kilo applies a
+request timeout, so launch the jar directly rather than through `lein run`):
+
+```jsonc
+{
+  "mcp": {
+    "armate": {
+      "type": "local",
+      "command": ["/usr/bin/java", "-jar", "/absolute/path/to/armate/target/armate-2.0.0-SNAPSHOT-standalone.jar"],
+      "enabled": true,
+      "timeout": 150000
+    }
+  }
+}
+```
+
+Use absolute paths for `java`, the jar and any `workingDirectory` to avoid PATH
+issues when Kilo starts the server. Restart Kilo (or reload its config) for the
+new MCP server to be picked up. For a per-project registration, create a
+`kilo.json` at the repository root with the same `"mcp"` structure.
 
 ## Usage
 
