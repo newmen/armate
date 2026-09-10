@@ -195,12 +195,31 @@
 
 (def ^:private jc-token #"Junction_Or\(")
 
+(defn- views-placing-connector
+  "The view names that place at least one connector represented by @token (a regex over
+   the rendered PlantUML). Assumes `enriched` names a connector alias whose plane renders
+   as @token; returns the placing views."
+  [views token]
+  (->> views
+       (keep (fn [v]
+               (let [puml (ana/render-view enriched graph v :none nil 50)]
+                 (when (re-find token puml) v))))
+       (into #{})))
+
+(defn- non-placing-views
+  "Every view of the fixture that does not render a connector matching @token."
+  [token]
+  (let [all (vec (keys (get-in enriched [:maps :views])))]
+    (remove (views-placing-connector all token) all)))
+
 (deftest unplaced-junction-absent-from-view
   (testing "a Junction not placed in a view is absent from its PlantUML"
-    (doseq [v ["Шахматы" "Процесс"]]
-      (let [puml (ana/render-view enriched graph v :none nil 50)]
-        (is (nil? (re-find jc-token puml))
-            (str v " must not render the unplaced Junction"))))))
+    (let [jv (views-placing-connector (keys (get-in enriched [:maps :views])) jc-token)]
+      (is (= #{"Семья"} jv) "only the view that places the Junction renders it")
+      (doseq [v (non-placing-views jc-token)]
+        (let [puml (ana/render-view enriched graph v :none nil 50)]
+          (is (nil? (re-find jc-token puml))
+              (str v " must not render the unplaced Junction")))))))
 
 (deftest placed-junction-and-incident-edges-present
   (testing "a view that places a Junction renders it with its incident relationships"
@@ -213,7 +232,7 @@
   (testing "mode :certain / :certain+potential never reintroduce an unplaced Junction"
     (let [certain (dcr/derivate-certain-relations graph)]
       (doseq [mode [:certain :certain+potential]
-              v ["Шахматы" "Процесс"]]
+              v (non-placing-views jc-token)]
         (let [puml (ana/render-view enriched graph v mode certain 50)]
           (is (nil? (re-find jc-token puml))
               (str mode " must not reintroduce the Junction into " v)))))))
