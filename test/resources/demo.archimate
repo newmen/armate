@@ -100,6 +100,7 @@
     <element xsi:type="archimate:TriggeringRelationship" id="id-429cf022882e49f4a9f2436178cca1dc" source="id-0b91f827a887466291869a1b548fb0e8" target="id-7a33cc3b378a4e939f15c273d012fff8"/>
     <element xsi:type="archimate:TriggeringRelationship" id="id-382f4c4895be48d7b08b8eeaf7a2c5cb" source="id-c6b50deef07b491d966dee1fddd0b44d" target="id-7a33cc3b378a4e939f15c273d012fff8"/>
     <element xsi:type="archimate:TriggeringRelationship" id="id-3ab8c01f2594404e9385f3a1ce4bc739" source="id-7a33cc3b378a4e939f15c273d012fff8" target="id-1a04f031acdf4ca2a1a42448d2c3660b"/>
+    <element xsi:type="archimate:FlowRelationship" id="id-86c1dbb040084994bdd8d6992b6bba65" source="id-5beb37c7bdcb4a5385a0ca8c5d4e4607" target="id-212f6784d3644c139f49a54a9126439d"/>
   </folder>
   <folder name="Views" id="id-9579977d4eb24e9e85901c6c1ff3f056" type="diagrams">
     <element xsi:type="archimate:ArchimateDiagramModel" name="Процесс" id="id-d445090e53784f508b3af004bcd8095d">
@@ -204,6 +205,11 @@
         <bounds x="816" y="204" width="120" height="55"/>
         <sourceConnection xsi:type="archimate:Connection" id="id-79805dbd022a4994997976ff502a4336" source="id-1e8b1f1fe7ab41ceabef3f82f155f64b" target="id-ea8a3b9a4b224765986038fa83195b17" archimateRelationship="id-fd2b9628acbc46f0a5a86193a0595c94"/>
         <sourceConnection xsi:type="archimate:Connection" id="id-d0ca5d766b684542979e8a99222641d9" source="id-1e8b1f1fe7ab41ceabef3f82f155f64b" target="id-b42a4d8784324c929c0258cbf4f99ff0" archimateRelationship="id-1d2cd241646846d4aeec05940b4ab847"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-2cd0f489dffc4e17b8db7f9624bd130e" source="id-1e8b1f1fe7ab41ceabef3f82f155f64b" target="id-d43429be3b6f48309628a00339e9db57" archimateRelationship="id-86c1dbb040084994bdd8d6992b6bba65">
+          <bendpoint startY="-63" endX="336" endY="-279"/>
+          <bendpoint startX="-432" startY="-63" endX="-96" endY="-279"/>
+          <bendpoint startX="-432" startY="213" endX="-96" endY="-3"/>
+        </sourceConnection>
       </child>
       <child xsi:type="archimate:DiagramObject" id="id-fcef15b00ce7432c932dc1836be5de0c" targetConnections="id-a2bc050acdb4474eafea78e6d23c367f" archimateElement="id-556ed06b853a4d00a99e50080760d5a2">
         <bounds x="564" y="312" width="120" height="55"/>
@@ -220,7 +226,7 @@
         <bounds x="648" y="204" width="120" height="55"/>
         <sourceConnection xsi:type="archimate:Connection" id="id-30e0708c88ea472c83dac3f0c40435bd" source="id-ea8a3b9a4b224765986038fa83195b17" target="id-ee5f96ff3ba447f2869a3979a59fe97e" archimateRelationship="id-df1fbb67b03c4d63ab9d221e7fe297b1"/>
       </child>
-      <child xsi:type="archimate:DiagramObject" id="id-d43429be3b6f48309628a00339e9db57" targetConnections="id-3988962343f34edbb3f50cb2fa5f32d8" archimateElement="id-212f6784d3644c139f49a54a9126439d">
+      <child xsi:type="archimate:DiagramObject" id="id-d43429be3b6f48309628a00339e9db57" targetConnections="id-3988962343f34edbb3f50cb2fa5f32d8 id-2cd0f489dffc4e17b8db7f9624bd130e" archimateElement="id-212f6784d3644c139f49a54a9126439d">
         <bounds x="480" y="420" width="120" height="55"/>
         <sourceConnection xsi:type="archimate:Connection" id="id-61a3c33d88a94501a582d4465102a875" source="id-d43429be3b6f48309628a00339e9db57" target="id-d5df3db552184050babcf950e8c44a8e" archimateRelationship="id-56fdd8d241804371bcccf79597b2d76d"/>
         <sourceConnection xsi:type="archimate:Connection" id="id-ffd6576b03ff4e40bc460d7a5730bacf" source="id-d43429be3b6f48309628a00339e9db57" target="id-ffb2a33829244977a70123e1bf3ffee8" archimateRelationship="id-ee6913933b584a2d8b28b644dacb1c2f"/>

@@ -18,6 +18,6 @@
       (is (= 32 (get-in stats [:elements :total])))
       (is (= {:business 31 :strategy 1}
              (get-in stats [:elements :layer])))
-      (is (= 56 (get-in stats [:relations :original :total])))
-      (is (= 11 (get-in stats [:relations :original :groups :dynamic])))
+      (is (= 57 (get-in stats [:relations :original :total])))
+      (is (= 12 (get-in stats [:relations :original :groups :dynamic])))
       (is (= 0 (get-in stats [:lints]))))))
