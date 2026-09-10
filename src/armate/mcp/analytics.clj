@@ -320,12 +320,23 @@
                              (or certain-relations []))]
     (assoc graph :elements elements :relations with-certain)))
 
+(defn- mode->render-derivable
+  "The set of `:derivate` markers to render as edges for a derivation @mode:
+   `:none` renders none, `:certain` only the `certain` marker, `:certain+potential`
+   both; nil/unknown modes default to none (no derived edges)."
+  [mode]
+  (case mode
+    :certain #{:certain}
+    :certain+potential #{:certain :potential}
+    #{}))
+
 (defn render-puml
-  "Render @ctx (a model/sub-graph context) to PlantUML source."
-  [ctx title]
+  "Render @ctx (a model/sub-graph context) to PlantUML source, drawing as edges the
+   `:derivate` markers implied by @mode (see @mode->render-derivable)."
+  [ctx title mode]
   (-> ctx
       (model/set-start-title title)
-      (viz/on-fly-generate-puml)))
+      (viz/on-fly-generate-puml {:render-derivable (mode->render-derivable mode)})))
 
 ;; ---------------------------------------------------------------------------
 ;; view rendering (render_view / merge_views)
@@ -388,7 +399,7 @@
   [enriched graph view-name mode certain-graph potential-cap]
   (let [aliases (view-aliases enriched view-name)
         sub (build-sub-context graph aliases nil)]
-    (render-puml (apply-mode sub mode certain-graph potential-cap) view-name)))
+    (render-puml (apply-mode sub mode certain-graph potential-cap) view-name mode)))
 
 (defn render-merged-views
   "Render the union of views @view-names (merge_views) to PlantUML. The sub-context is the
@@ -399,7 +410,8 @@
                      (into #{}))
         sub (build-sub-context graph aliases nil)]
     (render-puml (apply-mode sub mode certain-graph potential-cap)
-                 (s/join ", " view-names))))
+                 (s/join ", " view-names)
+                 mode)))
 
 (defn related-elements
   "The induced subgraph around @root-name: all elements within @depth hops (undirected,
@@ -423,7 +435,7 @@
                      (->> (mg/get-relationships (:relations certain-graph))
                           (filter (fn [[from to _]] (and (aliases from) (aliases to))))))
            sub (build-sub-context graph aliases certain)]
-       (render-puml (apply-mode sub mode certain-graph potential-cap) root-name)))))
+       (render-puml (apply-mode sub mode certain-graph potential-cap) root-name mode)))))
 
 ;; ---------------------------------------------------------------------------
 ;; statistics

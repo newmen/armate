@@ -185,7 +185,58 @@
     (testing "a sub-context within the cap renders without throwing"
       (let [sub (ana/build-sub-context graph #{"ba12" "bo6"} nil)]
         (is (string? (ana/render-puml (ana/apply-mode sub :certain+potential nil 30)
-                                      "sub")))))))
+                                      "sub"
+                                      :certain+potential)))))))
+
+
+;; ---------------------------------------------------------------------------
+;; Ticket 02 — derived relationships rendered per mode
+;; ---------------------------------------------------------------------------
+
+(deftest mode-certain-renders-certain-derived-edge
+  (testing "mode :certain renders a certain-derived edge (PlantUML contains the relation token)"
+    (let [certain (dcr/derivate-certain-relations graph)
+          aliases (set (ana/view-aliases enriched "Процесс"))
+          puml (ana/render-view enriched graph "Процесс" :certain certain 30)
+          derived (ana/derived-relations certain aliases)
+          [from to rel] (first derived)
+          token (str "Rel_" (s/capitalize (name (:type rel))))]
+      (is (seq derived) "demo view has at least one certain-derived relation")
+      (is (re-find (re-pattern (str token "\\(" from ", " to)) puml)
+          (str "rendered PlantUML contains the derived relation " token)))))
+
+(deftest mode-none-excludes-certain-derived-edge
+  (testing "mode :none renders no derived edges"
+    (let [certain (dcr/derivate-certain-relations graph)
+          aliases (set (ana/view-aliases enriched "Процесс"))
+          puml (ana/render-view enriched graph "Процесс" :none certain 30)
+          derived (ana/derived-relations certain aliases)]
+      (is (seq derived) "demo view has at least one certain-derived relation to exclude")
+      (doseq [[from to rel] derived]
+        (let [token (str "Rel_" (s/capitalize (name (:type rel))))]
+          (is (nil? (re-find (re-pattern (str token "\\(" from ", " to "\\)")) puml))
+              (str "no " token "(" from ", " to ") edge under mode :none")))))))
+
+(deftest mode-maps-to-render-derivable
+  (let [mk-ctx (fn []
+                 {:start {:title "t"}
+                  :elements {"a" {:alias "a" :kind :business-actor :title "A"}
+                             "b" {:alias "b" :kind :business-actor :title "B"}
+                             "c" {:alias "c" :kind :business-actor :title "C"}}
+                  :relations {"a" {"b" #{{:type :serving :derivate :certain}}
+                                  "c" #{{:type :serving :derivate :potential}}}}})]
+    (testing "mode :certain renders the certain-derived edge, suppresses the potential one"
+      (let [puml (ana/render-puml (mk-ctx) "t" :certain)]
+        (is (re-find #"Rel_Serving\(a, b\)" puml) "certain-derived edge rendered")
+        (is (nil? (re-find #"Rel_Serving\(a, c\)" puml)) "potential-derived edge suppressed")))
+    (testing "mode :none renders neither derived edge"
+      (let [puml (ana/render-puml (mk-ctx) "t" :none)]
+        (is (nil? (re-find #"Rel_Serving\(a, b\)" puml)) "certain-derived edge suppressed")
+        (is (nil? (re-find #"Rel_Serving\(a, c\)" puml)) "potential-derived edge suppressed")))
+    (testing "mode :certain+potential renders both certain and potential markers"
+      (let [puml (ana/render-puml (mk-ctx) "t" :certain+potential)]
+        (is (re-find #"Rel_Serving\(a, b\)" puml) "certain-derived edge rendered")
+        (is (re-find #"Rel_Serving\(a, c\)" puml) "potential-derived edge rendered")))))
 
 
 ;; ---------------------------------------------------------------------------

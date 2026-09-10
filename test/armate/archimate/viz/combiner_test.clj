@@ -2,7 +2,8 @@
   (:require [clojure.string :as s]
             [clojure.test :refer [deftest is testing]]
             [armate.archimate.plantuml.parser :as prr]
-            [armate.archimate.viz.combiner :as viz]))
+            [armate.archimate.viz.combiner :as viz]
+            [armate.archimate.viz.support :as su]))
 
 (defn strip-lines
   "Removes :line so the (non-line) ordering logic is exercised."
@@ -134,3 +135,74 @@ c1_acp -[hidden]-> c2_ai
     (testing "relations of same category sorted by both endpoints"
       (is (= ["Rel_Serving(a, z)" "Rel_Serving(b, c)" "Rel_Serving(z, a)"]
              (rel-lines out))))))
+
+;; ---------------------------------------------------------------------------
+;; Ticket 01: on-fly options (group-modes + render-derivable)
+;; ---------------------------------------------------------------------------
+
+(def alice {:alias "a" :kind :grouping :type :grouping :title "Alice"})
+(def bob {:alias "b" :kind :application-component :title "Bob"})
+(def carol {:alias "c" :kind :business-actor :title "Carol"})
+
+(defn- connect-simple
+  [out from to]
+  (re-find (re-pattern (str "Rel_Serving\\(" from ", " to "\\)")) out))
+
+(deftest render-derivable-default-suppresses-derived-edges
+  (let [out (viz/on-fly-generate-puml
+             (su/ctx [alice bob carol]
+                   (merge (su/derived-edge "a" "b" :serving :certain)
+                          (su/derived-edge "b" "c" :serving :potential)
+                          (su/edge "a" "c" :serving))))]
+    (is (nil? (connect-simple out "a" "b")) "certain-derived edge suppressed")
+    (is (nil? (connect-simple out "b" "c")) "potential-derived edge suppressed")
+    (is (connect-simple out "a" "c") "plain (non-derived) edge rendered")))
+
+(deftest render-derivable-certain-renders-certain-suppresses-potential
+  (let [out (viz/on-fly-generate-puml
+             (su/ctx [alice bob carol]
+                   (merge (su/derived-edge "a" "b" :serving :certain)
+                          (su/derived-edge "b" "c" :serving :potential)))
+             {:render-derivable #{:certain}})]
+    (is (connect-simple out "a" "b") "certain-derived edge rendered")
+    (is (nil? (connect-simple out "b" "c")) "potential-derived edge suppressed")))
+
+(deftest render-derivable-both-renders-certain-and-potential
+  (let [out (viz/on-fly-generate-puml
+             (su/ctx [alice bob carol]
+                   (merge (su/derived-edge "a" "b" :serving :certain)
+                          (su/derived-edge "b" "c" :serving :potential)))
+             {:render-derivable #{:certain :potential}})]
+    (is (connect-simple out "a" "b") "certain-derived edge rendered")
+    (is (connect-simple out "b" "c") "potential-derived edge rendered")))
+
+(deftest default-grouping-nests-grouping-elements
+  (let [g {:alias "g" :kind :grouping :type :grouping :title "Group"}
+        c {:alias "c" :kind :application-component :title "Comp"}
+        out (viz/on-fly-generate-puml
+             (su/ctx [g c]
+                  (su/edge "g" "c" :composition)))]
+    (is out)
+    (is (re-find #"(?s)\bGrouping\(g, \"Group\"\) \{\s*.*?Application_Component\(" out)
+        "grouping element nests the component via composition")))
+
+(deftest explicit-empty-group-modes-disables-nesting
+  (let [g {:alias "g" :kind :grouping :type :grouping :title "Group"}
+        c {:alias "c" :kind :application-component :title "Comp"}
+        out (viz/on-fly-generate-puml
+             (su/ctx [g c]
+                  (su/edge "g" "c" :composition))
+             {:group-modes {}})]
+    (is (re-find #"Grouping\(g, \"Group\"\)" out) "grouping element still emitted")
+    (is (nil? (re-find #"Grouping\(g, \"Group\"\) \{" out))
+        "no nesting: grouping emitted flat")))
+
+(deftest nil-group-modes-applies-default
+  (let [g {:alias "g" :kind :grouping :type :grouping :title "Group"}
+        c {:alias "c" :kind :application-component :title "Comp"}
+        out (viz/on-fly-generate-puml
+             (su/ctx [g c]
+                  (su/edge "g" "c" :composition))
+             {:group-modes nil})]
+    (is (re-find #"(?s)\bGrouping\(g, \"Group\"\) \{\s*.*?Application_Component\(" out)
+        "explicit :group-modes nil falls back to default (grouping on)")))

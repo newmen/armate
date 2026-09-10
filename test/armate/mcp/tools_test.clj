@@ -48,6 +48,43 @@
           (is (ok? rc))
           (is (s/includes? (txt rc) "@startuml")))))))
 
+(deftest render-view-mode-controls-derived-edges
+  (testing "render_view renders derived edges per mode: certain only for :certain, none for :none, both for :certain+potential"
+    (with-demo
+      (fn [r id]
+        (let [[_ none-rc] (tools/handle-tool "render_view" r
+                                             {:model_id id :view "Процесс" :mode "none"})
+              [_ certain-rc] (tools/handle-tool "render_view" r
+                                                {:model_id id :view "Процесс" :mode "certain"})
+              [_ both-rc] (tools/handle-tool "render_view" r
+                                             {:model_id id :view "Процесс" :mode "certain+potential"})
+              none (txt none-rc)
+              certain (txt certain-rc)
+              both (txt both-rc)]
+          (is (ok? none-rc))
+          (is (ok? certain-rc))
+          (is (ok? both-rc))
+          (is (>= (count (s/split-lines certain)) (count (s/split-lines none)))
+              "mode :certain added at least the certain-derived relations to the view")
+          (is (>= (count (s/split-lines both)) (count (s/split-lines certain)))
+              "mode :certain+potential adds at least as many relation lines as :certain"))))))
+
+(deftest render-view-mode-certain-shows-derived-token
+  (testing "mode :certain renders a relation token that mode :none suppresses"
+    (with-demo
+      (fn [r id]
+        (let [[_ none-rc] (tools/handle-tool "render_view" r
+                                             {:model_id id :view "Процесс" :mode "none"})
+              [_ certain-rc] (tools/handle-tool "render_view" r
+                                                {:model_id id :view "Процесс" :mode "certain"})
+              none (txt none-rc)
+              certain (txt certain-rc)]
+          (is (ok? none-rc))
+          (is (ok? certain-rc))
+          (is (some (fn [l] (and (re-find #"^Rel_" l) (not (s/includes? none l))))
+                    (s/split-lines certain))
+              "certain's derived edge line is absent from mode :none"))))))
+
 (deftest list-elements-with-view
   (testing "list_elements narrows to a view's sub-context"
     (with-demo

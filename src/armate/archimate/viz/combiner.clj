@@ -1,23 +1,12 @@
 (ns armate.archimate.viz.combiner
   (:require [clojure.string :as s]
-            [clojure.set :as o]
             [armate.archimate.metamodel.rank :as rank]
             [armate.archimate.model :as model]
             [armate.archimate.multi-graph :as mg]
             [armate.archimate.viz.common :as vcm]))
 
-(def do-grouping? false)
-(def group-modes
-  {:application-collaboration #{:composition :aggregation}
-   :application-component #{:composition}
-   :application-interface #{:composition}
-   :application-function #{:aggregation :composition}
-   :application-process #{:aggregation :composition}
-   :application-service #{:composition}
-   :grouping #{:aggregation :composition}})
-
-(def escape-derivated
-  #{:certain :potential})
+(def default-group-modes
+  {:grouping #{:aggregation :composition}})
 
 (defn sort-elements
   "Elements with :line keep the original file order.
@@ -230,11 +219,13 @@
    (or to "")])
 
 (defn- get-relations
-  [grsf key context]
+  [grsf key render-derivable context]
   (->> (grsf (key context))
-       (remove (comp (o/union #{:nesting :connecting} escape-derivated)
-                     :derivate
-                     last))
+       (remove (fn [[_ _ rel]]
+                 (let [derivate (:derivate rel)]
+                   (or (contains? #{:nesting :connecting} derivate)
+                       (and (some? derivate)
+                            (not (contains? render-derivable derivate)))))))
        (sort-by relation-sort-key)
        (mapcat get-relation)))
 
@@ -267,7 +258,7 @@
 
 (defn generate-puml
   ([context]
-   (generate-puml (partial get-relations mg/get-relationships)
+   (generate-puml (fn [key ctx] (get-relations mg/get-relationships key #{} ctx))
                   context))
   ([relf context]
    (let [holder-types (get-holder-types context)
@@ -286,19 +277,19 @@
           (s/join "\n\n")))))
 
 (defn make-nesting
-  [context triple]
+  [group-modes context triple]
   (let [[from to rel] triple]
-    (if (and do-grouping?
+    (if (and (seq group-modes)
              (when-let [element (model/element context from)]
-               (contains? (group-modes (:kind element)) (:type rel))))
+               (contains? (get group-modes (:kind element)) (:type rel))))
       [true [from to (assoc rel :derivate :nesting)]]
       [false triple])))
 
 (defn make-grouped
-  [context]
+  [group-modes context]
   (->> (:relations context)
        (mg/get-relationships)
-       (map (partial make-nesting context))
+       (map (partial make-nesting group-modes context))
        (reduce (fn [acc [nesting? [from to rel]]]
                  (let [ctx2 (model/set-relation acc from to rel)]
                    (if nesting?
@@ -307,6 +298,21 @@
                (assoc context :relations {}))))
 
 (defn on-fly-generate-puml
-  [context]
-  (generate-puml (partial get-relations mg/get-relationships)
-                 (make-grouped context)))
+  "Render @context (a model/sub-graph context) to PlantUML source, with per-call
+   decisions supplied in the options map @opts:
+
+   - `:group-modes` — map of `{element-kind #{relationship-type}}` deciding which
+     relationships nest one element inside another. Default (absent or `nil`):
+     `{:grouping #{:aggregation :composition}}` (grouping on). An explicit empty
+     map `{}` disables nesting (flat rendering).
+   - `:render-derivable` — set of `:derivate` markers rendered as edges (e.g.
+     `#{:certain}`, `#{:certain :potential}`). Default `#{}`: no derived edges.
+     The internal `:nesting`/`:connecting` markers are always excluded."
+  ([context]
+   (on-fly-generate-puml context nil))
+  ([context opts]
+   (let [group-modes (or (:group-modes opts) default-group-modes)
+         render-derivable (:render-derivable opts #{})]
+     (generate-puml (fn [key ctx]
+                      (get-relations mg/get-relationships key render-derivable ctx))
+                    (make-grouped group-modes context)))))
