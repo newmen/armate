@@ -2,7 +2,7 @@
 
 **Feature slug:** `junction-subcontext`
 
-**Status:** ready-for-agent (blocking-issue parent for the ticket set)
+**Status:** done (blocking-issue parent for the ticket set)
 
 Make the MCP view tools (`render_view`, `merge_views`, `related_elements`) respect the **sub-context of a view** rule for Junctions exactly as they do for elements: a Junction appears in the rendered PlantUML only when the target views explicitly place it. Today a Junction is globally leaked into every rendered view because it lives in a separate graph slot from elements. All domain terms follow `CONTEXT.md`.
 

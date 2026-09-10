@@ -1,4 +1,4 @@
-(defproject armate "2.1.0-SNAPSHOT"
+(defproject armate "2.1.1"
   :description "Analysis ArchiMate diagrams"
   :license {:name "Private"}
   :main armate.mcp.server
