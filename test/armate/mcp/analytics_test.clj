@@ -120,6 +120,32 @@
       (is (map? (:elements st)))
       (is (map? (:relations st))))))
 
+(deftest stats-with-derived-certain-counts-derived
+  (testing "stats with a derived certain graph reports the derived relations under
+            :relations.certain instead of an empty bucket"
+    (let [derived (dcr/derivate-certain-relations graph)
+          with-derived (ana/stats graph derived)
+          plain (ana/stats graph)]
+      (is (zero? (get-in plain [:relations :certain :total]))
+          "plain stats report no certain relations (none are derived in the raw context)")
+      (is (pos? (get-in with-derived [:relations :certain :total]))
+          "derived certain relations are counted")
+      (is (zero? (get-in with-derived [:relations :potential :total]))
+          "potential is never reported by the certain derivation")
+      (is (= (get-in plain [:relations :original])
+             (get-in with-derived [:relations :original]))
+          "original relations are unaffected by the derived merge")
+      (is (= (:elements plain) (:elements with-derived))
+          "element statistics are unaffected by the derived merge"))))
+
+(deftest stats-without-derived-certain-stays-empty
+  (testing "stats with a derived graph carrying no relations still reports an empty
+            :relations.certain (stable shape, only content changes)"
+    (let [empty-derived {:relations {} :elements {}}
+          with-derived (ana/stats graph empty-derived)]
+      (is (zero? (get-in with-derived [:relations :certain :total])))
+      (is (map? (get-in with-derived [:relations :certain]))))))
+
 ;; ---------------------------------------------------------------------------
 ;; Ticket 03 — related_elements induced subgraph
 ;; ---------------------------------------------------------------------------

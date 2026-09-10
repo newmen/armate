@@ -1,6 +1,7 @@
 (ns armate.mcp.tools-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.string :as s]
+            [armate.mcp.registry :as reg]
             [armate.mcp.tools :as tools]))
 
 (def demo-path "test/resources/demo.archimate")
@@ -199,12 +200,58 @@
           (is (not (s/includes? (txt rc) "bpc20")) "uses element names, not aliases"))))))
 
 (deftest get-stats-tool
-  (with-demo
-    (fn [r id]
-      (let [[_ rc] (tools/handle-tool "get_stats" r
-                                      {:model_id id})]
-        (is (ok? rc))
-        (is (s/includes? (txt rc) ":elements"))))))
+  (testing "get_stats reports types/:elements/:relations/:lints"
+    (with-demo
+      (fn [r id]
+        (let [[_ rc] (tools/handle-tool "get_stats" r
+                                        {:model_id id})]
+          (is (ok? rc))
+          (is (s/includes? (txt rc) ":elements")))))))
+
+(deftest get-stats-reports-derived-certain-after-load
+  (testing "get_stats right after load_model reports the globally derived certain relations,
+            not an empty :relations.certain bucket"
+    (with-demo
+      (fn [r id]
+        (let [[_ rc] (tools/handle-tool "get_stats" r
+                                        {:model_id id})
+              stats (read-string (txt rc))]
+          (is (ok? rc))
+          (is (pos? (get-in stats [:relations :certain :total]))
+              "a fresh load already surfaces derived certain relations")
+          (is (zero? (get-in stats [:relations :potential :total]))
+              "potential relations are never counted"))))))
+
+(deftest get-stats-certain-agrees-with-certain-graph
+  (testing "get_stats :relations.certain agrees with the registry's certain derivation,
+            so stats and the derivation modes cannot drift"
+    (with-demo
+      (fn [r id]
+        (let [[_ rc] (tools/handle-tool "get_stats" r
+                                        {:model_id id})
+              stats (read-string (txt rc))
+              certain (reg/certain-graph r id)
+              derived-count (->> (:relations certain)
+                                 (vals)
+                                 (mapcat vals)
+                                 (mapcat identity)
+                                 (filter (fn [rel] (= :certain (:derivate rel))))
+                                 (count))]
+          (is (ok? rc))
+          (is (= derived-count (get-in stats [:relations :certain :total]))
+              "the stats certain total equals the derived certain relations"))))))
+
+(deftest get-stats-stable-shape
+  (testing "get_stats keeps the stable stats shape: all relation buckets (including an empty
+            :relations.potential) are always present"
+    (with-demo
+      (fn [r id]
+        (let [[_ rc] (tools/handle-tool "get_stats" r
+                                        {:model_id id})
+              stats (read-string (txt rc))]
+          (is (ok? rc))
+          (is (contains? (set (keys (:relations stats))) :certain))
+          (every? #(map? %) (vals (:relations stats))))))))
 
 (deftest derived-relations-found
   (testing "derived_relations lists certain-derived relations between two elements"

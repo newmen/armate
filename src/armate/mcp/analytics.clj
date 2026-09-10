@@ -452,6 +452,12 @@
 ;; ---------------------------------------------------------------------------
 
 (defn stats
-  "Whole-model statistics, reusing armate's own get-stats."
-  [graph]
-  (acore/get-stats graph))
+  "Whole-model statistics, reusing armate's own get-stats. The single-arity call reports only
+   the relations already present in @graph. The two-arity call additionally merges the globally
+   derived `certain` relations from @derived-certain-graph (the registry's `certain` cache, e.g.
+   `reg/certain-graph`) into @graph before counting, so `:relations.certain` reflects the model's
+   implied structure. Always pure: the caller supplies the derived graph; this only counts."
+  ([graph]
+   (acore/get-stats graph))
+  ([graph derived-certain-graph]
+   (acore/get-stats (with-certain graph derived-certain-graph))))

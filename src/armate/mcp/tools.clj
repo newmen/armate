@@ -387,7 +387,8 @@
   (let [{:keys [rec error]} (existing registry model_id)]
     (if error
       [registry error]
-      [registry (ok (pr-str (ana/stats (:context rec))))])))
+      (let [certain (reg/certain-graph registry model_id)]
+        [registry (ok (pr-str (ana/stats (:context rec) certain)))]))))
 
 (defn- handle-dispatch
   [tool-name]
@@ -534,6 +535,7 @@
                  "directed" {:type "boolean" :description "When true, traverse only along relationship direction (default false/undirected)"}
                  "rel_types" {:type "array" :items {:type "string"}}}}
    {:name "get_stats"
-    :description "Whole-model statistics."
+    :description (str "Whole-model statistics. :relations.certain reports the globally derived "
+                      "certain relations (from the registry's certain cache).")
     :required ["model_id"]
     :properties {"model_id" {:type "string"}}}])
