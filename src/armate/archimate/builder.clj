@@ -191,14 +191,14 @@
                  (str "g" alias-or-id)
                  alias-or-id)]
      (if-let [element (check-cache context kind alias)]
-[context element]
-        (let [element (-> (merge {:kind kind
-                                  :type kind
-                                  :title title
-                                  :name title
-                                  :alias alias}))]
-          [(model/add-element context alias element)
-           element])))))
+       [context element]
+       (let [element {:kind kind
+                      :type kind
+                      :title title
+                      :name title
+                      :alias alias}]
+         [(model/add-element context alias element)
+          element])))))
 
 (defn add-connector
   ([context type junction-name]
@@ -211,15 +211,15 @@
          alias (if (only-int? alias-or-id)
                  (str "jc" alias-or-id)
                  alias-or-id)]
-(if-let [connector (check-cache context kind alias)]
-        [context connector]
-        (let [connector (-> (merge {:kind kind
-                                    :type type
-                                    :title (name/lex-name title)
-                                    :name title
-                                    :alias alias}))]
-          [(model/add-connector context alias connector)
-           connector])))))
+     (if-let [connector (check-cache context kind alias)]
+       [context connector]
+       (let [connector {:kind kind
+                        :type type
+                        :title title
+                        :name title
+                        :alias alias}]
+         [(model/add-connector context alias connector)
+          connector])))))
 
 (def init-context
   {:start {:title (str title-generated-at-prefix (Instant/now))}

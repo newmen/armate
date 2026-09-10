@@ -276,6 +276,15 @@
       (is (re-find #"Rel_Triggering\(" puml)
           "a placed Junction keeps its incident Rel_Triggering edges"))))
 
+(deftest junction-title-unifies-like-element-name
+  (testing "a Junction's title is unified through name normalization, matching elements"
+    (let [puml (ana/render-view enriched graph "Семья" :none nil 50)
+          c (first (vals (:connectors graph)))]
+      (is (= (:name c) (:title c))
+          "the Junction stores one unified name/title pair, like an element")
+      (is (re-find #"Junction_Or\(jc\d+, \"Причина поставить выполнение уроков на паузу\"\)" puml)
+          "the Junction renders with its unified single-line name, not a lex-split title"))))
+
 (deftest derivation-modes-do-not-reintroduce-junction
   (testing "mode :certain / :certain+potential never reintroduce an unplaced Junction"
     (let [certain (dcr/derivate-certain-relations graph)]
