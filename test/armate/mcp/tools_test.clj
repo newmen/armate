@@ -1,6 +1,7 @@
 (ns armate.mcp.tools-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.string :as s]
+            [armate.archimate.multi-graph :as mg]
             [armate.mcp.registry :as reg]
             [armate.mcp.tools :as tools]))
 
@@ -223,23 +224,40 @@
               "potential relations are never counted"))))))
 
 (deftest get-stats-certain-agrees-with-certain-graph
-  (testing "get_stats :relations.certain agrees with the registry's certain derivation,
-            so stats and the derivation modes cannot drift"
+  (testing "get_stats :relations.certain agrees with the registry's certain derivation
+            (relations whose endpoints are model elements), so stats and the derivation
+            modes cannot drift"
     (with-demo
       (fn [r id]
         (let [[_ rc] (tools/handle-tool "get_stats" r
                                         {:model_id id})
               stats (read-string (txt rc))
               certain (reg/certain-graph r id)
-              derived-count (->> (:relations certain)
-                                 (vals)
-                                 (mapcat vals)
-                                 (mapcat identity)
-                                 (filter (fn [rel] (= :certain (:derivate rel))))
-                                 (count))]
+              aliases (set (keys (:elements certain)))
+              expected-count (->> (mg/get-relationships (:relations certain))
+                                  (filter (fn [[from to rel]]
+                                            (and (aliases from) (aliases to)
+                                                 (= :certain (:derivate rel)))))
+                                  (count))]
           (is (ok? rc))
-          (is (= derived-count (get-in stats [:relations :certain :total]))
-              "the stats certain total equals the derived certain relations"))))))
+          (is (= expected-count (get-in stats [:relations :certain :total]))
+              "the stats certain total equals the endpoint-filtered derived relations"))))))
+
+(deftest get-stats-reload-invalidates-derived-counts
+  (testing "reload_model invalidates the derived counts, so get_stats reflects the re-read
+            file, not a stale derivation"
+    (with-demo
+      (fn [r id]
+        (let [[_ rc-first] (tools/handle-tool "get_stats" r {:model_id id})
+              stats-first (read-string (txt rc-first))
+              [r2 _] (tools/handle-tool "reload_model" r {:model_id id})
+              [_ rc-second] (tools/handle-tool "get_stats" r2 {:model_id id})
+              stats-second (read-string (txt rc-second))]
+          (is (ok? rc-first))
+          (is (map? (:relations stats-second)))
+          (is (= (get-in stats-first [:relations :certain :total])
+                 (get-in stats-second [:relations :certain :total]))
+              "reloading the same unchanged file yields equivalent derived counts"))))))
 
 (deftest get-stats-stable-shape
   (testing "get_stats keeps the stable stats shape: all relation buckets (including an empty
