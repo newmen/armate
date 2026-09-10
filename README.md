@@ -73,14 +73,14 @@ Build the executable uberjar:
 lein uberjar
 ```
 
-This produces `target/armate-<version>-standalone.jar`, e.g. `target/armate-2.0.0-SNAPSHOT-standalone.jar`.
+This produces `target/armate-<version>-standalone.jar`, e.g. `target/armate-2.1.0-SNAPSHOT-standalone.jar`.
 
 ### Run
 
 Launch the server in stdio mode (it reads JSON-RPC requests on stdin and writes responses to stdout):
 
 ```sh
-java -jar target/armate-2.0.0-SNAPSHOT-standalone.jar
+java -jar target/armate-2.1.0-SNAPSHOT-standalone.jar
 ```
 
 The server is a normal MCP stdio process; you generally do not run it by hand but register it with your MCP client (see below).
@@ -120,7 +120,7 @@ Add an entry under the `"mcp"` object in the global Kilo config (`~/.config/kilo
   "mcp": {
     "armate": {
       "type": "local",
-      "command": ["/usr/bin/java", "-jar", "/absolute/path/to/armate/target/armate-2.0.0-SNAPSHOT-standalone.jar"],
+      "command": ["/usr/bin/java", "-jar", "/absolute/path/to/armate/target/armate-2.1.0-SNAPSHOT-standalone.jar"],
       "enabled": true,
       "timeout": 150000
     }

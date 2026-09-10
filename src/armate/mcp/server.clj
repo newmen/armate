@@ -39,7 +39,7 @@
   (json-rpc-result (:id msg)
                    {:protocolVersion protocol-version
                     :capabilities {:tools {:listChanged false}}
-                    :serverInfo {:name "armate-mcp" :version "2.0.0"}}))
+                    :serverInfo {:name "armate-mcp" :version "2.1.0"}}))
 
 (defn- notification?
   "A JSON-RPC notification is a request without an id; the server must not respond to it."
