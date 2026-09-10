@@ -300,15 +300,21 @@
 
 (defn build-sub-context
   "A renderable context containing only @aliases and relationships between them taken from
-   the model (per CONTEXT.md's *sub-context of a view*: strictly the placed elements, no
-   transitive expansion), optionally augmented with `certain` derived relationships (when
-   @with-certain is true and the registry has computed them)."
+   the model (per CONTEXT.md's *sub-context of a view*: strictly the placed elements and
+   placed Junctions, no transitive expansion), optionally augmented with `certain` derived
+   relationships (when @with-certain is true and the registry has computed them).
+
+   A Junction (stored as a `:connector`) is carried into the sub-context only when its
+   alias is among @aliases, and a selected connector counts as a placed vertex for
+   relationship selection (so a placed Junction keeps its incident relationships)."
   [graph aliases certain-relations]
   (let [elements (into {} (keep (fn [a]
                                   (when-let [el (model/element graph a)]
                                     [a el]))
                                 aliases))
-        selected? (fn [a] (contains? elements a))
+        selected? (fn [a] (or (contains? elements a)
+                              (when (contains? (:connectors graph) a)
+                                (contains? aliases a))))
         base-rels (->> (mg/get-relationships (:relations graph))
                        (filter (fn [[from to _]] (and (selected? from) (selected? to))))
                        (reduce (fn [acc [from to rel]]
@@ -317,8 +323,12 @@
         with-certain (reduce (fn [acc [from to rel]]
                                (update-in acc [from to] u/fnil-conj-set rel))
                              base-rels
-                             (or certain-relations []))]
-    (assoc graph :elements elements :relations with-certain)))
+                             (or certain-relations []))
+        connectors (into {} (keep (fn [a]
+                                    (when-let [c (model/connector graph a)]
+                                      [a c]))
+                                  aliases))]
+    (assoc graph :elements elements :relations with-certain :connectors connectors)))
 
 (defn- mode->render-derivable
   "The set of `:derivate` markers to render as edges for a derivation @mode:

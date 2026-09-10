@@ -134,7 +134,7 @@
             (is (s/includes? out "Unknown element: Вовк") out)
             (is (s/includes? out "Did you mean") out)
             (is (s/includes? out "Волк") out)
-            (is (re-find #"ba12" out) "suggests the alias/kind/layer of the near-miss")))
+            (is (re-find #"ba13" out) "suggests the alias/kind/layer of the near-miss")))
         (testing "a known name still renders successfully"
           (let [[_ rc-ok] (tools/handle-tool "related_elements" r
                                               {:model_id id :name "Волк"})]
@@ -153,8 +153,8 @@
           (let [out (txt rc)]
             (is (s/includes? out "Производитель пойла -(assignment)-> Варит пойло") out)
             (is (s/includes? out "Варит пойло -(access_w)-> Пойло") out)
-            (is (s/includes? out "Пойло <-(access_r)- Бухает") out)
-            (is (s/includes? out "Бухает <-(assignment)- Волк") out)
+            (is (s/includes? out "Пойло <-(access_w)- Покупает пойло") out)
+            (is (s/includes? out "Покупает пойло <-(assignment)- Волк") out)
             (is (not (s/includes? out "ba29")) "uses element names, not aliases")
             (is (not (s/includes? out "bpc20")) "uses element names, not aliases")))))))
 
@@ -282,20 +282,20 @@
                                         {:model_id id :name "Вовк"})]
           (is (not (ok? rc)))
           (is (s/includes? (txt rc) "Волк"))
-          (is (re-find #"ba12" (txt rc)))
+          (is (re-find #"ba13" (txt rc)))
           (is (re-find #"business-actor.*business" (txt rc))))))))
 
 (deftest error-ambiguous-element-lists-candidates
   (testing "a name shared by several elements is an isError listing candidates, not fuzzy hints"
     (with-demo
       (fn [r id]
-        (let [r (assoc-in r [id :context :elements "ba27" :name] "Волк")
+        (let [r (assoc-in r [id :context :elements "ba25" :name] "Волк")
               [_ rc] (tools/handle-tool "element_views" r
                                         {:model_id id :name "Волк"})]
           (is (not (ok? rc)))
           (is (s/includes? (txt rc) "Ambiguous element name"))
-          (is (s/includes? (txt rc) "ba12"))
-          (is (s/includes? (txt rc) "ba27"))
+          (is (s/includes? (txt rc) "ba13"))
+          (is (s/includes? (txt rc) "ba25"))
           (is (not (s/includes? (txt rc) "Did you mean"))))))))
 
 (deftest tool-list-has-input-schemas

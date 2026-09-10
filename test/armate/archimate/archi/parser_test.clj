@@ -89,10 +89,10 @@
   (testing ":element-views maps every placed element alias to the views that place it"
     (let [ev (:element-views demo-indexed)]
       (is (seq ev))
-      ;; "Волк" (ba12) is placed in both "Процесс" and "Шахматы" demo views
-      (is (= #{"Процесс" "Шахматы"} (get ev "ba12")))
-      ;; "Петя" (ba27) appears in "Процесс" and "Семья"
-      (is (= #{"Процесс" "Семья"} (get ev "ba27"))))))
+      ;; "Волк" (ba13) is placed in both "Процесс" and "Шахматы" demo views
+      (is (= #{"Процесс" "Шахматы"} (get ev "ba13")))
+      ;; "Петя" (ba30) appears in "Процесс" and "Семья"
+      (is (= #{"Процесс" "Семья"} (get ev "ba30"))))))
 
 (deftest view-index-produces-relation-views
   (testing ":relation-views maps [from-alias to-alias] {rel-type #{view-names}}"
@@ -104,7 +104,7 @@
                          (map? types)
                          (every? keyword? (keys types))))
                   rv))
-      ;; Дедушка (ba10) --assignment--> Играет в шахматы (bin19) appears in "Семья" and "Шахматы"
-      (is (= (get-in rv [["ba10" "bin19"] :assignment]) #{"Семья" "Шахматы"}))
-      ;; Волк (ba12) --assignment--> Бухает (bpc18) appears in "Процесс"
-      (is (= (get-in rv [["ba12" "bpc18"] :assignment]) #{"Процесс"})))))
+      ;; Дедушка (ba11) --assignment--> Играет в шахматы (bin21) appears in "Семья" and "Шахматы"
+      (is (= (get-in rv [["ba11" "bin21"] :assignment]) #{"Семья" "Шахматы"}))
+      ;; Волк (ba13) --assignment--> Покупает пойло (bpc28) appears in "Процесс"
+      (is (= (get-in rv [["ba13" "bpc28"] :assignment]) #{"Процесс"})))))

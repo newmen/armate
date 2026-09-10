@@ -27,14 +27,14 @@
 (deftest resolve-name-unique
   (testing "unique element names resolve to {:single {name alias kind layer}}"
     (let [res (ana/resolve-name graph "Волк")]
-      (is (= {:name "Волк" :alias "ba12" :kind :business-actor :layer :business}
+      (is (= {:name "Волк" :alias "ba13" :kind :business-actor :layer :business}
              (:single res))))))
 
 (deftest resolve-name-ambiguous-lists-candidates
   (testing "a name shared by several elements yields a candidate list"
     (let [g (-> graph
-                (assoc-in [:elements "ba12" :name] "Двойник")
-                (assoc-in [:elements "ba27" :name] "Двойник")) 
+                (assoc-in [:elements "ba13" :name] "Двойник")
+                (assoc-in [:elements "ba25" :name] "Двойник"))
           res (ana/resolve-name g "Двойник")]
       (is (contains? res :candidates))
       (is (= 2 (count (:candidates res)))))))
@@ -72,8 +72,8 @@
 (deftest nearest-elements-lists-each-alias-of-a-shared-name
   (testing "a name shared by several aliases yields one suggestion per alias"
     (let [g (-> graph
-                (assoc-in [:elements "ba12" :name] "Двойник")
-                (assoc-in [:elements "ba27" :name] "Двойник"))
+                (assoc-in [:elements "ba13" :name] "Двойник")
+                (assoc-in [:elements "ba25" :name] "Двойник"))
           sugs (ana/nearest-elements g "Двойник" :limit 8)]
       (is (= 2 (count (filter #(= "Двойник" (:name %)) sugs)))))))
 
@@ -81,7 +81,7 @@
   (testing "filter_by_type across the whole model and narrowed to a view"
     (let [all (ana/filter-by-type enriched graph :business-process)
           in-view (ana/filter-by-type enriched graph :business-process "Процесс")]
-      (is (= 10 (count all)))
+      (is (= 13 (count all)))
       (is (every? #(= :business-process (:kind %)) all))
       (is (every? #(= :business-process (:kind %)) in-view))
       (testing "the Процесс view's sub-context narrows to its placed business-processes"
@@ -91,26 +91,26 @@
   (testing "filter by layer across whole model and within a view"
     (let [business (ana/filter-by-layer enriched graph :business)
           in-view (ana/filter-by-layer enriched graph :business "Семья")]
-      (is (= 28 (count business)))
+      (is (= 31 (count business)))
       (is (every? #(= :business (:layer %)) business))
       (is (every? #(= :business (:layer %)) in-view))
       (is (< (count in-view) (count business))))))
 
 (deftest label-map-unique-names
   (testing "label-map returns the bare name for unique element names"
-    (is (= "Волк" (get (ana/label-map graph) "ba12")))
-    (is (= "Бухает" (get (ana/label-map graph) "bpc20")))))
+    (is (= "Волк" (get (ana/label-map graph) "ba13")))
+    (is (= "Проигрывает" (get (ana/label-map graph) "bfn6")))))
 
 (deftest label-map-disambiguates-ambiguous-names
   (testing "label-map disambiguates shared names with alias/kind/layer"
     (let [g (-> graph
-                (assoc-in [:elements "ba12" :name] "Двойник")
-                (assoc-in [:elements "ba27" :name] "Двойник"))
+                (assoc-in [:elements "ba13" :name] "Двойник")
+                (assoc-in [:elements "ba25" :name] "Двойник"))
           labels (ana/label-map g)]
-      (is (s/starts-with? (get labels "ba12") "Двойник ["))
-      (is (s/starts-with? (get labels "ba27") "Двойник ["))
-      (is (not= (get labels "ba12") (get labels "ba27")) "labels differ between ambiguous aliases")
-      (is (s/includes? (get labels "ba12") "ba12")))))
+      (is (s/starts-with? (get labels "ba13") "Двойник ["))
+      (is (s/starts-with? (get labels "ba25") "Двойник ["))
+      (is (not= (get labels "ba13") (get labels "ba25")) "labels differ between ambiguous aliases")
+      (is (s/includes? (get labels "ba13") "ba13")))))
 
 (deftest stats-shape
   (testing "get_stats reports types/:elements/:relations/:lints"
@@ -128,7 +128,7 @@
   (testing "rendered related_elements is valid PlantUML with the root placed"
     (let [puml (ana/related-elements graph nil "Волк" 1)]
       (is (s/includes? puml "@startuml"))
-      (is (s/includes? puml "Business_Actor(ba12"))
+      (is (s/includes? puml "Business_Actor(ba13"))
       (is (re-find #"Rel_" puml)))))
 
 (deftest related-elements-unknown-root-suggests-nearest-names
@@ -139,7 +139,7 @@
       (is (s/includes? (ex-message e) "Unknown element: Вовк"))
       (is (s/includes? (ex-message e) "Did you mean"))
       (is (s/includes? (ex-message e) "Волк"))
-      (is (re-find #"ba12" (ex-message e))))))
+      (is (re-find #"ba13" (ex-message e))))))
 
 (deftest render-view-produces-plantuml
   (testing "render_view renders the view sub-context with its placed elements"
@@ -172,7 +172,7 @@
 (deftest certain-mode-excludes-potential
   (testing "mode :certain renders only certain-derived relations; potential ones stay out"
     (let [certain (dcr/derivate-certain-relations graph)
-          merged (ana/with-certain (ana/build-sub-context graph #{"ba12" "bo6"} nil) certain)
+          merged (ana/with-certain (ana/build-sub-context graph #{"ba13" "bo7"} nil) certain)
           kinds (derivate-kinds merged)]
       (is (not (contains? kinds :potential)))
       (is (contains? kinds :certain)))))
@@ -183,14 +183,61 @@
       (is (thrown? clojure.lang.ExceptionInfo
                    (ana/apply-mode ctx :certain+potential nil 0))))
     (testing "a sub-context within the cap renders without throwing"
-      (let [sub (ana/build-sub-context graph #{"ba12" "bo6"} nil)]
+      (let [sub (ana/build-sub-context graph #{"ba13" "bo7"} nil)]
         (is (string? (ana/render-puml (ana/apply-mode sub :certain+potential nil 30)
                                       "sub"
                                       :certain+potential)))))))
 
 
 ;; ---------------------------------------------------------------------------
-;; Ticket 02 — derived relationships rendered per mode
+;; Ticket 01 — connectors (Junctions) render only when placed
+;; ---------------------------------------------------------------------------
+
+(def ^:private jc-token #"Junction_Or\(")
+
+(deftest unplaced-junction-absent-from-view
+  (testing "a Junction not placed in a view is absent from its PlantUML"
+    (doseq [v ["Шахматы" "Процесс"]]
+      (let [puml (ana/render-view enriched graph v :none nil 50)]
+        (is (nil? (re-find jc-token puml))
+            (str v " must not render the unplaced Junction"))))))
+
+(deftest placed-junction-and-incident-edges-present
+  (testing "a view that places a Junction renders it with its incident relationships"
+    (let [puml (ana/render-view enriched graph "Семья" :none nil 50)]
+      (is (re-find jc-token puml) "Семья places the Junction, so it must render")
+      (is (re-find #"Rel_Triggering\(" puml)
+          "a placed Junction keeps its incident Rel_Triggering edges"))))
+
+(deftest derivation-modes-do-not-reintroduce-junction
+  (testing "mode :certain / :certain+potential never reintroduce an unplaced Junction"
+    (let [certain (dcr/derivate-certain-relations graph)]
+      (doseq [mode [:certain :certain+potential]
+              v ["Шахматы" "Процесс"]]
+        (let [puml (ana/render-view enriched graph v mode certain 50)]
+          (is (nil? (re-find jc-token puml))
+              (str mode " must not reintroduce the Junction into " v)))))))
+
+(deftest merge-views-junction-follows-placing-views
+  (testing "merge_views shows the Junction iff at least one merged view places it"
+    (let [non-placing (ana/render-merged-views enriched graph ["Шахматы" "Процесс"] :none nil 50)
+          with-family (ana/render-merged-views enriched graph ["Семья" "Шахматы"] :none nil 50)]
+      (is (nil? (re-find jc-token non-placing))
+          "merging only non-placing views must not show the Junction")
+      (is (re-find jc-token with-family)
+          "merging a placing view with a non-placing one must show the Junction"))))
+
+(deftest related-elements-junction-included-when-induced-subgraph-has-it
+  (testing "related_elements includes the Junction only when the induced subgraph reaches it"
+    (let [puml-placed (ana/related-elements graph nil "Учится в школе" 3)
+          puml-far (ana/related-elements graph nil "Волк" 1)]
+      (is (re-find jc-token puml-placed)
+          "depth that reaches the Junction renders it")
+      (is (nil? (re-find jc-token puml-far))
+          "a window far from the Junction must not render it"))))
+
+;; ---------------------------------------------------------------------------
+;; Ticket 02: derived relationships rendered per mode
 ;; ---------------------------------------------------------------------------
 
 (deftest mode-certain-renders-certain-derived-edge
@@ -247,8 +294,8 @@
   (testing "shortest path between related elements"
     (let [wolf (ana/alias-of (ana/resolve-name graph "Волк"))
           nal (ana/alias-of (ana/resolve-name graph "Наличные"))]
-      (is (= "ba12" wolf))
-      (is (= "bo6" nal))
+      (is (= "ba13" wolf))
+      (is (= "bo7" nal))
       (is (some? (ana/shortest-path graph wolf nal nil))))))
 
 (deftest shortest-path-none
@@ -265,8 +312,8 @@
 (deftest derived-relations-lists-certain
   (testing "derived-relations returns the global derived relations, scoped by aliases"
     (let [certain (dcr/derivate-relations graph)
-          wolf (get-in graph [:elements "ba12" :alias])
-          nal (get-in graph [:elements "bo6" :alias])
+          wolf (get-in graph [:elements "ba13" :alias])
+          nal (get-in graph [:elements "bo7" :alias])
           rels (ana/derived-relations certain #{wolf nal})]
       (is (seq rels))
       (is (some (fn [[from to rel]]

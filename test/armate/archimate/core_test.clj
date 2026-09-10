@@ -15,9 +15,9 @@
   (testing "get-stats reports the demo model's elements and relations"
     (let [stats (core/get-stats demo-context)]
       (is (= 44 (:types stats)))
-      (is (= 29 (get-in stats [:elements :total])))
-      (is (= {:business 28 :strategy 1}
+      (is (= 32 (get-in stats [:elements :total])))
+      (is (= {:business 31 :strategy 1}
              (get-in stats [:elements :layer])))
-      (is (= 50 (get-in stats [:relations :original :total])))
-      (is (= 8 (get-in stats [:relations :original :groups :dynamic])))
+      (is (= 56 (get-in stats [:relations :original :total])))
+      (is (= 11 (get-in stats [:relations :original :groups :dynamic])))
       (is (= 0 (get-in stats [:lints]))))))
