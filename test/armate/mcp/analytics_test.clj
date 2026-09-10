@@ -73,7 +73,7 @@
   (testing "a name shared by several aliases yields one suggestion per alias"
     (let [g (-> graph
                 (assoc-in [:elements "ba13" :name] "Двойник")
-                (assoc-in [:elements "ba25" :name] "Двойник"))
+                (assoc-in [:elements "ba11" :name] "Двойник"))
           sugs (ana/nearest-elements g "Двойник" :limit 8)]
       (is (= 2 (count (filter #(= "Двойник" (:name %)) sugs)))))))
 
@@ -91,7 +91,7 @@
   (testing "filter by layer across whole model and within a view"
     (let [business (ana/filter-by-layer enriched graph :business)
           in-view (ana/filter-by-layer enriched graph :business "Семья")]
-      (is (= 31 (count business)))
+      (is (= 33 (count business)))
       (is (every? #(= :business (:layer %)) business))
       (is (every? #(= :business (:layer %)) in-view))
       (is (< (count in-view) (count business))))))
@@ -105,11 +105,11 @@
   (testing "label-map disambiguates shared names with alias/kind/layer"
     (let [g (-> graph
                 (assoc-in [:elements "ba13" :name] "Двойник")
-                (assoc-in [:elements "ba25" :name] "Двойник"))
+                (assoc-in [:elements "ba11" :name] "Двойник"))
           labels (ana/label-map g)]
       (is (s/starts-with? (get labels "ba13") "Двойник ["))
-      (is (s/starts-with? (get labels "ba25") "Двойник ["))
-      (is (not= (get labels "ba13") (get labels "ba25")) "labels differ between ambiguous aliases")
+      (is (s/starts-with? (get labels "ba11") "Двойник ["))
+      (is (not= (get labels "ba13") (get labels "ba11")) "labels differ between ambiguous aliases")
       (is (s/includes? (get labels "ba13") "ba13")))))
 
 (deftest stats-shape
@@ -172,6 +172,28 @@
     (let [puml (ana/render-view enriched graph "Процесс" :none nil 50)]
       (is (s/includes? puml "@startuml"))
       (is (re-find #"Business_Actor\(" puml)))))
+
+(deftest render-view-nests-grouping-elements-by-default
+  (testing "render_view nests a placed grouping's composed/aggregated children by default"
+    (let [puml (ana/render-view enriched graph "Семья" :none nil 50)]
+      (is (s/includes? puml "@startuml"))
+      (is (re-find #"Grouping\(g19, \"Досуг дедушки\"\) \{" puml)
+          "the grouping element opens a nested block")
+      (is (re-find #"Business_Process\(bpc24, \"Ловит рыбу\"\)" puml)
+          "a composed child renders inside the grouping block")
+      (is (re-find #"(?s)Grouping\(g19, \"Досуг дедушки\"\) \{[^\n]*\n  Business_Interaction\(bin22"
+                   puml)
+          "nested children appear before the grouping closes"))))
+
+(deftest render-puml-nests-grouping-by-default
+  (testing "render-puml (the seam behind render_view/merge_views/related_elements) applies
+            the default :group-modes nesting for a :grouping element"
+    (let [sub (ana/build-sub-context graph (set (ana/view-aliases enriched "Семья")) nil)
+          puml (ana/render-puml sub "Семья" :none)]
+      (is (re-find #"Grouping\(g19, \"Досуг дедушки\"\) \{" puml)
+          "grouping block opened with default group-modes")
+      (is (re-find #"Business_Process\(bpc24, \"Ловит рыбу\"\)" puml)
+          "composed child nested inside the grouping"))))
 
 (deftest render-merged-views-unions-subcontext
   (testing "merge_views unions placed elements of several views"

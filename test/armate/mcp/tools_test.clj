@@ -50,6 +50,16 @@
           (is (ok? rc))
           (is (s/includes? (txt rc) "@startuml")))))))
 
+(deftest render-view-nests-grouping-by-default
+  (testing "render_view nests a placed grouping's children by default"
+    (with-demo
+      (fn [r id]
+        (let [[_ rc] (tools/handle-tool "render_view" r
+                                        {:model_id id :view "Семья"})]
+          (is (ok? rc))
+          (is (s/includes? (txt rc) "Grouping(g19, \"Досуг дедушки\") {"))
+          (is (s/includes? (txt rc) "Business_Process(bpc24, \"Ловит рыбу\")")))))))
+
 (deftest render-view-mode-controls-derived-edges
   (testing "render_view renders derived edges per mode: certain only for :certain, none for :none, both for :certain+potential"
     (with-demo
@@ -354,13 +364,13 @@
   (testing "a name shared by several elements is an isError listing candidates, not fuzzy hints"
     (with-demo
       (fn [r id]
-        (let [r (assoc-in r [id :context :elements "ba25" :name] "Волк")
+        (let [r (assoc-in r [id :context :elements "ba11" :name] "Волк")
               [_ rc] (tools/handle-tool "element_views" r
                                         {:model_id id :name "Волк"})]
           (is (not (ok? rc)))
           (is (s/includes? (txt rc) "Ambiguous element name"))
           (is (s/includes? (txt rc) "ba13"))
-          (is (s/includes? (txt rc) "ba25"))
+          (is (s/includes? (txt rc) "ba11"))
           (is (not (s/includes? (txt rc) "Did you mean"))))))))
 
 (deftest tool-list-has-input-schemas

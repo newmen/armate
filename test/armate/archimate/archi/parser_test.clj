@@ -91,8 +91,8 @@
       (is (seq ev))
       ;; "Волк" (ba13) is placed in both "Процесс" and "Шахматы" demo views
       (is (= #{"Процесс" "Шахматы"} (get ev "ba13")))
-      ;; "Петя" (ba30) appears in "Процесс" and "Семья"
-      (is (= #{"Процесс" "Семья"} (get ev "ba30"))))))
+      ;; "Петя" (ba32) appears in "Процесс" and "Семья"
+      (is (= #{"Процесс" "Семья"} (get ev "ba32"))))))
 
 (deftest view-index-produces-relation-views
   (testing ":relation-views maps [from-alias to-alias] {rel-type #{view-names}}"
@@ -104,7 +104,21 @@
                          (map? types)
                          (every? keyword? (keys types))))
                   rv))
-      ;; Дедушка (ba11) --assignment--> Играет в шахматы (bin21) appears in "Семья" and "Шахматы"
-      (is (= (get-in rv [["ba11" "bin21"] :assignment]) #{"Семья" "Шахматы"}))
-      ;; Волк (ba13) --assignment--> Покупает пойло (bpc28) appears in "Процесс"
-      (is (= (get-in rv [["ba13" "bpc28"] :assignment]) #{"Процесс"})))))
+      ;; Дедушка (ba11) --assignment--> Играет в шахматы (bin22) appears in "Шахматы"
+      (is (= (get-in rv [["ba11" "bin22"] :assignment]) #{"Шахматы"}))
+      ;; Волк (ba13) --assignment--> Покупает пойло (bpc29) appears in "Процесс"
+      (is (= (get-in rv [["ba13" "bpc29"] :assignment]) #{"Процесс"})))))
+
+(deftest view-index-places-grouping-children-recursively
+  (testing "view-membership walks the diagram tree, so a grouping's nested children count as placed"
+    (let [ev (:element-views demo-indexed)
+          rv (:relation-views demo-indexed)]
+      ;; "Досуг дедушки" (g19) nests children via composition/aggregation in "Семья";
+      ;; those children are drawn as `<child>` DiagramObjects inside the grouping, so
+      ;; they must be registered as placed in "Семья" (and their relations collected).
+      (is (contains? (get ev "g19") "Семья") "grouping placed in Семья")
+      (is (contains? (get ev "bpc24") "Семья") "composed child 'Ловит рыбу' placed in Семья")
+      (is (contains? (get ev "bin36") "Семья") "aggregated child 'Катается на роликах' placed in Семья")
+      (is (contains? (get ev "bin22") "Семья") "composed child 'Играет в шахматы' placed in Семья")
+      ;; the composition relation g19 -> bpc24 must be visible in the "Семья" view
+      (is (contains? (get-in rv [["g19" "bpc24"] :composition]) "Семья")))))

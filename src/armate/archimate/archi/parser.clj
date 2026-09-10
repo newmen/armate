@@ -146,22 +146,28 @@
 
 (defn view-placed-ids
   "For a view's content, the sets of depicted element-ids and relationship-ids
-   (from `:child/@archimateElement` and `:child/:sourceConnection/@archimateRelationship`)."
+   (from `:child/@archimateElement` and `:child/:sourceConnection/@archimateRelationship`).
+   Walks the whole diagram tree, so elements nested inside a container (e.g. a
+   grouping's `<child>` DiagramObjects) and their relationships count as placed."
   [view-content]
-  (reduce (fn [acc item]
-            (if (= :child (:tag item))
-              (let [rels (reduce (fn [a conn]
-                                   (if (= :sourceConnection (:tag conn))
-                                     (conj a (get-in conn [:attrs :archimateRelationship]))
-                                     a))
-                                 #{}
-                                 (:content item))]
-                (-> acc
-                    (update :elements conj (get-in item [:attrs :archimateElement]))
-                    (update :relations into rels)))
-              acc))
-          {:elements #{} :relations #{}}
-          view-content))
+  (reduce
+   (fn [acc item]
+     (if (= :child (:tag item))
+       (let [rels (reduce (fn [a conn]
+                            (if (= :sourceConnection (:tag conn))
+                              (conj a (get-in conn [:attrs :archimateRelationship]))
+                              a))
+                          #{}
+                          (:content item))
+             nested (view-placed-ids (:content item))]
+         (-> acc
+             (update :elements conj (get-in item [:attrs :archimateElement]))
+             (update :elements into (:elements nested))
+             (update :relations into rels)
+             (update :relations into (:relations nested))))
+       acc))
+   {:elements #{} :relations #{}}
+   view-content))
 
 (defn build-view-indexes
   "Build the view-membership metadata for an enriched @model (as returned by @get-model):
