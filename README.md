@@ -73,14 +73,14 @@ Build the executable uberjar:
 lein uberjar
 ```
 
-This produces `target/armate-<version>-standalone.jar`, e.g. `target/armate-2.1.1-standalone.jar`.
+This produces `target/armate-<version>-standalone.jar`, e.g. `target/armate-2.1.2-standalone.jar`.
 
 ### Run
 
 Launch the server in stdio mode (it reads JSON-RPC requests on stdin and writes responses to stdout):
 
 ```sh
-java -jar target/armate-2.1.1-standalone.jar
+java -jar target/armate-2.1.2-standalone.jar
 ```
 
 The server is a normal MCP stdio process; you generally do not run it by hand but register it with your MCP client (see below).
@@ -120,7 +120,7 @@ Add an entry under the `"mcp"` object in the global Kilo config (`~/.config/kilo
   "mcp": {
     "armate": {
       "type": "local",
-      "command": ["/usr/bin/java", "-jar", "/absolute/path/to/armate/target/armate-2.1.1-standalone.jar"],
+      "command": ["/usr/bin/java", "-jar", "/absolute/path/to/armate/target/armate-2.1.2-standalone.jar"],
       "enabled": true,
       "timeout": 150000
     }
@@ -163,6 +163,10 @@ lein test
 ```
 
 ## Changelog
+
+### 2.1.2
+
+- Fix: rendered views (`render_view`, `merge_views`, `related_elements`) now nest a placed `Grouping`'s children by default. View membership walks the whole diagram tree, so elements drawn inside a grouping (and their composition/aggregation relationships) count as placed; the default `:group-modes` then nests them.
 
 ### 2.1.1
 
