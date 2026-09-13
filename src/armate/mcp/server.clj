@@ -100,3 +100,26 @@
 (defn -main
   [& _]
   (start))
+
+(comment
+  
+  (def local-reg (atom {}))
+
+  (reset! local-reg
+          (first (tools/handle-tool "load_model"
+                                    @local-reg
+                                    {:path "test/resources/demo.archimate"})))
+
+  (keys @local-reg)
+
+  (-> (tools/handle-tool "render_view"
+                         @local-reg
+                         {:model_id "demo"
+                          :view "Семья"})
+      last
+      :content
+      first
+      :text
+      println)
+
+  )

@@ -1,44 +1,7 @@
 (ns armate.archimate.collector
-  (:require [clojure.string :as s]
-            [clojure.set :as o]
-            [armate.archimate.metamodel.meta :as mt]
+  (:require [clojure.set :as o]
             [armate.archimate.model :as model]
             [armate.archimate.multi-graph :as mg]))
-
-(defn get-nbrs
-  [rels-graph rel-type-f rel-to-f alias]
-  (->> (get rels-graph alias)
-       (filter (fn [[_ rels]]
-                 (some (fn [rel]
-                         (and (rel-type-f (:type rel))
-                              (rel-to-f (:to rel))))
-                       rels)))
-       (map first)))
-
-(defn get-composed-aliases
-  [context component-alias]
-  (get-nbrs (:relations context)
-            #{:aggregation :composition}
-            constantly
-            component-alias))
-
-(defn collect-interfaces
-  [context component-alias]
-  (->> (get-composed-aliases context component-alias)
-       (map #(model/element context %))
-       (mapcat (fn [element]
-                 (case (:kind element)
-                   :application-component (collect-interfaces context (:alias element))
-                   :application-interface [element]
-                   nil)))))
-
-(defn collect-component-interfaces
-  [context]
-  (->> (vals (:elements context))
-       (filter (comp (partial = :application-component) :kind))
-       (map (fn [component]
-              {:component component
-               :interfaces (collect-interfaces context (:alias component))}))))
 
 (defn- filter-aliases
   [context predicate]
@@ -46,26 +9,6 @@
        (filter predicate)
        (map :alias)
        (into #{})))
-
-(defn- collect-aliases
-  [graph depth aliases]
-  (loop [depth depth
-         aliases aliases
-         first-time? true]
-    (if (zero? depth)
-      aliases
-      (let [nals (->> (mg/get-relationships graph)
-                      (filter (fn [[from to rel]]
-                                (if first-time?
-                                  (or (aliases to) (aliases from))
-                                  (and (aliases to)
-                                       (or (aliases from)
-                                           (mt/structural? (:type rel)))))))
-                      (mapcat (juxt first second))
-                      (into #{}))]
-        (recur (if (= aliases nals) 0 (dec depth))
-               nals
-               false)))))
 
 (defn select-just-elements
   [context predicate]
@@ -77,31 +20,6 @@
         (update :elements #(select-keys % aliases))
         (update :relations frf)
         (update :hidden frf))))
-
-(defn select-near-elements
-  ([context predicate]
-   (select-near-elements context predicate 1))
-  ([context predicate depth]
-   (let [aliases (->> (filter-aliases context predicate)
-                      (collect-aliases (:relations context) depth))]
-     (select-just-elements context (comp aliases :alias)))))
-
-(defn exclude-sub-titles
-  [context excluding-names]
-  (let [checking-nps (map s/lower-case excluding-names)]
-    (select-just-elements context
-                          (fn [element]
-                            (not (some (partial s/includes?
-                                                (s/lower-case (:name element)))
-                                       checking-nps))))))
-
-(defn select-services
-  [context]
-  (select-just-elements context
-                        (comp #{:business-product
-                                :business-service
-                                :application-service}
-                              :kind)))
 
 (defn ungroup
   [context]

@@ -62,17 +62,6 @@
       (throw (ex-info "File is empty" {:file-path file-path}))
       (prr/analyze-content content))))
 
-(defn stat-file
-  [file-path]
-  (try
-    (-> file-path
-        analyze-file
-        dcr/derivate-relations
-        get-stats)
-    (catch clojure.lang.ExceptionInfo e
-      {:exception {:message (ex-message e)
-                   :data (ex-data e)}})))
-
 (defn find-alias
   [context name]
   (some #(when (= name (:name (second %)))

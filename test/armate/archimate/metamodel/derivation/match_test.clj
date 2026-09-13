@@ -305,3 +305,37 @@
            (mch/derivate-relationships restricted? drs/certain-rules graph)))
     (is (= {"3nf" {"fix" #{{:type :influence :desc "++"}}}}
            (mch/derivate-relationships restricted? drs/potential-rules graph)))))
+
+(deftest derivate-direct-dynamic-rels-test
+  (letfn [(build-graph [p q] {"event" {"func" #{{:type p}}}
+                              "func" {"service" #{{:type q}}}})]
+    (let [graph (build-graph :triggering :triggering)]
+      (is (= {"event" {"service" #{{:type :triggering}}}}
+             (mch/derivate-relationships restricted? drs/certain-rules graph)))
+      (is (= {}
+             (mch/derivate-relationships restricted? drs/potential-rules graph))))
+    (let [graph (build-graph :triggering :flow)]
+      (is (= {}
+             (mch/derivate-relationships restricted? drs/certain-rules graph)))
+      (is (= {}
+             (mch/derivate-relationships restricted? drs/potential-rules graph))))
+    (let [graph (build-graph :flow :triggering)]
+      (is (= {}
+             (mch/derivate-relationships restricted? drs/certain-rules graph)))
+      (is (= {}
+             (mch/derivate-relationships restricted? drs/potential-rules graph))))
+    (let [graph (build-graph :flow :flow)]
+      (is (= {}
+             (mch/derivate-relationships restricted? drs/certain-rules graph)))
+      (is (= {"event" {"service" #{{:type :flow}}}}
+             (mch/derivate-relationships restricted? drs/potential-rules graph))))
+    (let [graph (build-graph :triggering :realization)]
+      (is (= {"event" {"service" #{{:type :triggering}}}}
+             (mch/derivate-relationships restricted? drs/certain-rules graph)))
+      (is (= {}
+             (mch/derivate-relationships restricted? drs/potential-rules graph))))
+    (let [graph (build-graph :flow :realization)]
+      (is (= {}
+             (mch/derivate-relationships restricted? drs/certain-rules graph)))
+      (is (= {"event" {"service" #{{:type :flow}}}}
+             (mch/derivate-relationships restricted? drs/potential-rules graph))))))
