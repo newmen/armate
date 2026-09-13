@@ -457,14 +457,14 @@
     :required ["model_id"]
     :properties {"model_id" {:type "string"}}}
    {:name "render_view"
-    :description "Render a view to PlantUML @startuml text. Alias values = the stable model aliases shared by list_elements / related_elements / paths. The mode param adds relationships inferred by ArchiMate derivation rules on top of the explicit model: certain adds globally-implied relations, certain+potential also adds locally-derivable ones (see derived_relations for direct access). Potential derivation is capped at 30 involved elements and denotes a possibility, not a certainty, of an inferred relationship."
+    :description "Render a view to PlantUML @startuml text. Alias values = the stable model aliases shared by list_elements / related_elements / paths. The mode param adds relationships inferred by ArchiMate derivation rules on top of the explicit model: certain adds globally-implied relations, certain+potential also adds locally-derivable ones (see derived_relations for direct access). Potential derivation is capped at 30 involved elements and denotes a possibility, not a certainty, of an inferred relationship. Relationships that are drawn only because their endpoints both fall inside the view's sub-context but that are not genuinely placed on the view are labelled (offview) in their label; relationships inferred by the derivation rules are labelled (derived-certain) / (derived-potential) according to their rule. A relationship genuinely placed on the view carries no marker."
     :required ["model_id" "view"]
     :properties {"model_id" {:type "string"}
                  "view" {:type "string" :description "View name"}
                  "mode" {:type "string" :enum ["none" "certain" "certain+potential"]
                          :description "Derivation mode (default none). certain/certain+potential render inferred (derived) relationships per ArchiMate rules, not just the explicit model relations. Potential derivation is capped at 30 involved elements and denotes a possibility, not a certainty."}}}
    {:name "merge_views"
-    :description "Render the union of several views to PlantUML. Like render_view, the mode param adds relationships inferred by ArchiMate derivation rules (certain/certain+potential) to reveal implied structure beyond the explicit model. Potential derivation is capped at 30 involved elements and denotes a possibility, not a certainty, of an inferred relationship."
+    :description "Render the union of several views to PlantUML. Like render_view, the mode param adds relationships inferred by ArchiMate derivation rules (certain/certain+potential) to reveal implied structure beyond the explicit model. Potential derivation is capped at 30 involved elements and denotes a possibility, not a certainty, of an inferred relationship. A relationship between two merged elements that is placed on none of the merged views is labelled (offview); relationships inferred by the derivation rules are labelled (derived-certain) / (derived-potential). A relationship placed on at least one merged view carries no marker."
     :required ["model_id" "views"]
     :properties {"model_id" {:type "string"}
                  "views" {:type "array" :items {:type "string"}

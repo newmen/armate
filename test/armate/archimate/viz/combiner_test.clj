@@ -206,3 +206,43 @@ c1_acp -[hidden]-> c2_ai
              {:group-modes nil})]
     (is (re-find #"(?s)\bGrouping\(g, \"Group\"\) \{\s*.*?Application_Component\(" out)
         "explicit :group-modes nil falls back to default (grouping on)")))
+
+;; ---------------------------------------------------------------------------
+;; Ticket: relation markers (offview / derived-certain / derived-potential)
+;; ---------------------------------------------------------------------------
+
+(deftest relation-markers-append-trailing-token
+  (testing ":relation-markers appends the token as the last parenthesized group"
+    (let [out (viz/on-fly-generate-puml
+               (su/ctx [alice bob carol]
+                    (merge (su/edge "a" "b" :serving)
+                           (su/derived-edge "b" "c" :serving :certain)))
+               {:render-derivable #{:certain}
+                :relation-markers {["a" "b" :serving] "offview"
+                                   ["b" "c" :serving] "derived-certain"}})]
+      (is (re-find #"Rel_Serving\(a, b, \"\(offview\)\"\)" out)
+          "offview token appended as a bare label")
+      (is (re-find #"Rel_Serving\(b, c, \"\(derived-certain\)\"\)" out)
+          "derived-certain token appended as the label"))))
+
+(deftest relation-marker-preserves-desc-prefix
+  (testing "a relation marker appends after an existing :desc (influence strength style)"
+    (let [inf (assoc (first (get-in (su/edge "a" "b" :influence) ["a" "b"]))
+                :desc "+++")
+          ctx (su/ctx [alice bob]
+                   {"a" {"b" #{inf}}})]
+      (is (re-find #"Rel_Influence\(a, b, \"\+\+\+ \(derived-certain\)\"\)"
+                   (viz/on-fly-generate-puml
+                    ctx
+                    {:render-derivable #{:certain}
+                     :relation-markers {["a" "b" :influence] "derived-certain"}}))
+          "influence strength text is preserved with the marker appended after it"))))
+
+(deftest relation-marker-default-suppresses-all-markers
+  (testing "without :relation-markers no markers are appended and existing desc is preserved"
+    (let [inf (assoc (first (get-in (su/edge "a" "b" :influence) ["a" "b"]))
+                :desc "+++")
+          out (viz/on-fly-generate-puml
+               (su/ctx [alice bob] {"a" {"b" #{inf}}}))]
+      (is (re-find #"Rel_Influence\(a, b, \"\+\+\+\"\)" out)
+          "desc is rendered unchanged"))))

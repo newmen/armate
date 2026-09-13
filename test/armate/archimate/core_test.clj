@@ -14,10 +14,10 @@
 (deftest get-stats-on-demo
   (testing "get-stats reports the demo model's elements and relations"
     (let [stats (core/get-stats demo-context)]
-      (is (= 44 (:types stats)))
-      (is (= 35 (get-in stats [:elements :total])))
-      (is (= {:business 33 :strategy 1 :grouping 1}
+      (is (= 45 (:types stats)))
+      (is (= 40 (get-in stats [:elements :total])))
+      (is (= {:business 35 :strategy 1 :location 3 :grouping 1}
              (get-in stats [:elements :layer])))
-      (is (= 61 (get-in stats [:relations :original :total])))
+      (is (= 72 (get-in stats [:relations :original :total])))
       (is (= 12 (get-in stats [:relations :original :groups :dynamic])))
       (is (= 0 (get-in stats [:lints]))))))

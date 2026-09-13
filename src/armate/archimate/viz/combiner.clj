@@ -146,7 +146,7 @@
       :else (get-fn-element element))))
 
 (defn- get-relation
-  [[from to {:keys [type direction raw reverse? desc]
+  [[from to {:keys [type direction raw reverse? desc relation-marker]
              :as relation}]]
   [(if raw
      (let [parts [from raw to]
@@ -156,8 +156,12 @@
        (let [func (apply str (concat ["Rel_" (s/capitalize (name type))]
                                      (when direction
                                        [(str "_" (s/capitalize (name direction)))])))
+             label (cond
+                     (and desc relation-marker) (str desc " (" relation-marker ")")
+                     relation-marker (str "(" relation-marker ")")
+                     :else desc)
              args [from to]
-             args2 (if desc (into args [(wrap-str desc)]) args)]
+             args2 (if label (into args [(wrap-str label)]) args)]
          (make-call func args2))
        (throw (ex-info "A relation without type" relation))))])
 
@@ -219,13 +223,17 @@
    (or to "")])
 
 (defn- get-relations
-  [grsf key render-derivable context]
+  [grsf key render-derivable relation-markers context]
   (->> (grsf (key context))
        (remove (fn [[_ _ rel]]
                  (let [derivate (:derivate rel)]
                    (or (contains? #{:nesting :connecting} derivate)
                        (and (some? derivate)
                             (not (contains? render-derivable derivate)))))))
+       (map (fn [[from to rel]]
+              [from to (if-let [marker (get relation-markers [from to (:type rel)])]
+                         (assoc rel :relation-marker marker)
+                         rel)]))
        (sort-by relation-sort-key)
        (mapcat get-relation)))
 
@@ -258,7 +266,7 @@
 
 (defn generate-puml
   ([context]
-   (generate-puml (fn [key ctx] (get-relations mg/get-relationships key #{} ctx))
+   (generate-puml (fn [key ctx] (get-relations mg/get-relationships key #{} {} ctx))
                   context))
   ([relf context]
    (let [holder-types (get-holder-types context)
@@ -307,12 +315,16 @@
      map `{}` disables nesting (flat rendering).
    - `:render-derivable` — set of `:derivate` markers rendered as edges (e.g.
      `#{:certain}`, `#{:certain :potential}`). Default `#{}`: no derived edges.
-     The internal `:nesting`/`:connecting` markers are always excluded."
+     The internal `:nesting`/`:connecting` markers are always excluded.
+   - `:relation-markers` — map `{[from to type] token}` appending `(token)` to each matching
+     relationship's label (see analytics/relation-markers). Default `{}`: no suffix."
   ([context]
    (on-fly-generate-puml context nil))
   ([context opts]
    (let [group-modes (or (:group-modes opts) default-group-modes)
-         render-derivable (:render-derivable opts #{})]
+         render-derivable (:render-derivable opts #{})
+         relation-markers (:relation-markers opts {})]
      (generate-puml (fn [key ctx]
-                      (get-relations mg/get-relationships key render-derivable ctx))
+                      (get-relations mg/get-relationships key render-derivable
+                                     relation-markers ctx))
                     (make-grouped group-modes context)))))

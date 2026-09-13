@@ -131,6 +131,48 @@
   (into #{} (keep (fn [[alias views]] (when (views view-name) alias)))
         (:element-views enriched)))
 
+(defn- relation-markers
+  "A map `{[from to type] token}` labelling, for a view render bounded by @view-names, every
+   relationship of the renderable @ctx that is not genuinely placed on those views.
+
+   Each relationship of @ctx is dispatched to exactly one marker:
+   - a relationship carrying a `:derivate` marker is labelled by its derivation class
+     (`derived-certain` for `:certain`, `derived-potential` for `:potential`);
+   - an original (non-derived) relationship between two placed elements that is placed on NONE
+     of @view-names is labelled `offview` (it renders only because both endpoints fall inside
+     the sub-context);
+   - a relationship genuinely placed on one of the views carries no marker.
+
+   @enriched must carry the `:relation-views` index built at parse time, keyed
+   `{[src tgt] {rel-type #{view-names}}}`; the index keys access relations by their BASE type
+   `:access`, while the graph stores direction-suffixed variants (`:access_w`/`:access_r`/
+   `:access_rw`), so the base type is derived for the placement query and the check runs in
+   both orientations so a graph-stored reversal does not misclassify. A `:derivate` marker
+   other than `:certain`/`:potential` (e.g. the internal `:nesting`/`:connecting`) is not
+   labelled by this map (the renderer filters such edges anyway). Returns {} for an empty
+   @view-names or when no relationship qualifies."
+  [ctx enriched view-names]
+  (let [derived-token {:certain "derived-certain" :potential "derived-potential"}
+        access-variant? (fn [t] (contains? #{:access_w :access_r :access_rw :access} t))
+        base-type (fn [t] (if (access-variant? t) :access t))
+        rv (:relation-views enriched)
+        view-set (into #{} view-names)
+        placed? (fn [from to type]
+                  (let [bt (base-type type)
+                        vs (into #{} (concat (get (get rv [from to]) bt #{})
+                                             (get (get rv [to from]) bt #{})))]
+                    (some view-set vs)))]
+    (reduce (fn [acc [from to rel]]
+              (let [key [from to (:type rel)]
+                    token (get derived-token (:derivate rel))]
+                (cond
+                  token (assoc acc key token)
+                  (and (nil? (:derivate rel)) (not (placed? from to (:type rel))))
+                  (assoc acc key "offview")
+                  :else acc)))
+            {}
+            (mg/get-relationships (:relations ctx)))))
+
 ;; ---------------------------------------------------------------------------
 ;; filters
 ;; ---------------------------------------------------------------------------
@@ -342,11 +384,16 @@
 
 (defn render-puml
   "Render @ctx (a model/sub-graph context) to PlantUML source, drawing as edges the
-   `:derivate` markers implied by @mode (see @mode->render-derivable)."
-  [ctx title mode]
-  (-> ctx
-      (model/set-start-title title)
-      (viz/on-fly-generate-puml {:render-derivable (mode->render-derivable mode)})))
+   `:derivate` markers implied by @mode (see @mode->render-derivable). @markers — an
+   `{[from to type] token}` map (see @relation-markers) — is threaded into the renderer so
+   each edge's label gains its `(token)` suffix; nil/empty disables marking."
+  ([ctx title mode]
+   (render-puml ctx title mode nil))
+  ([ctx title mode markers]
+   (-> ctx
+       (model/set-start-title title)
+       (viz/on-fly-generate-puml {:render-derivable (mode->render-derivable mode)
+                                  :relation-markers (or markers {})}))))
 
 ;; ---------------------------------------------------------------------------
 ;; view rendering (render_view / merge_views)
@@ -405,23 +452,26 @@
   "Render the view @view-name to PlantUML. The sub-context is strictly the view's placed
    elements (no transitive expansion), sliced from the model's GLOBAL full context so the
    Element aliases are the same stable ones @list-elements / @related-elements / paths use.
-   Mode and certain/potential handled per @apply-mode."
+   Mode and certain/potential handled per @apply-mode. Relationships not placed on
+   @view-name are marked and labelled per the spec."
   [enriched graph view-name mode certain-graph potential-cap]
   (let [aliases (view-aliases enriched view-name)
-        sub (build-sub-context graph aliases nil)]
-    (render-puml (apply-mode sub mode certain-graph potential-cap) view-name mode)))
+        sub (build-sub-context graph aliases nil)
+        ctx (apply-mode sub mode certain-graph potential-cap)]
+    (render-puml ctx view-name mode (relation-markers ctx enriched [view-name]))))
 
 (defn render-merged-views
   "Render the union of views @view-names (merge_views) to PlantUML. The sub-context is the
-   union of the placed elements (stable global aliases); eager on their aliases."
+   union of the placed elements (stable global aliases); eager on their aliases. A relationship
+   placed on none of @view-names is marked `offview` per the spec."
   [enriched graph view-names mode certain-graph potential-cap]
   (let [aliases (->> view-names
                      (mapcat #(view-aliases enriched %))
                      (into #{}))
-        sub (build-sub-context graph aliases nil)]
-    (render-puml (apply-mode sub mode certain-graph potential-cap)
-                 (s/join ", " view-names)
-                 mode)))
+        sub (build-sub-context graph aliases nil)
+        ctx (apply-mode sub mode certain-graph potential-cap)]
+    (render-puml ctx (s/join ", " view-names) mode
+                 (relation-markers ctx enriched view-names))))
 
 (defn related-elements
   "The induced subgraph around @root-name: all elements within @depth hops (undirected,
@@ -445,7 +495,7 @@
                      (->> (mg/get-relationships (:relations certain-graph))
                           (filter (fn [[from to _]] (and (aliases from) (aliases to))))))
            sub (build-sub-context graph aliases certain)]
-       (render-puml (apply-mode sub mode certain-graph potential-cap) root-name mode)))))
+       (render-puml (apply-mode sub mode certain-graph potential-cap) root-name mode nil)))))
 
 ;; ---------------------------------------------------------------------------
 ;; statistics

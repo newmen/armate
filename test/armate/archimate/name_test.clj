@@ -13,6 +13,7 @@
     (is (= "Идентификация" (n/normalize-name "Идентифи-кация")))
     (is (= "Автоматизация" (n/normalize-name "Автомати-зация")))
     (is (= "Передедубликация" (n/normalize-name "Пере-дедублика-ция")))
+    (is (= "Деактивирующий лок" (n/normalize-name "Деактивиру-ющий лок")))
     (is (= "бизнес-процесс" (n/normalize-name "бизнес-процесс")))
     (is (= "ИДЕНТИФИКАЦИЯ-МОДУЛЬ" (n/normalize-name "ИДЕНТИФИКАЦИЯ-МОДУЛЬ"))))
   (testing "slash spacing keeps both-side spaces and uppercase paths"

@@ -34,7 +34,7 @@
   (testing "a name shared by several elements yields a candidate list"
     (let [g (-> graph
                 (assoc-in [:elements "ba13" :name] "Двойник")
-                (assoc-in [:elements "ba25" :name] "Двойник"))
+                (assoc-in [:elements "ba1" :name] "Двойник"))
           res (ana/resolve-name g "Двойник")]
       (is (contains? res :candidates))
       (is (= 2 (count (:candidates res)))))))
@@ -73,7 +73,7 @@
   (testing "a name shared by several aliases yields one suggestion per alias"
     (let [g (-> graph
                 (assoc-in [:elements "ba13" :name] "Двойник")
-                (assoc-in [:elements "ba11" :name] "Двойник"))
+                (assoc-in [:elements "ba1" :name] "Двойник"))
           sugs (ana/nearest-elements g "Двойник" :limit 8)]
       (is (= 2 (count (filter #(= "Двойник" (:name %)) sugs)))))))
 
@@ -81,7 +81,7 @@
   (testing "filter_by_type across the whole model and narrowed to a view"
     (let [all (ana/filter-by-type enriched graph :business-process)
           in-view (ana/filter-by-type enriched graph :business-process "Процесс")]
-      (is (= 13 (count all)))
+      (is (= 14 (count all)))
       (is (every? #(= :business-process (:kind %)) all))
       (is (every? #(= :business-process (:kind %)) in-view))
       (testing "the Процесс view's sub-context narrows to its placed business-processes"
@@ -91,7 +91,7 @@
   (testing "filter by layer across whole model and within a view"
     (let [business (ana/filter-by-layer enriched graph :business)
           in-view (ana/filter-by-layer enriched graph :business "Семья")]
-      (is (= 33 (count business)))
+      (is (= 35 (count business)))
       (is (every? #(= :business (:layer %)) business))
       (is (every? #(= :business (:layer %)) in-view))
       (is (< (count in-view) (count business))))))
@@ -105,11 +105,11 @@
   (testing "label-map disambiguates shared names with alias/kind/layer"
     (let [g (-> graph
                 (assoc-in [:elements "ba13" :name] "Двойник")
-                (assoc-in [:elements "ba11" :name] "Двойник"))
+                (assoc-in [:elements "ba1" :name] "Двойник"))
           labels (ana/label-map g)]
       (is (s/starts-with? (get labels "ba13") "Двойник ["))
-      (is (s/starts-with? (get labels "ba11") "Двойник ["))
-      (is (not= (get labels "ba13") (get labels "ba11")) "labels differ between ambiguous aliases")
+      (is (s/starts-with? (get labels "ba1") "Двойник ["))
+      (is (not= (get labels "ba13") (get labels "ba1")) "labels differ between ambiguous aliases")
       (is (s/includes? (get labels "ba13") "ba13")))))
 
 (deftest stats-shape
@@ -177,11 +177,11 @@
   (testing "render_view nests a placed grouping's composed/aggregated children by default"
     (let [puml (ana/render-view enriched graph "Семья" :none nil 50)]
       (is (s/includes? puml "@startuml"))
-      (is (re-find #"Grouping\(g19, \"Досуг дедушки\"\) \{" puml)
+      (is (re-find #"Grouping\(g20, \"Досуг дедушки\"\) \{" puml)
           "the grouping element opens a nested block")
-      (is (re-find #"Business_Process\(bpc24, \"Ловит рыбу\"\)" puml)
+      (is (re-find #"Business_Process\(bpc25, \"Ловит рыбу\"\)" puml)
           "a composed child renders inside the grouping block")
-      (is (re-find #"(?s)Grouping\(g19, \"Досуг дедушки\"\) \{[^\n]*\n  Business_Interaction\(bin22"
+      (is (re-find #"(?s)Grouping\(g20, \"Досуг дедушки\"\) \{[^\n]*\n  Business_Interaction\(bin23"
                    puml)
           "nested children appear before the grouping closes"))))
 
@@ -189,10 +189,10 @@
   (testing "render-puml (the seam behind render_view/merge_views/related_elements) applies
             the default :group-modes nesting for a :grouping element"
     (let [sub (ana/build-sub-context graph (set (ana/view-aliases enriched "Семья")) nil)
-          puml (ana/render-puml sub "Семья" :none)]
-      (is (re-find #"Grouping\(g19, \"Досуг дедушки\"\) \{" puml)
+          puml (ana/render-puml (ana/apply-mode sub :none nil 50) "Семья" :none nil)]
+      (is (re-find #"Grouping\(g20, \"Досуг дедушки\"\) \{" puml)
           "grouping block opened with default group-modes")
-      (is (re-find #"Business_Process\(bpc24, \"Ловит рыбу\"\)" puml)
+      (is (re-find #"Business_Process\(bpc25, \"Ловит рыбу\"\)" puml)
           "composed child nested inside the grouping"))))
 
 (deftest render-merged-views-unions-subcontext
@@ -333,9 +333,15 @@
     (let [certain (dcr/derivate-certain-relations graph)
           aliases (set (ana/view-aliases enriched "Процесс"))
           puml (ana/render-view enriched graph "Процесс" :none certain 30)
-          derived (ana/derived-relations certain aliases)]
+          derived (ana/derived-relations certain aliases)
+          original (->> (ana/build-sub-context graph aliases nil)
+                        (ana/filter-relations-to aliases)
+                        (map (fn [[f t r]] [f t (:type r)]))
+                        (set))
+          derived-only (remove (fn [[f t r]] (original [f t (:type r)])) derived)]
       (is (seq derived) "demo view has at least one certain-derived relation to exclude")
-      (doseq [[from to rel] derived]
+      (is (seq derived-only) "acute derived edges that are not original are excluded")
+      (doseq [[from to rel] derived-only]
         (let [token (str "Rel_" (s/capitalize (name (:type rel))))]
           (is (nil? (re-find (re-pattern (str token "\\(" from ", " to "\\)")) puml))
               (str "no " token "(" from ", " to ") edge under mode :none")))))))

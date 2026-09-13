@@ -53,7 +53,8 @@
    :technology-process "tpc"
    :technology-service "tsv"
    :implementation-deliverable "idv"
-   :implementation-workpackage "iwp"})
+   :implementation-workpackage "iwp"
+   :location "l"})
 
 (defn get-sprite-name
   [kind]

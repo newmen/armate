@@ -115,7 +115,8 @@
   (-> (tools/handle-tool "render_view"
                          @local-reg
                          {:model_id "demo"
-                          :view "Семья"})
+                          :view "Семья"
+                          :mode "none"})
       last
       :content
       first

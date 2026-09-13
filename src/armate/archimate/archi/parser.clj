@@ -247,6 +247,7 @@
    "Driver" :motivation-driver
    "ImplementationEvent" :implementation-event
    "Goal" :motivation-goal
+   "Location" :location
    "Node" :technology-node
    "Outcome" :motivation-outcome
    "Principle" :motivation-principle
@@ -329,10 +330,8 @@
                               "2" :access
                               "3" :access_rw)
                             type)
-                    dir (when (= :specialization type2) :up)
                     desc (or strength (get-in item [:attrs :name]))]
-                #_(abd/add-relation acc source target type2 nil desc)
-                (abd/add-relation acc source target type2 dir desc))
+                (abd/add-relation acc source target type2 nil desc))
               acc))
           context
           relations))
