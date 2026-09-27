@@ -46,7 +46,7 @@
   (testing "tools/list advertises the armate tools"
     (let [resp (handle-method {:id 2 :method "tools/list"})]
       (is (= 2 (:id resp)))
-      (is (= 17 (count (get-in resp [:result :tools])))))))
+      (is (= 18 (count (get-in resp [:result :tools])))))))
 
 (deftest tools-call-load-and-list-views
   (testing "tools/call load_model then list_views over the server registry"

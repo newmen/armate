@@ -17,7 +17,8 @@
            outer-blocks '()]
       (if (empty? lines-is)
         (if (seq outer-blocks)
-          (throw (ex-info "Unclosed block" {:blocks (vec outer-blocks)}))
+          (throw (ex-info "Unclosed block" {:armate/error :unclosed-block
+                                            :blocks (vec outer-blocks)}))
           blocks)
         (let [line-i (first lines-is)
               line (s/trim (first line-i))

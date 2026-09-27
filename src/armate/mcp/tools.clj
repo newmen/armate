@@ -7,6 +7,7 @@
   validated before computation."
   (:require [clojure.string :as s]
             [armate.archimate.metamodel.meta :as mt]
+            [armate.archimate.plantuml.lint :as lint]
             [armate.mcp.analytics :as ana]
             [armate.mcp.registry :as reg]))
 
@@ -390,6 +391,17 @@
       (let [certain (reg/certain-graph registry model_id)]
         [registry (ok (pr-str (ana/stats (:context rec) certain)))]))))
 
+(defn lint_plantuml
+  [registry {:keys [content]}]
+  (if (or (not (string? content))
+          (s/blank? content))
+    [registry (err "lint_plantuml requires a non-blank 'content' argument")]
+    (try
+      (let [summary (lint/lint-content content)]
+        [registry (ok (lint/format-summary summary))])
+      (catch Exception e
+        [registry (err (str "Failed to lint PlantUML: " (ex-message e)))]))))
+
 (defn- handle-dispatch
   [tool-name]
   (get {"load_model" load_model
@@ -408,7 +420,8 @@
         "related_elements" related_elements
         "shortest_path" shortest_path
         "all_paths" all_paths
-        "get_stats" get_stats}
+        "get_stats" get_stats
+        "lint_plantuml" lint_plantuml}
        tool-name))
 
 (defn handle-tool
@@ -538,4 +551,23 @@
     :description (str "Whole-model statistics. :relations.certain reports the globally derived "
                       "certain relations (from the registry's certain cache).")
     :required ["model_id"]
-    :properties {"model_id" {:type "string"}}}])
+    :properties {"model_id" {:type "string"}}}
+   {:name "lint_plantuml"
+    :description (str "Lint a generated ArchiMate PlantUML document before you try to "
+                      "validate it with a generic PlantUML CLI: a PlantUML syntax/grammar "
+                      "tool cannot tell you whether ArchiMate relationships are legal "
+                      "between the element kinds you used, and this tool can. "
+                      "It checks ArchiMate semantics over the whole document: undefined "
+                      "element and relationship types, relationships not allowed between "
+                      "two element kinds, unresolved endpoints, duplicate definitions, "
+                      "connector misuse, and document structure. Returns a report whose "
+                      "first line is the verdict (e.g. '2 errors, 1 warnings') followed "
+                      "by one line per problem, sorted errors first. Lints are data: a "
+                      "report is a successful call, not an error. "
+                      "ArchiMate only: this is NOT for sequence diagrams or other UML "
+                      "diagram types, which will not lint meaningfully. Standalone: it "
+                      "does not need a loaded model and takes the whole document inline.")
+    :required ["content"]
+    :properties {"content" {:type "string"
+                            :description (str "The full PlantUML document to lint "
+                                              "(multiline, ArchiMate only)")}}}])

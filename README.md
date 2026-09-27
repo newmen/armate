@@ -135,10 +135,16 @@ Use absolute paths for `java`, the jar and any `workingDirectory` to avoid PATH 
 Armate is driven from a Clojure REPL:
 
 ```clojure
-(require '[armate.core :as core])
+(require '[armate.archimate.core :as core]
+         '[armate.archimate.plantuml.lint :as lint])
 
-;; Analyse a model file (returns lints from parsing)
-(core/lint-file "path/to/model.archimate")
+;; Analyse a model file (returns the full parse context, including :lints)
+(core/analyze-file "path/to/model.archimate")
+
+;; Lint a PlantUML document as text (ArchiMate-aware)
+(-> (slurp "path/to/diagram.puml")
+    lint/lint-content
+    lint/format-summary)
 
 ;; Analyse and export stats (per-layer elements, per-kind relationships)
 (-> "path/to/model.archimate"

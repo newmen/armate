@@ -1003,14 +1003,14 @@ Did you mean: Волк [ba13 business-actor business]")
   "Ambiguous element name: Волк
 Candidates: Волк [ba1], Волк [ba13]")
 
-(deftest tool-list-17-tools
-  (testing "tool-list advertises exactly the 17 armate tools"
+(deftest tool-list-18-tools
+  (testing "tool-list advertises exactly the 18 armate tools"
     (let [names (sort (map :name (tools/tool-list)))]
-      (is (= 17 (count names)))
+      (is (= 18 (count names)))
       (is (= '("all_paths" "derived_relations" "element_views" "filter_by_layer"
-               "filter_by_type" "get_stats" "list_elements" "list_models" "list_views"
-               "load_model" "merge_views" "related_elements" "relation_views" "reload_model"
-               "render_view" "shortest_path" "unload_model")
+               "filter_by_type" "get_stats" "lint_plantuml" "list_elements" "list_models"
+               "list_views" "load_model" "merge_views" "related_elements" "relation_views"
+               "reload_model" "render_view" "shortest_path" "unload_model")
              names)))))
 
 (deftest tool-descriptions-document-markers
@@ -1022,6 +1022,17 @@ Candidates: Волк [ba1], Волк [ba13]")
       (is (s/includes? (:description rv) "(derived-certain)"))
       (is (s/includes? (:description mv) "(offview)"))
       (is (s/includes? (:description mv) "(derived-certain)")))))
+
+(deftest tool-description-lint-plantuml-guides
+  (testing "lint_plantuml description covers the ArchiMate-only scope and CLI guidance"
+    (let [d (first (filter #(= "lint_plantuml" (:name %)) (tools/tool-list)))
+          desc (:description d)]
+      (is (s/includes? desc "ArchiMate"))
+      (is (s/includes? desc "PlantUML CLI"))
+      (is (s/includes? desc "sequence")))
+    (let [d (first (filter #(= "lint_plantuml" (:name %)) (tools/tool-list)))]
+      (is (= ["content"] (get-in d [:inputSchema :required])))
+      (is (= "string" (get-in d [:inputSchema :properties "content" :type]))))))
 
 (deftest load-model-returns-id
   (testing "load_model loads the demo and returns its model_id"
@@ -1333,3 +1344,76 @@ Candidates: Волк [ba1], Волк [ba13]")
           (is (= "ba13" list-alias))
           (is (s/includes? EXP-RENDER-PROC-NONE
                            (str "Business_Actor(" list-alias ", \"Волк\")"))))))))
+
+;; ---------------------------------------------------------------------------
+;; lint_plantuml
+;; ---------------------------------------------------------------------------
+
+(def ^:private LINT-VALID
+  "@startuml \"Семья\"\n\n!include <archimate/Archimate>\n\nBusiness_Actor(ba4, \"Мама\")\nBusiness_Process(bpc17, \"Варит суп\")\n\nRel_Assignment(ba4, bpc17)\n\n@enduml")
+
+(def ^:private LINT-UNSPECIFIED
+  "\n@startuml\n\n!$app = \"jar:archimate/application\"\n!include <archimate/Archimate>\n\nsprite $aComponent $app-component\n\nrectangle \"Component1\" as c1 <<$aComponent>>\nrectangle \"Component 2\" as c2 <<$aComponent>>\n\nc1 ~ c2\n\n@enduml")
+
+(def ^:private LINT-UNCLOSED
+  "@startuml\n\n!include <archimate/Archimate>\n\nGrouping(g1, \"G\") {\n  Business_Actor(ba4, \"Мама\")\n\n@enduml")
+
+(def ^:private LINT-SEQUENCE
+  "@startuml\nAlice -> Bob: Authentication Request\nBob --> Alice: Authentication Response\n@enduml")
+
+(deftest lint-plantuml-valid
+  (testing "a valid ArchiMate document returns OK with no closing line"
+    (let [[_ rc] (tools/handle-tool "lint_plantuml" {} {:content LINT-VALID})]
+      (is (ok? rc))
+      (is (= "OK: no problems" (txt rc))))))
+
+(deftest lint-plantuml-unspecified-relation
+  (testing "a disallowed relationship is reported as a warning plus the closing line"
+    (let [[_ rc] (tools/handle-tool "lint_plantuml" {} {:content LINT-UNSPECIFIED})
+          t (txt rc)]
+      (is (ok? rc))
+      (is (s/includes? t "0 errors, 1 warnings"))
+      (is (s/includes? t "WARN line 12"))
+      (is (s/includes? t "unspecified-relation-type"))
+      (is (s/includes? t "Fix the errors and warnings above and lint again")))))
+
+(deftest lint-plantuml-undefined-relation
+  (testing "an unknown construct is reported as an error"
+    (let [content (s/replace LINT-VALID "Rel_Assignment(ba4, bpc17)"
+                             "Rel_Assignment(ba4, bpc17)\n??? bogus line")
+          [_ rc] (tools/handle-tool "lint_plantuml" {} {:content content})
+          t (txt rc)]
+      (is (ok? rc))
+      (is (s/includes? t "ERROR"))
+      (is (s/includes? t "Fix the errors and warnings above and lint again")))))
+
+(deftest lint-plantuml-unclosed-block
+  (testing "an unclosed block is a lint, not an error response"
+    (let [[_ rc] (tools/handle-tool "lint_plantuml" {} {:content LINT-UNCLOSED})
+          t (txt rc)]
+      (is (ok? rc))
+      (is (s/includes? t "ERROR line 5 [in parse] unclosed-block"))
+      (is (s/includes? t "Fix the errors and warnings above and lint again")))))
+
+(deftest lint-plantuml-missing-and-blank
+  (testing "missing and blank content are argument errors"
+    (let [[_ rc1] (tools/handle-tool "lint_plantuml" {} {})
+          [_ rc2] (tools/handle-tool "lint_plantuml" {} {:content "   \n  "})
+          [_ rc3] (tools/handle-tool "lint_plantuml" {} {:content nil})]
+      (is (not (ok? rc1)))
+      (is (not (ok? rc2)))
+      (is (not (ok? rc3)))
+      (is (s/includes? (txt rc1) "content")))))
+
+(deftest lint-plantuml-standalone-empty-registry
+  (testing "lint_plantuml needs no loaded model and leaves the registry unchanged"
+    (let [[r rc] (tools/handle-tool "lint_plantuml" {} {:content LINT-VALID})]
+      (is (ok? rc))
+      (is (= {} r))
+      (is (= "OK: no problems" (txt rc))))))
+
+(deftest lint-plantuml-not-archimate
+  (testing "a non-ArchiMate diagram returns a report (no crash), not an isError"
+    (let [[_ rc] (tools/handle-tool "lint_plantuml" {} {:content LINT-SEQUENCE})]
+      (is (ok? rc))
+      (is (s/includes? (txt rc) "errors")))))

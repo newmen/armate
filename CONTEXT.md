@@ -43,5 +43,9 @@ _Avoid_: tree, subtree, neighbourhood
 The in-memory store of loaded models in the MCP server, keyed by `model_id`. No persistence between server runs.
 _Avoid_: database, catalog
 
+**PlantUML lint**:
+Checking an ArchiMate PlantUML document as text for structural correctness and metamodel validity (legal relationships, resolvable endpoints, defined types), without loading it as a model. The parse context built during linting is diagnostic only.
+_Avoid_: validation, syntax check (a syntax check is generic PlantUML; a lint is ArchiMate-aware)
+
 **Re-center approach**:
 Not a term; see **Sub-context of a view** and **Target views**.
