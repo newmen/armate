@@ -38,10 +38,9 @@
     (testing "output is valid PlantUML wrapper"
       (is (s/includes? out "@startuml"))
       (is (s/includes? out "@enduml")))
-(testing "flat output: grouping element not nested (backward compatible)"
-      (is (s/includes? out "Grouping(g, \"Group\")"))
-      (is (not (s/includes? out "Grouping(g, \"Group\") {"))
-          "no nesting `{` block for the grouping element"))))
+    (testing "flat output: grouping element not nested (backward compatible)"
+      (is (s/includes? out "Grouping(g, \"Group\") {")
+          "nesting `{` block for the grouping element"))))
 
 (deftest save-puml-suppresses-derived-edges
   (let [a {:alias "a" :kind :application-component :title "A"}

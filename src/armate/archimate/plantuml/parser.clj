@@ -197,7 +197,9 @@
   [fn-name]
   (let [parts (s/split fn-name #"_")
         layer (first parts)
-        specie (csk/->kebab-case (last parts))]
+        specie (if (= "WorkPackage" (second parts))
+                 "workpackage"
+                 (csk/->kebab-case (last parts)))]
     {:layer (str "#" layer)
      :kind (keyword (str (s/lower-case layer) "-" specie))}))
 

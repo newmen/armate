@@ -42,6 +42,7 @@
   (testing "ArchiMate 3.2. Appendix B.5. Relationship Tables"
     (is (= "NO" (get-letters :motivation-driver :motivation-requirement)))
     (is (= "scgnO" (get-letters :motivation-goal :grouping)))
+    (is (= "O" (get-letters :motivation-goal :implementation-workpackage)))
     (is (= "SCGNO" (get-letters :motivation-constraint :motivation-constraint)))
     (is (= "SCGNO" (get-letters :motivation-constraint :motivation-requirement)))
     (is (= "SCGNO" (get-letters :motivation-requirement :motivation-constraint)))
@@ -195,6 +196,8 @@
     (is (= "SCGrO" (get-letters :physical-material :physical-material)))
     (is (= "AO" (get-letters :implementation-event :implementation-deliverable)))
     (is (= "TfO" (get-letters :implementation-event :implementation-plateau)))
+    (is (= "RNO" (get-letters :implementation-workpackage :motivation-requirement)))
+    (is (= "RO" (get-letters :implementation-workpackage :application-service)))
     (is (= "CGnO" (get-letters :location :motivation-driver)))
     (is (= "CGaO" (get-letters :location :business-representation)))
     (is (= "CGvtfO" (get-letters :location :technology-communication-network)))

@@ -399,7 +399,8 @@
 
 (defn get-views-graph
   "Build a graph for the view(s) named in @view-names, or every view when none are given.
-  Optional trailing arg is a names-replacer fn (kept for legacy callers). Returns [graph id-map']."
+   Optional trailing arg is a names-replacer fn (kept for legacy callers).
+   Returns context with graph inside."
   [model & view-names]
   (let [names-replacer (last view-names)
         names-replacer2 (when-not (string? names-replacer)
@@ -407,7 +408,7 @@
         view-names (if names-replacer2
                      (drop-last view-names)
                      view-names)]
-    (build-views-graph model view-names names-replacer2 {})))
+    (first (build-views-graph model view-names names-replacer2 {}))))
 
 (defn get-component-names
   ([context]

@@ -69,15 +69,14 @@
           "every parallel fresh-seed build yields the aliases of the serial build"))))
 
 (deftest views-graph-determinism
-  (testing "get-views-graph returns [graph id-map] and is deterministic with a fresh seed"
-    (let [model {:maps {:views {"V1" {:attrs {:name "V1"} :content nil}}
-                         "V2" {:attrs {:name "V2"} :content nil}}
+  (testing "get-views-graph returns graph and is deterministic with a fresh seed"
+    (let [model {:maps {:views {"V1" {:attrs {:name "V1"} :content nil}
+                                "V2" {:attrs {:name "V2"} :content nil}}}
                  :elements []
                  :relations []}
-          [g1 m1] (arr/get-views-graph model)
-          [g2 _m2] (arr/get-views-graph model)]
-      (is (vector? (arr/get-views-graph model)))
-      (is (map? m1))
+          g1 (arr/get-views-graph model)
+          g2 (arr/get-views-graph model)]
+      (is (map? g1))
       (is (= (element-aliases g1) (element-aliases g2))
           "two fresh flagless view parses share element aliases"))))
 
